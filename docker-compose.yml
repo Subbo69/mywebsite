@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    container_name: halovisionai_new
+    restart: unless-stopped
+    ports:
+      - "8081:80"
