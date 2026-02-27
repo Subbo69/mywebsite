@@ -121,13 +121,14 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-32 bg-black text-white overflow-hidden">
+    /* py-32 changed to py-16 to reduce overall section height */
+    <section ref={sectionRef} className="relative py-16 bg-black text-white overflow-hidden">
       <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-        <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
           {t.workWithUs}
         </h2>
 
-        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
           {t.workWithUsDesc}
         </p>
 
@@ -166,7 +167,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
               rounded-full
               bg-white
               px-10
-              py-5
+              py-4
               text-lg
               font-bold
               flex
@@ -186,8 +187,8 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
         </div>
       </div>
 
-      {/* Improved Copyright Footer */}
-      <footer className="mt-32 border-t border-white/10 pt-12 text-center text-sm text-gray-500">
+      {/* mt-32 reduced to mt-16 and pt-12 to pt-8 to keep footer close */}
+      <footer className="mt-16 border-t border-white/10 pt-8 text-center text-xs text-gray-500">
         <div className="max-w-4xl mx-auto px-6">
           <p>© {currentYear} Halovision AI. All rights reserved.</p>
         </div>
