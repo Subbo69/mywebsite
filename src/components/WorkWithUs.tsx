@@ -16,92 +16,80 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   const [animationCount, setAnimationCount] = useState(0);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
 
-  // Animation function
+  // Automatically calculates the year so you never have to edit it manually
+  const currentYear = new Date().getFullYear();
+
+  // Animation function for the "light sweep" effect on the button
   const runAnimation = () => {
     let startTime: number | null = null;
-    const duration = 3294; // 170% speed (5600 / 1.7 ≈ 3294ms)
+    const duration = 3294;
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Smoother ease in-out for better acceleration/deceleration
-      const eased = progress < 0.5 
-        ? 4 * progress * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      
-      // Opacity control: fade in at start, fade out at end (going into button)
+
+      const eased =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
       if (progress < 0.05) {
-        // Fade in during first 5%
         setLightOpacity(progress / 0.05);
       } else if (progress > 0.92) {
-        // Fade out during last 8% (smooth disappear into button)
         setLightOpacity((1 - progress) / 0.08);
       } else {
         setLightOpacity(1);
       }
-      
-      // Start from -90deg (top) and complete one full rotation
-      setAnimationProgress(-90 + (eased * 360));
+
+      setAnimationProgress(-90 + eased * 360);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Animation complete, increment counter
-        setAnimationCount(prev => prev + 1);
+        setAnimationCount((prev) => prev + 1);
       }
     };
 
     requestAnimationFrame(animate);
   };
 
-  // Schedule animations based on timing rules
   useEffect(() => {
-    // Clear any existing timers
-    timersRef.current.forEach(timer => clearTimeout(timer));
+    timersRef.current.forEach((timer) => clearTimeout(timer));
     timersRef.current = [];
 
     if (isVisible) {
-      // First animation: wait 3 seconds
       const firstTimer = setTimeout(() => {
         runAnimation();
       }, 2300);
       timersRef.current.push(firstTimer);
 
-      // Second animation: after 30 seconds (3s initial + 30s = 33s total)
       const secondTimer = setTimeout(() => {
         runAnimation();
       }, 27000);
       timersRef.current.push(secondTimer);
 
-      // Third animation and beyond: every 3 minutes after the second one
-      // (3s + 30s + 3min = 213s total for third)
-      const scheduleRecurringAnimations = () => {
-        const thirdTimer = setTimeout(() => {
+      const thirdTimer = setTimeout(() => {
+        runAnimation();
+
+        const recurringInterval = setInterval(() => {
           runAnimation();
-          
-          // Continue every 3 minutes
-          const recurringInterval = setInterval(() => {
-            runAnimation();
-          }, 70000); // 3 minutes
+        }, 70000);
 
-          // Store interval ID for cleanup (cast to NodeJS.Timeout)
-          timersRef.current.push(recurringInterval as unknown as NodeJS.Timeout);
-        }, 213000); // 3s + 30s + 3min
-        timersRef.current.push(thirdTimer);
-      };
+        timersRef.current.push(
+          recurringInterval as unknown as NodeJS.Timeout
+        );
+      }, 213000);
 
-      scheduleRecurringAnimations();
+      timersRef.current.push(thirdTimer);
     }
 
     return () => {
-      timersRef.current.forEach(timer => clearTimeout(timer));
+      timersRef.current.forEach((timer) => clearTimeout(timer));
       timersRef.current = [];
     };
   }, [isVisible]);
 
-  // Intersection Observer to detect visibility
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -110,7 +98,6 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
             setIsVisible(true);
           } else {
             setIsVisible(false);
-            // Reset animation count when leaving viewport
             setAnimationCount(0);
             setLightOpacity(0);
             setAnimationProgress(-90);
@@ -134,26 +121,25 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-32 bg-black text-white">
-      <div className="max-w-4xl mx-auto px-6 text-center">
-        <h2 className="text-5xl md:text-6xl font-bold mb-6">
+    <section ref={sectionRef} className="relative py-32 bg-black text-white overflow-hidden">
+      <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+        <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight">
           {t.workWithUs}
         </h2>
-        <p className="text-xl text-gray-400 mb-12">
+
+        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
           {t.workWithUsDesc}
         </p>
 
-        {/* White light-string border button */}
         <div className="relative inline-block">
-          {/* Shooting star effect - bright head with trailing tail */}
-          <div 
+          {/* Animated Border/Glow effect */}
+          <div
             className="absolute inset-0 rounded-full pointer-events-none"
             style={{
               padding: '1px',
-              transform: 'scale(1.06)', // Closer to button (was 1.12)
+              transform: 'scale(1.06)',
             }}
           >
-            {/* Bright head of the shooting star */}
             <div
               className="absolute w-full h-full rounded-full"
               style={{
@@ -162,7 +148,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
                 opacity: lightOpacity,
               }}
             />
-            {/* Extra glow for the bright head */}
+
             <div
               className="absolute w-full h-full rounded-full"
               style={{
@@ -173,26 +159,25 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
             />
           </div>
 
-          {/* White button */}
           <button
             onClick={onBookingClick}
             className="
               relative
               rounded-full
               bg-white
-              px-8
-              py-4
+              px-10
+              py-5
               text-lg
-              font-semibold
+              font-bold
               flex
               items-center
               gap-3
               text-black
               hover:scale-105
               active:scale-95
-              transition-transform
+              transition-all
               duration-200
-              shadow-lg
+              shadow-[0_0_20px_rgba(255,255,255,0.3)]
             "
           >
             <span>{t.bookCall}</span>
@@ -200,6 +185,13 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
           </button>
         </div>
       </div>
+
+      {/* Improved Copyright Footer */}
+      <footer className="mt-32 border-t border-white/10 pt-12 text-center text-sm text-gray-500">
+        <div className="max-w-4xl mx-auto px-6">
+          <p>© {currentYear} Halovision AI. All rights reserved.</p>
+        </div>
+      </footer>
     </section>
   );
 }
