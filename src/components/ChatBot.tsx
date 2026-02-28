@@ -1,6 +1,59 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Database, Brain, Terminal } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
+
+// --- CLEAN & MINIMALIST THINKING COMPONENT ---
+function ThinkingProcess({ language }: { language: Language }) {
+  const [step, setStep] = useState(0);
+  
+  const steps = [
+    { icon: <Terminal className="w-3 h-3" />, en: "Initializing...", de: "Initialisierung...", fr: "Initialisation..." },
+    { icon: <Brain className="w-3 h-3" />, en: "Analyzing intent...", de: "Absicht analysieren...", fr: "Analyse de l'intention..." },
+    { icon: <Database className="w-3 h-3" />, en: "Scanning knowledge base...", de: "Datenbank scannen...", fr: "Scan de la base de connaissances..." },
+    { icon: <Sparkles className="w-3 h-3" />, en: "Formulating response...", de: "Antwort formulieren...", fr: "Formulation de la réponse..." },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 1600); 
+    return () => clearInterval(interval);
+  }, [steps.length]);
+
+  return (
+    <div className="flex flex-col gap-1 py-1 px-2 max-w-full animate-in fade-in duration-700">
+      {steps.slice(0, step + 1).map((s, i) => (
+        <div 
+          key={i} 
+          className="flex items-center gap-2.5 h-4 animate-in slide-in-from-left-2 duration-500"
+        >
+          <span className={i === step ? "text-black/60 scale-90" : "text-black/10"}>
+            {s.icon}
+          </span>
+          
+          <span className={`
+            text-[9px] font-light uppercase tracking-[0.2em] whitespace-nowrap
+            ${i === step 
+              ? "text-transparent bg-clip-text bg-gradient-to-r from-black via-zinc-400 to-black bg-[length:200%_100%] animate-[textGlow_2s_linear_infinite]" 
+              : "text-black/10"}
+          `}>
+            {language === 'de' ? s.de : language === 'fr' ? s.fr : s.en}
+          </span>
+
+          {i === step && (
+            <div className="w-0.5 h-0.5 rounded-full bg-black/20 animate-pulse ml-2" />
+          )}
+        </div>
+      ))}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes textGlow {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}} />
+    </div>
+  );
+}
 
 interface ChatBotProps {
   context: string;
@@ -11,58 +64,124 @@ interface ChatBotProps {
 export default function ChatBot({ context, onContextUsed, language }: ChatBotProps) {
   const t = translations[language];
 
+  // UI & ANIMATION STATE
   const [isOpen, setIsOpen] = useState(false);
   const [animateOpen, setAnimateOpen] = useState(false);
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([{ role: 'assistant', content: t.chatGreeting }]);
+  const [isVisible, setIsVisible] = useState(true);
+  const [buttonBrightness, setButtonBrightness] = useState(0);
+
+  // CHAT LOGIC STATE
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [longMessagesSent, setLongMessagesSent] = useState(0);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
-
-  // Animation states - simple fade
-  const [isVisible, setIsVisible] = useState(true);
-  const [buttonBrightness, setButtonBrightness] = useState(0); // 0 = normal, 1 = fully bright white
-  const timersRef = useRef<NodeJS.Timeout[]>([]);
+  const [pendingMsg, setPendingMsg] = useState<string | null>(null);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
+
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(scrollToBottom, [messages]);
+  useEffect(scrollToBottom, [messages, isLoading]);
 
+  // Handle Initial Greeting
   useEffect(() => {
-    setMessages([{ role: 'assistant', content: t.chatGreeting }]);
+    if (messages.length === 0) {
+      setMessages([{ role: 'assistant', content: t.chatGreeting }]);
+    }
   }, [language, t.chatGreeting]);
 
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    setRecommendations([]);
+    setLimitWarning(null);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    if (text.length > 500) setLongMessagesSent(prev => prev + 1);
+    setIsLoading(true);
+
+    try {
+      const history = [...messagesRef.current, { role: 'user', content: text }].slice(-10);
+      const response = await fetch('https://n8n.halovisionai.cloud/webhook/halovisionchatbot997655', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history, language }),
+      });
+      
+      const data = await response.json();
+      let assistantMessage = data?.response || data?.message || data?.output || data?.text || t.bookingError || 'No response.';
+      
+      const cleanMessage = assistantMessage
+        .replace(/<[^>]*>/g, '')
+        .replace(/\*\*/g, '')
+        .replace(/#+/g, '')
+        .replace(/[`>]/g, '')
+        .trim();
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: cleanMessage }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: "Error connecting to service." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitInput = () => {
+    if (input.trim()) {
+      handleSendMessage(input);
+      setInput('');
+    }
+  };
+
+  // RESTORED RECOMMENDATION LOGIC
   useEffect(() => {
     if (context) {
       openChat();
-      const recs =
-        t.chatRecommendations?.[context as keyof typeof t.chatRecommendations] ||
-        t.chatRecommendations?.general ||
-        [];
-      setRecommendations(recs);
+      
+      // List of valid keys in chatRecommendations
+      const validCategories = ['general', 'lead-generation', 'custom-solutions', 'save-time', 'examples'];
+      
+      if (validCategories.includes(context)) {
+        // It's a category: Show recommendations
+        const recs = t.chatRecommendations?.[context as keyof typeof t.chatRecommendations] || t.chatRecommendations?.general || [];
+        setRecommendations(recs);
+      } else {
+        // It's a custom message: Send it immediately
+        setPendingMsg(context);
+      }
       onContextUsed();
     }
-  }, [context, onContextUsed, t]);
+  }, [context, onContextUsed, t.chatRecommendations]);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
+    if (pendingMsg && isOpen) {
+      const timer = setTimeout(() => {
+        handleSendMessage(pendingMsg);
+        setPendingMsg(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingMsg, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        chatRef.current &&
-        !chatRef.current.contains(e.target as Node) &&
-        !buttonRef.current?.contains(e.target as Node)
-      ) {
+      if (chatRef.current && !chatRef.current.contains(e.target as Node) && !buttonRef.current?.contains(e.target as Node)) {
         closeChat();
       }
     }
@@ -70,77 +189,35 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Simple fade animation
   const runFadeAnimation = () => {
     let startTime: number | null = null;
-    const duration = 2000; // 2 seconds total (1s fade in, 1s fade out)
-
+    const duration = 2000;
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Create a fade in and fade out effect
-      let brightness;
-      if (progress < 0.5) {
-        // First half: fade in (0 to 1)
-        brightness = progress * 2; // 0 -> 1
-      } else {
-        // Second half: fade out (1 to 0)
-        brightness = (1 - progress) * 2; // 1 -> 0
-      }
-      
+      const brightness = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
       setButtonBrightness(brightness);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setButtonBrightness(0); // Ensure we end at 0
-      }
+      if (progress < 1) requestAnimationFrame(animate);
+      else setButtonBrightness(0);
     };
-
     requestAnimationFrame(animate);
   };
 
-  // Schedule animations: 27s, then 3min later, then every 5min
   useEffect(() => {
     timersRef.current.forEach(timer => clearTimeout(timer));
     timersRef.current = [];
-
     if (isVisible && !isOpen) {
-      // First animation: 27 seconds
-      const firstTimer = setTimeout(() => {
-        runFadeAnimation();
-      }, 27000);
-      timersRef.current.push(firstTimer);
-
-      // Second animation: 3 minutes after first (27s + 180s = 207s)
-      const secondTimer = setTimeout(() => {
-        runFadeAnimation();
-      }, 207000);
-      timersRef.current.push(secondTimer);
-
-      // Third animation and recurring every 5 minutes after second
-      const thirdTimer = setTimeout(() => {
-        runFadeAnimation();
-        
-        // Then recurring every 5 minutes
-        const recurringInterval = setInterval(() => {
-          runFadeAnimation();
-        }, 300000); // 5 minutes
-
-        timersRef.current.push(recurringInterval as unknown as NodeJS.Timeout);
-      }, 507000); // 27s + 180s + 300s = 507s
-      timersRef.current.push(thirdTimer);
+      const schedule = [27000, 207000, 507000];
+      schedule.forEach(delay => {
+        timersRef.current.push(setTimeout(() => runFadeAnimation(), delay));
+      });
+      const interval = setInterval(() => runFadeAnimation(), 300000);
+      timersRef.current.push(interval as any);
     }
-
-    return () => {
-      timersRef.current.forEach(timer => clearTimeout(timer));
-      timersRef.current = [];
-    };
+    return () => timersRef.current.forEach(timer => clearTimeout(timer));
   }, [isVisible, isOpen]);
 
-  /* ---------- OPEN / CLOSE ---------- */
   const openChat = () => {
     setIsOpen(true);
     setTimeout(() => setAnimateOpen(true), 10);
@@ -151,181 +228,66 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
     setTimeout(() => setIsOpen(false), 300);
   };
 
-  const toggleChat = () => {
-    isOpen ? closeChat() : openChat();
-  };
+  const toggleChat = () => (isOpen ? closeChat() : openChat());
 
-  /* ---------- SEND ---------- */
-  const handleSend = async (message?: string) => {
-    const userMessage = message || input.trim();
-    if (!userMessage || isLoading) return;
-
-    setInput('');
-    setRecommendations([]);
-    setLimitWarning(null);
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-
-    if (userMessage.length > 500) setLongMessagesSent(prev => prev + 1);
-
-    setIsLoading(true);
-
-    try {
-      const history = [...messages, { role: 'user', content: userMessage }].slice(-10);
-
-      const response = await fetch(
-        'https://n8n.halovisionai.cloud/webhook/halovisionchatbot997655',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Webhook error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      let assistantMessage = '';
-
-      if (Array.isArray(data) && data.length > 0) {
-        assistantMessage =
-          data[0]?.json?.response ||
-          data[0]?.json?.message ||
-          data[0]?.json?.output ||
-          JSON.stringify(data[0]?.json || '');
-      } else if (typeof data === 'object') {
-        assistantMessage =
-          data?.response ||
-          data?.message ||
-          data?.output ||
-          data?.text ||
-          JSON.stringify(data);
-      } else if (typeof data === 'string') {
-        assistantMessage = data;
-      }
-
-      if (!assistantMessage) {
-        assistantMessage = t.chatError || 'No response received.';
-      }
-
-      const cleanMessage = assistantMessage
-        .replace(/<[^>]*>/g, '')
-        .replace(/\*\*/g, '')
-        .replace(/#+/g, '')
-        .replace(/[`>]/g, '')
-        .trim();
-
-      setMessages(prev => [...prev, { role: 'assistant', content: cleanMessage }]);
-    } catch (error) {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: t.chatError || 'Oops! Something went wrong.' },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /* ---------- INPUT ---------- */
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInput(value);
-
     const limit = longMessagesSent < 2 ? 2000 : 500;
-    setLimitWarning(value.length > limit ? t.chatCharLimit || 'Character limit reached.' : null);
-
+    setLimitWarning(value.length > limit ? "Message too long" : null);
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 40) + 'px';
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 80) + 'px';
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!limitWarning) handleSend();
-    }
-  };
-
-  const placeholderText =
-    t.chatInputPlaceholder ||
-    (language === 'de'
-      ? 'Frage unseren KI-Agenten'
-      : language === 'fr'
-      ? 'Posez votre question'
-      : 'Any questions?');
-
-  /* ---------- RENDER ---------- */
   return (
     <>
       <link href="https://fonts.cdnfonts.com/css/anurati" rel="stylesheet" />
 
-      {/* OPEN BUTTON with FADE ANIMATION */}
+      {/* Toggle Button */}
       <button
         ref={buttonRef}
         onClick={toggleChat}
         className="fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-full
-                   px-4 py-3 border border-white
-                   backdrop-blur-sm transition-all hover:scale-110 font-semibold"
-        style={{
-          backgroundColor: `rgba(255, 255, 255, ${buttonBrightness * 0.9})`,
-          color: buttonBrightness > 0.5 ? '#000000' : '#ffffff',
-          transition: 'background-color 0.3s ease, color 0.3s ease',
-        }}
-        aria-label={t.askHaloAI}
+                   px-4 py-3 border border-black transition-all hover:scale-110 font-bold text-black 
+                   shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none bg-white/40 backdrop-blur-md"
+        style={{ backgroundColor: `rgba(255, 255, 255, ${buttonBrightness > 0 ? 0.9 : 0.4})` }}
       >
         <MessageSquare className="w-6 h-6" />
-        <span>{t.askHaloAI || 'Ask Halo AI'}</span>
+        <span className="uppercase tracking-widest text-xs">{t.askHaloAI || 'Ask Halo AI'}</span>
       </button>
 
-      {/* CHAT WINDOW */}
+      {/* Chat Window */}
       {isOpen && (
         <div
           ref={chatRef}
           className={`fixed bottom-24 left-6 z-50 w-11/12 max-w-[24rem]
-          h-[400px] md:h-[600px]
-          flex flex-col backdrop-blur-xl bg-transparent border border-white rounded-3xl
-          shadow-md overflow-hidden
-          transform transition-all duration-300 ease-out
-          ${animateOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
-        `}
+          h-[500px] md:h-[600px] flex flex-col backdrop-blur-2xl bg-white/60 border-2 border-black rounded-3xl
+          shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transform transition-all duration-300 ease-out
+          ${animateOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         >
-          {/* HEADER */}
-          <div className="bg-black/80 text-white p-4 flex items-center justify-between rounded-t-3xl">
+          {/* Header */}
+          <div className="bg-black text-white p-5 flex items-center justify-between">
             <div>
-              <div
-                className="font-bold select-none"
-                style={{
-                  fontFamily: 'Anurati, sans-serif',
-                  fontSize: '1.1rem',
-                  letterSpacing: '0.12em',
-                }}
-              >
+              <div className="font-bold select-none" style={{ fontFamily: 'Anurati, sans-serif', fontSize: '1rem', letterSpacing: '0.15em' }}>
                 HALOVISION AI
               </div>
-              <div className="text-xs text-gray-300">{t.chatSub}</div>
+              <div className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t.chatSub}</div>
             </div>
-            <button onClick={closeChat} className="hover:bg-white/20 p-2 rounded-full">
+            <button onClick={closeChat} className="hover:bg-white/20 p-2 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* MESSAGES */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
             {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-2xl ${
+              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm font-medium ${
                     message.role === 'user'
-                      ? 'bg-black text-white'
-                      : 'bg-transparent text-white border border-white'
+                      ? 'bg-black text-white shadow-md'
+                      : 'bg-white/20 text-black border border-black'
                   }`}
                 >
                   {message.content}
@@ -333,58 +295,57 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
               </div>
             ))}
 
-            {recommendations.length > 0 && !isLoading && (
-              <div className="flex flex-col gap-2">
-                <div className="text-xs text-gray-300 text-center">{t.suggestions}</div>
-                {recommendations
-                  .slice(0, window.innerWidth < 768 ? 1 : 3)
-                  .map((rec, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSend(rec)}
-                      className="bg-transparent text-white border border-white p-3 rounded-2xl hover:bg-white/10 text-left text-sm"
-                    >
-                      {rec}
-                    </button>
-                  ))}
-              </div>
-            )}
-
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-transparent text-white border border-white p-3 rounded-2xl">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                </div>
+                <ThinkingProcess language={language} />
               </div>
             )}
 
+            {/* Recommendations Section */}
+            {recommendations.length > 0 && !isLoading && (
+              <div className="flex flex-col gap-2 pt-2 animate-in fade-in slide-in-from-bottom-2">
+                <div className="text-[10px] font-black uppercase text-black/40 text-center">{t.suggestions}</div>
+                {recommendations.slice(0, 3).map((rec, index) => (
+                  <button key={index} onClick={() => handleSendMessage(rec)}
+                    className="bg-white/40 text-black border border-black p-3 rounded-xl hover:bg-black hover:text-white transition-all text-left text-xs font-bold"
+                  >
+                    {rec}
+                  </button>
+                ))}
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT */}
-          <div className="p-4 bg-transparent border-t border-white flex items-end gap-2 rounded-b-3xl">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              rows={1}
-              style={{ lineHeight: '1.25rem' }}
-              placeholder={placeholderText}
-              className="flex-1 px-4 py-2 rounded-full border border-white focus:outline-none focus:ring-2 focus:ring-white bg-transparent text-white resize-none overflow-y-auto max-h-10"
-            />
-            <button
-              onClick={() => handleSend()}
-              disabled={isLoading || !input.trim()}
-              className="bg-transparent text-white border border-white p-2 rounded-full hover:bg-white/10 disabled:opacity-50"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+          {/* Input Area */}
+          <div className="p-4 bg-white/20 border-t border-black flex flex-col gap-2">
+            {limitWarning && (
+              <div className="text-[10px] text-red-500 font-bold uppercase animate-pulse">
+                {limitWarning}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={(e) => { 
+                  if (e.key === 'Enter' && !e.shiftKey) { 
+                    e.preventDefault(); 
+                    submitInput(); 
+                  } 
+                }}
+                rows={1}
+                placeholder={t.chatInputPlaceholder}
+                className="flex-1 px-4 py-2 rounded-xl border border-black focus:ring-1 focus:ring-black bg-white/50 text-black placeholder:text-black/40 resize-none text-sm font-bold"
+              />
+              <button onClick={submitInput} disabled={isLoading || !input.trim() || !!limitWarning}
+                className="bg-black text-white p-2.5 rounded-xl hover:scale-105 transition-transform disabled:opacity-30 disabled:hover:scale-100"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-
-          {limitWarning && (
-            <div className="text-xs text-red-500 text-center pb-2">{limitWarning}</div>
-          )}
         </div>
       )}
     </>
