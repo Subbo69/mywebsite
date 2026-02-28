@@ -1,8 +1,7 @@
 export const translations = {
   en: {
     heroTitle: "Turn Manual Workflows Into Autonomous Revenue Engines",
-    heroSubtitle:
-      "We eliminate repetitive work and build AI systems that generate revenue, reduce costs, and scale your operations.",
+    heroSubtitle: "Custom AI agents for your business.",
     letsTalk: "Let's Talk",
     startJourney: "Book Your Free Automation Audit",
     askAI: "Test Our AI Agent",
@@ -13,6 +12,13 @@ export const translations = {
     available: "24/7",
     aiSolutions: "Revenue-Driven AI Systems",
     growth: "Measurable Growth",
+
+    // Hero & Chat UI
+    openingChat: "Opening Chat Panel...",
+    askAiAgent: "Ask our AI Agent",
+    askAiAgentButton: "Ask AI Agent",
+    sendingMessage: "Sending message...",
+    howCanWeHelp: "How can we help you?",
 
     servicesTitle: "What AI Automation Does For You",
     servicesSubtitle:
@@ -70,6 +76,8 @@ export const translations = {
     growthMappingCall: "Free Automation Audit",
     growthMappingDesc:
       "30-minute strategy session. Includes:",
+    duration: "30 Min",
+    locale: "en-US",
     analysisStep:
       "Workflow breakdown & bottleneck identification.",
     auditStep:
@@ -112,7 +120,7 @@ export const translations = {
     chatGreeting:
       "Hi, I'm your automation assistant. Ask me how AI can optimize your business.",
     chatSub: "Automation Support",
-    chatInputPlaceholder: "Ask about automation opportunities...",
+    chatInputPlaceholder: "Ask about automations...",
     suggestions: "Suggested questions",
 
     chatRecommendations: {
@@ -146,8 +154,7 @@ export const translations = {
 
   de: {
     heroTitle: "Manuelle Workflows in autonome Umsatzmaschinen verwandeln",
-    heroSubtitle:
-      "Wir eliminieren repetitive Arbeit und entwickeln KI-Systeme, die Umsatz steigern, Kosten senken und Prozesse skalieren.",
+    heroSubtitle: "Individuelle KI-Agenten für Unternehmen.",
     letsTalk: "Kontakt",
     startJourney: "Kostenlosen Automations-Audit buchen",
     askAI: "KI-Agent testen",
@@ -158,6 +165,13 @@ export const translations = {
     available: "24/7",
     aiSolutions: "Umsatzgetriebene KI-Systeme",
     growth: "Messbares Wachstum",
+
+    // Hero & Chat UI
+    openingChat: "Chat-Panel wird geöffnet...",
+    askAiAgent: "Frage unseren KI-Agenten",
+    askAiAgentButton: "KI-Agent fragen",
+    sendingMessage: "Nachricht wird gesendet...",
+    howCanWeHelp: "Wie können wir dir helfen?",
 
     servicesTitle: "Was KI-Automatisierung für dich leistet",
     servicesSubtitle:
@@ -215,6 +229,8 @@ export const translations = {
     growthMappingCall: "Kostenloser Automations-Audit",
     growthMappingDesc:
       "30-minütige Strategie-Session. Enthält:",
+    duration: "30 Min",
+    locale: "de-DE",
     analysisStep: "Workflow-Analyse & Engpass-Identifikation.",
     auditStep: "Automationspotenzial & ROI-Mapping.",
     nextSteps: "Konkreter Umsetzungsplan.",
@@ -242,7 +258,7 @@ export const translations = {
       "Fehler beim Absenden. Bitte erneut versuchen.",
 
     chatGreeting:
-      "Hi, ich bin dein Automations-Assistent.",
+      "Hi, ich bin dein Automations-Assistent. Frag mich, wie KI dein Business optimieren kann.",
     chatSub: "Automation Support",
     chatInputPlaceholder: "Frage zur Automatisierung...",
     suggestions: "Vorschläge",
@@ -253,13 +269,32 @@ export const translations = {
         "Wie automatisiere ich Leadgenerierung?",
         "Welche Prozesse zuerst automatisieren?",
       ],
+      "lead-generation": [
+        "Wie kann KI Leads automatisch qualifizieren?",
+        "Kann ich Outbound-Prospecting automatisieren?",
+        "Wie verbinde ich KI mit meinem CRM?",
+      ],
+      "custom-solutions": [
+        "Können Sie KI in meine Tools integrieren?",
+        "Wie funktionieren LLM-Systeme im Betrieb?",
+        "Welche Backend-Automatisierung bauen Sie?",
+      ],
+      "save-time": [
+        "Welche manuellen Aufgaben zuerst eliminieren?",
+        "Wie viele Stunden spart Automatisierung wirklich?",
+        "Wie messe ich den ROI von KI-Automatisierung?",
+      ],
+      examples: [
+        "Welche Automationssysteme haben Sie gebaut?",
+        "Wie verbindet sich n8n mit LLMs?",
+        "Kann Onboarding automatisiert werden?",
+      ],
     },
   },
 
   fr: {
     heroTitle: "Transformez vos processus manuels en moteurs de revenus autonomes",
-    heroSubtitle:
-      "Nous éliminons le travail répétitif et construisons des systèmes IA qui augmentent vos revenus et réduisent vos coûts.",
+    heroSubtitle: "Agents IA personnalisés pour entreprises.",
     letsTalk: "Contact",
     startJourney: "Réservez votre audit IA gratuit",
     askAI: "Tester l'agent IA",
@@ -271,31 +306,38 @@ export const translations = {
     aiSolutions: "Systèmes IA orientés revenus",
     growth: "Croissance mesurable",
 
+    // Hero & Chat UI
+    openingChat: "Ouverture du chat...",
+    askAiAgent: "Demander à notre agent IA",
+    askAiAgentButton: "Demander à l'IA",
+    sendingMessage: "Envoi du message...",
+    howCanWeHelp: "Comment pouvons-nous vous aider ?",
+
     servicesTitle: "Ce que l'automatisation IA vous apporte",
     servicesSubtitle:
       "Nous analysons vos processus et construisons des systèmes intelligents pour éliminer le travail manuel et améliorer l'efficacité.",
 
     leadGeneration: "Génération de leads IA",
     leadGenerationDesc:
-      "Des systèmes autonomes qualifient et nourrissent vos prospects en continu pour optimiser vos revenus.",
+      "Des systèmes autonomes qualifient et nourrissent vos prospects en continu pour optimiser vos revenus sans suivi manuel.",
 
     customSolutions: "Automatisation avancée des workflows",
     customSolutionsDesc:
-      "Intégrations LLM et architecture intelligente pour connecter CRM, opérations et ventes.",
+      "Intégrations LLM et architecture intelligente pour connecter CRM, opérations et ventes de manière fluide.",
 
     saveTime: "Économisez 20+ heures par semaine",
     saveTimeDesc:
-      "Automatisez les tâches répétitives et concentrez-vous sur la croissance.",
+      "Automatisez la saisie de données et les relances. Libérez votre équipe pour qu'elle se concentre sur la stratégie.",
 
     exampleAgents: "Exemples de systèmes",
     exampleAgentsDesc:
       "Nous développons des automatisations pour:",
     exampleAgentsList: [
       "Qualification automatique des leads",
-      "Support client IA",
-      "Automatisation des ventes",
-      "Tableaux de bord temps réel",
-      "Onboarding automatisé",
+      "Support client IA avec base de connaissances",
+      "Automatisation des propositions commerciales",
+      "Tableaux de bord de performance en direct",
+      "Onboarding client automatisé",
     ],
 
     whyUsTitle: "Pourquoi nous choisir",
@@ -306,31 +348,33 @@ export const translations = {
       "Dashboards personnalisés",
     ],
     reasonsDesc: [
-      "Spécialistes des architectures IA avancées.",
-      "Chaque solution vise un impact business mesurable.",
-      "Flexibilité technique complète.",
-      "Insights en temps réel.",
+      "Spécialistes des architectures IA avancées et des intégrations API.",
+      "Chaque solution vise un impact business mesurable et concret.",
+      "Flexibilité technique complète, sans limitations de modèles.",
+      "Suivi des gains de productivité en temps réel.",
     ],
 
     customBuilt: "Jayden Mikus – Architecte IA",
     customBuiltDesc:
-      "Spécialisé dans la création de systèmes IA scalables qui transforment les processus manuels en moteurs de revenus.",
+      "Spécialisé dans la création de systèmes IA scalables qui transforment les processus manuels en moteurs de revenus via n8n et les LLM.",
 
     rapidDeployment:
-      "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations.",
+      "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations quotidiennes.",
 
     workWithUs: "Travaillez avec nous",
     workWithUsDesc:
-      "Commencez avec un audit IA gratuit de 30 minutes.",
+      "Commencez avec un audit IA gratuit de 30 minutes pour découvrir vos opportunités.",
     bookCall: "Réservez votre audit IA gratuit",
 
     growthMappingCall: "Audit IA gratuit",
     growthMappingDesc:
       "Session stratégique de 30 minutes incluant:",
-    analysisStep: "Analyse des processus.",
-    auditStep: "Identification des opportunités IA.",
-    nextSteps: "Plan d'action personnalisé.",
-    agencyNote: "Pour entreprises ambitieuses.",
+    duration: "30 Min",
+    locale: "fr-FR",
+    analysisStep: "Analyse détaillée des processus.",
+    auditStep: "Identification des opportunités d'automatisation.",
+    nextSteps: "Plan d'action et roadmap personnalisés.",
+    agencyNote: "Pour les entreprises prêtes à passer à l'échelle.",
 
     testimonialsTitle: "Résultats",
     clientReviewsTitle: "Résultats clients",
@@ -345,25 +389,45 @@ export const translations = {
     revenueRange: "Revenu mensuel",
     selectRevenueRange: "Choisir la tranche",
     website: "Site web",
-    businessDescription: "Processus actuels",
+    businessDescription: "Processus actuels et goulots d'étranglement",
     reason: "Objectif avec l'IA?",
     back: "Retour",
     submit: "Planifier l'audit",
     submitting: "Envoi...",
     bookingError:
-      "Erreur lors de l'envoi.",
+      "Erreur lors de l'envoi. Veuillez réessayer.",
 
     chatGreeting:
-      "Bonjour, je suis votre assistant automatisation.",
+      "Bonjour, je suis votre assistant automatisation. Demandez-moi comment l'IA peut optimiser votre entreprise.",
     chatSub: "Support IA",
     chatInputPlaceholder: "Question sur l'automatisation...",
     suggestions: "Suggestions",
 
     chatRecommendations: {
       general: [
-        "Où l'IA peut-elle m'aider?",
-        "Comment automatiser mes ventes?",
-        "Par où commencer?",
+        "Où l'IA peut-elle m'aider à gagner du temps ?",
+        "Comment automatiser ma génération de leads ?",
+        "Par quels processus devrais-je commencer ?",
+      ],
+      "lead-generation": [
+        "Comment l'IA peut-elle qualifier mes prospects ?",
+        "Puis-je automatiser la prospection sortante ?",
+        "Comment connecter l'IA à mon CRM ?",
+      ],
+      "custom-solutions": [
+        "Pouvez-vous intégrer l'IA à mes outils actuels ?",
+        "Comment fonctionnent les systèmes LLM en entreprise ?",
+        "Quelles automatisations backend construisez-vous ?",
+      ],
+      "save-time": [
+        "Quelles tâches manuelles éliminer en priorité ?",
+        "Combien d'heures l'IA peut-elle vraiment sauver ?",
+        "Comment mesurer le ROI de l'automatisation ?",
+      ],
+      examples: [
+        "Quels systèmes d'automatisation avez-vous déjà créés ?",
+        "Comment n8n se connecte-t-il aux LLM ?",
+        "Pouvez-vous automatiser mon onboarding ?",
       ],
     },
   },
