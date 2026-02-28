@@ -1,0 +1,126 @@
+import { useEffect, useRef } from 'react';
+
+export default function GlobalParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+
+    const PARTICLE_COUNT = 2200; 
+    const HISTORY_FRAMES = 120; 
+
+    let particles: any[] = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let mouseHistory: {x: number, y: number}[] = Array(HISTORY_FRAMES).fill({ ...mouse });
+    let ticker = 0;
+    let waveActive = false;
+    let lastWaveTime = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    const getParticleColor = (x: number, y: number, opacity: number) => {
+      const diagScore = (x + y) / (canvas.width + canvas.height);
+      // Dark Indigo/Purple for light background visibility
+      const hue = diagScore > 0.45 ? 245 : 275; 
+      return `hsla(${hue}, 70%, 40%, ${opacity})`;
+    };
+
+    const init = () => {
+      particles = [];
+      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = i * angleStep;
+        const radius = Math.sqrt(i) * 16; 
+        const z = 0.5 + Math.random();
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          offsetX: (Math.cos(angle) * radius),
+          offsetY: (Math.sin(angle) * radius),
+          z: z, 
+          baseSize: Math.max(0.4, 1.2 * (1 - i / PARTICLE_COUNT)) * z,
+          baseOpacity: Math.max(0.04, 0.22 * (1 - i / PARTICLE_COUNT)),
+          randomOffset: Math.random() * 600,
+          delayFrames: Math.floor((i / PARTICLE_COUNT) * 100) 
+        });
+      }
+    };
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      let clientX, clientY;
+      if ('touches' in e && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
+      }
+      mouse.x = clientX;
+      mouse.y = clientY;
+    };
+
+    const animate = (time: number) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ticker += 0.005; 
+
+      if (!waveActive && time - lastWaveTime > 7000) {
+        waveActive = true;
+        lastWaveTime = time;
+        setTimeout(() => { waveActive = false; }, 3000);
+      }
+
+      mouseHistory.push({ ...mouse });
+      if (mouseHistory.length > HISTORY_FRAMES) mouseHistory.shift();
+
+      particles.forEach((p) => {
+        const delayedMouse = mouseHistory[mouseHistory.length - 1 - p.delayFrames] || mouseHistory[0];
+        const targetX = delayedMouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 5);
+        const targetY = delayedMouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 5);
+
+        p.x += (targetX - p.x) * (0.016 * p.z);
+        p.y += (targetY - p.y) * (0.016 * p.z);
+
+        let swell = 0;
+        if (waveActive) {
+          const dist = Math.sqrt((p.x - mouse.x)**2 + (p.y - mouse.y)**2);
+          swell = Math.max(0, Math.sin((dist * 0.006) - (ticker * 2)) * 1.5);
+        }
+
+        const size = p.baseSize * (1 + (swell * 0.15));
+        const color = getParticleColor(p.x, p.y, Math.min(0.4, p.baseOpacity + (swell * 0.08)));
+
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', handleMove);
+    resize();
+    init();
+    requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMove);
+    };
+  }, []);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="fixed inset-0 pointer-events-none -z-10" 
+      style={{ background: 'white' }}
+    />
+  );
+}
