@@ -16,9 +16,17 @@ export const translations = {
     // Hero & Chat UI
     openingChat: "Opening Chat Panel...",
     askAiAgent: "Ask our AI Agent",
-    askAiAgentButton: "Ask AI Agent",
+    askAiAgentButton: "Test Support AI",
     sendingMessage: "Sending message...",
     howCanWeHelp: "How can we help you?",
+    
+    // Ghost Placeholders & Video
+    heroPlaceholder1: "Type your vision...",
+    heroPlaceholder2: "Ask about our process...",
+    heroPlaceholder3: "Start a conversation...",
+    playIntro: "Play intro",
+    videoAmbientTitle: "Ambient Background",
+    videoFullTitle: "Full Video",
 
     servicesTitle: "What AI Automation Does For You",
     servicesSubtitle:
@@ -168,10 +176,18 @@ export const translations = {
 
     // Hero & Chat UI
     openingChat: "Chat-Panel wird geöffnet...",
-    askAiAgent: "Frage unseren KI-Agenten",
+    askAiAgent: "Support-KI testen",
     askAiAgentButton: "KI-Agent fragen",
     sendingMessage: "Nachricht wird gesendet...",
     howCanWeHelp: "Wie können wir dir helfen?",
+    
+    // Ghost Placeholders & Video
+    heroPlaceholder1: "Deine Vision eingeben...",
+    heroPlaceholder2: "Frage nach unserem Prozess...",
+    heroPlaceholder3: "Gespräch beginnen...",
+    playIntro: "Intro abspielen",
+    videoAmbientTitle: "Hintergrundvideo",
+    videoFullTitle: "Vollständiges Video",
 
     servicesTitle: "Was KI-Automatisierung für dich leistet",
     servicesSubtitle:
@@ -308,10 +324,18 @@ export const translations = {
 
     // Hero & Chat UI
     openingChat: "Ouverture du chat...",
-    askAiAgent: "Demander à notre agent IA",
+    askAiAgent: "Tester l'IA de support",
     askAiAgentButton: "Demander à l'IA",
     sendingMessage: "Envoi du message...",
     howCanWeHelp: "Comment pouvons-nous vous aider ?",
+    
+    // Ghost Placeholders & Video
+    heroPlaceholder1: "Écrivez votre vision...",
+    heroPlaceholder2: "Interrogez notre processus...",
+    heroPlaceholder3: "Démarrer une conversation...",
+    playIntro: "Lire l'intro",
+    videoAmbientTitle: "Vidéo d'ambiance",
+    videoFullTitle: "Vidéo complète",
 
     servicesTitle: "Ce que l'automatisation IA vous apporte",
     servicesSubtitle:
