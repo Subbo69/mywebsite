@@ -2,6 +2,37 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Sparkles, Database, Brain, Terminal } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 
+// --- SNAPPY TYPING ANIMATION COMPONENT WITH AUTO-SCROLL ---
+function TypingMessage({ content, onComplete, scrollRef }: { 
+  content: string; 
+  onComplete?: () => void;
+  scrollRef: React.RefObject<HTMLDivElement>;
+}) {
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < content.length) {
+      // 9ms is roughly 40% faster than the previous 15ms speed
+      const timeout = setTimeout(() => {
+        setDisplayedText((prev) => prev + content[currentIndex]);
+        setCurrentIndex((prev) => prev + 1);
+      }, 9);
+
+      // Keep the scroll synchronized with the growing text
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+      
+      return () => clearTimeout(timeout);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }, [currentIndex, content, onComplete, scrollRef]);
+
+  return <span>{displayedText}</span>;
+}
+
 // --- CLEAN & MINIMALIST THINKING COMPONENT ---
 function ThinkingProcess({ language }: { language: Language }) {
   const [step, setStep] = useState(0);
@@ -16,7 +47,7 @@ function ThinkingProcess({ language }: { language: Language }) {
   useEffect(() => {
     const interval = setInterval(() => {
       setStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 1600); 
+    }, 1200); 
     return () => clearInterval(interval);
   }, [steps.length]);
 
@@ -64,14 +95,12 @@ interface ChatBotProps {
 export default function ChatBot({ context, onContextUsed, language }: ChatBotProps) {
   const t = translations[language];
 
-  // UI & ANIMATION STATE
   const [isOpen, setIsOpen] = useState(false);
   const [animateOpen, setAnimateOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [buttonBrightness, setButtonBrightness] = useState(0);
 
-  // CHAT LOGIC STATE
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; isNew?: boolean }>>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<string[]>([]);
@@ -80,6 +109,7 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
   const [pendingMsg, setPendingMsg] = useState<string | null>(null);
 
   const chatRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -92,12 +122,13 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(scrollToBottom, [messages, isLoading]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
-  // Handle Initial Greeting
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([{ role: 'assistant', content: t.chatGreeting }]);
+      setMessages([{ role: 'assistant', content: t.chatGreeting, isNew: false }]);
     }
   }, [language, t.chatGreeting]);
 
@@ -128,9 +159,9 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
         .replace(/[`>]/g, '')
         .trim();
       
-      setMessages(prev => [...prev, { role: 'assistant', content: cleanMessage }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: cleanMessage, isNew: true }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Error connecting to service." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Error connecting to service.", isNew: true }]);
     } finally {
       setIsLoading(false);
     }
@@ -143,20 +174,14 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
     }
   };
 
-  // RESTORED RECOMMENDATION LOGIC
   useEffect(() => {
     if (context) {
       openChat();
-      
-      // List of valid keys in chatRecommendations
       const validCategories = ['general', 'lead-generation', 'custom-solutions', 'save-time', 'examples'];
-      
       if (validCategories.includes(context)) {
-        // It's a category: Show recommendations
         const recs = t.chatRecommendations?.[context as keyof typeof t.chatRecommendations] || t.chatRecommendations?.general || [];
         setRecommendations(recs);
       } else {
-        // It's a custom message: Send it immediately
         setPendingMsg(context);
       }
       onContextUsed();
@@ -281,16 +306,32 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+          <div 
+            ref={scrollAreaRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide scroll-smooth"
+          >
             {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-3 rounded-2xl text-sm font-medium ${
+              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm font-medium transition-all ${
                     message.role === 'user'
                       ? 'bg-black text-white shadow-md'
-                      : 'bg-white/20 text-black border border-black'
+                      : 'bg-white/20 text-black border border-black shadow-sm'
                   }`}
                 >
-                  {message.content}
+                  {message.role === 'assistant' && message.isNew ? (
+                    <TypingMessage 
+                      content={message.content} 
+                      scrollRef={scrollAreaRef}
+                      onComplete={() => {
+                        const newMsgs = [...messages];
+                        newMsgs[index].isNew = false;
+                        setMessages(newMsgs);
+                        scrollToBottom();
+                      }} 
+                    />
+                  ) : (
+                    message.content
+                  )}
                 </div>
               </div>
             ))}
@@ -314,7 +355,7 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
                 ))}
               </div>
             )}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-2" />
           </div>
 
           {/* Input Area */}
