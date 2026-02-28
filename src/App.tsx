@@ -7,6 +7,7 @@ import WhyUs from './components/WhyUs';
 import WorkWithUs from './components/WorkWithUs';
 import BookingModal from './components/BookingModal';
 import ChatBot from './components/ChatBot';
+import GlobalParticles from './components/GlobalParticles'; // Import here
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -18,27 +19,36 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Header
-        onBookingClick={() => setIsBookingOpen(true)}
-        language={language}
-        onLanguageChange={setLanguage}
-      />
-      <Hero
-        onBookingClick={() => setIsBookingOpen(true)}
-        onAskAIClick={() => openChatWithContext('general')}
-        language={language}
-      />
-      <Services
-        onAskAIClick={(context: string) => openChatWithContext(context)}
-        language={language}
-      />
-      <Testimonials />
-      <WhyUs language={language} />
-      <WorkWithUs
-        onBookingClick={() => setIsBookingOpen(true)}
-        language={language}
-      />
+    <div className="relative min-h-screen">
+      {/* 1. This sits fixed in the background of the whole site */}
+      <GlobalParticles />
+
+      {/* 2. All content must be z-10 to sit on top of the canvas */}
+      <div className="relative z-10">
+        <Header
+          onBookingClick={() => setIsBookingOpen(true)}
+          language={language}
+          onLanguageChange={setLanguage}
+        />
+        
+        {/* IMPORTANT: Ensure these components do not have solid bg-white classes inside them */}
+        <Hero
+          onBookingClick={() => setIsBookingOpen(true)}
+          onAskAIClick={() => openChatWithContext('general')}
+          language={language}
+        />
+        <Services
+          onAskAIClick={(context: string) => openChatWithContext(context)}
+          language={language}
+        />
+        <Testimonials />
+        <WhyUs language={language} />
+        <WorkWithUs
+          onBookingClick={() => setIsBookingOpen(true)}
+          language={language}
+        />
+      </div>
+
       <BookingModal
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
