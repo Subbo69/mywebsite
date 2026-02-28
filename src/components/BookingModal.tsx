@@ -116,7 +116,7 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
               <div className="mt-auto space-y-3 md:space-y-4 pt-6 md:pt-8 border-t border-white/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
                 <SummaryRow
                   icon={<CalIcon className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
-                  label={selectedDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE', {
+                  label={selectedDate.toLocaleDateString(t.locale, {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -129,7 +129,7 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
                 />
                 <SummaryRow 
                   icon={<Timer className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />} 
-                  label="30 Min" 
+                  label={t.duration} 
                 />
               </div>
             )}
@@ -161,9 +161,6 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
   );
 }
 
-/**
- * Reusable Row for the Left Panel Summary
- */
 function SummaryRow({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-4 text-gray-200">
