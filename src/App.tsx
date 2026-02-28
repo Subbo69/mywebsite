@@ -7,7 +7,7 @@ import WhyUs from './components/WhyUs';
 import WorkWithUs from './components/WorkWithUs';
 import BookingModal from './components/BookingModal';
 import ChatBot from './components/ChatBot';
-import GlobalParticles from './components/GlobalParticles'; // Import here
+import GlobalParticles from './components/GlobalParticles'; // Ensure this file exists!
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -19,11 +19,13 @@ function App() {
   };
 
   return (
-    <div className="relative min-h-screen">
-      {/* 1. This sits fixed in the background of the whole site */}
+    // "relative" is required here so children can use "z-index"
+    <div className="relative min-h-screen bg-white">
+      
+      {/* 1. THE BACKGROUND LAYER (Fixed) */}
       <GlobalParticles />
 
-      {/* 2. All content must be z-10 to sit on top of the canvas */}
+      {/* 2. THE CONTENT LAYER (Sits on top of animation) */}
       <div className="relative z-10">
         <Header
           onBookingClick={() => setIsBookingOpen(true)}
@@ -31,30 +33,39 @@ function App() {
           onLanguageChange={setLanguage}
         />
         
-        {/* IMPORTANT: Ensure these components do not have solid bg-white classes inside them */}
         <Hero
           onBookingClick={() => setIsBookingOpen(true)}
           onAskAIClick={() => openChatWithContext('general')}
           language={language}
         />
+        
         <Services
           onAskAIClick={(context: string) => openChatWithContext(context)}
           language={language}
         />
+        
         <Testimonials />
+        
         <WhyUs language={language} />
+        
         <WorkWithUs
           onBookingClick={() => setIsBookingOpen(true)}
           language={language}
         />
       </div>
 
+      {/* 3. MODALS & UI OVERLAYS */}
       <BookingModal
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         language={language}
       />
-      <ChatBot context={chatContext} onContextUsed={() => setChatContext('')} language={language} />
+      
+      <ChatBot 
+        context={chatContext} 
+        onContextUsed={() => setChatContext('')} 
+        language={language} 
+      />
     </div>
   );
 }
