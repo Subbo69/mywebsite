@@ -66,3 +66,4 @@ export function convertTimeToTimezone(timeStr: string, fromTimezone: string, toT
 
   return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
 }
+
