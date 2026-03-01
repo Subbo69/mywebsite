@@ -187,6 +187,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const init = () => {
       particles = [];
       const angleStep = Math.PI * (3 - Math.sqrt(5)); 
+      
+      // LOGIC: Detect mobile and boost dot size by 10%
+      const isMobile = window.innerWidth < 768;
+      const sizeMultiplier = isMobile ? 1.10 : 1.0;
+      const mobileFloor = isMobile ? 0.6 : 0.4;
+
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const angle = i * angleStep;
         const radius = Math.sqrt(i) * 21.12; 
@@ -197,7 +203,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           offsetX: (Math.cos(angle) * radius),
           offsetY: (Math.sin(angle) * radius),
           z: z, 
-          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
+          baseSize: (Math.max(mobileFloor, 1.72 * (1 - i / PARTICLE_COUNT)) * z) * sizeMultiplier,
           baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
           randomOffset: Math.random() * 600
         });
@@ -368,8 +374,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[10px] p-4 md:p-10">
-          {/* Closer to the edge with larger hit area */}
-          <button onClick={() => setIsModalOpen(false)} className="absolute top-2 right-2 md:top-4 md:right-4 p-6 z-[110] group">
+          <button 
+            onClick={() => setIsModalOpen(false)} 
+            className="absolute top-2 right-2 md:top-4 md:right-4 p-6 z-[110] group"
+          >
             <X className="w-8 h-8 md:w-12 md:h-12 text-black group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
           </button>
           
