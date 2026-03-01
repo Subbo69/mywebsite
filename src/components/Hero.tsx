@@ -238,6 +238,23 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
+      {/* Styles for the custom blinking gradient cursor */}
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .typewriter-cursor {
+          display: inline-block;
+          width: 4px;
+          height: 0.9em;
+          margin-left: 4px;
+          vertical-align: middle;
+          background: linear-gradient(to bottom, #a855f7, #3b82f6);
+          animation: blink 1s step-end infinite;
+        }
+      `}</style>
+
       <canvas 
         ref={canvasRef} 
         className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
@@ -251,7 +268,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             style={{ fontFamily: '"Montserrat", sans-serif' }}
           >
             <span>{displayText}</span>
-            {isTyping && <span className="animate-pulse font-light ml-1 opacity-60">|</span>}
+            {/* Improved Gradient Blinking Cursor */}
+            {isTyping && <span className="typewriter-cursor" />}
             <span className="opacity-0 select-none" aria-hidden="true">
               {fullText.slice(displayText.length)}
             </span>
