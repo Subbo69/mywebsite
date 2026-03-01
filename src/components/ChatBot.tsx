@@ -13,13 +13,11 @@ function TypingMessage({ content, onComplete, scrollRef }: {
 
   useEffect(() => {
     if (currentIndex < content.length) {
-      // 9ms is roughly 40% faster than the previous 15ms speed
       const timeout = setTimeout(() => {
         setDisplayedText((prev) => prev + content[currentIndex]);
         setCurrentIndex((prev) => prev + 1);
       }, 9);
 
-      // Keep the scroll synchronized with the growing text
       if (scrollRef.current) {
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
@@ -107,6 +105,7 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
   const [longMessagesSent, setLongMessagesSent] = useState(0);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
   const [pendingMsg, setPendingMsg] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -117,6 +116,13 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -346,7 +352,7 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
             {recommendations.length > 0 && !isLoading && (
               <div className="flex flex-col gap-2 pt-2 animate-in fade-in slide-in-from-bottom-2">
                 <div className="text-[10px] font-black uppercase text-black/40 text-center">{t.suggestions}</div>
-                {recommendations.slice(0, 3).map((rec, index) => (
+                {recommendations.slice(0, isMobile ? 2 : recommendations.length).map((rec, index) => (
                   <button key={index} onClick={() => handleSendMessage(rec)}
                     className="bg-white/40 text-black border border-black p-3 rounded-xl hover:bg-black hover:text-white transition-all text-left text-xs font-bold"
                   >
