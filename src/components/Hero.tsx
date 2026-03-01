@@ -368,9 +368,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[10px] p-4 md:p-10">
-          <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 md:top-8 md:right-8 p-4 z-[110]">
-            <X className="w-8 h-8 md:w-10 md:h-10 text-black hover:scale-110 transition-transform" />
+          {/* Closer to the edge with larger hit area */}
+          <button onClick={() => setIsModalOpen(false)} className="absolute top-2 right-2 md:top-4 md:right-4 p-6 z-[110] group">
+            <X className="w-8 h-8 md:w-12 md:h-12 text-black group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
           </button>
+          
           <div className="relative w-full max-w-[95vw] h-full max-h-[90vh] flex items-center justify-center">
             <div className="w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-zinc-200">
               <iframe
