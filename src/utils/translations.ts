@@ -168,7 +168,7 @@ export const translations = {
 
   de: {
     heroTitle: "Manuelle Workflows in autonome Umsatz-Maschinen verwandeln",
-    heroSubtitle: "Individuelle KI-Automatisierung für Ihr Business",
+    heroSubtitle: "Individuelle KI-Automatisierung für Ihr Business.",
     letsTalk: "Kontakt",
     startJourney: "Kostenlosen Automations-Audit buchen",
     askAI: "KI-Agent testen",
@@ -323,7 +323,7 @@ export const translations = {
 
   fr: {
     heroTitle: "Transformez vos processus manuels en moteurs de revenus autonomes",
-    heroSubtitle: "Automatisations IA personnalisées pour votre business",
+    heroSubtitle: "Automatisations IA personnalisées pour votre business.",
     letsTalk: "Contact",
     startJourney: "Réservez votre audit IA gratuit",
     askAI: "Tester l'agent IA",
