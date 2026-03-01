@@ -224,6 +224,15 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     resize(); init(); animate();
   }, []);
 
+  // ESC Key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -324,6 +333,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                   query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
                 }`}
               >
+                <span className="sr-only">Send</span>
                 <Send className="w-5 h-5" />
               </button>
             </form>
@@ -332,7 +342,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
         {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
         <div 
-          className="w-full max-w-7xl sticky top-32 transition-all duration-700"
+          className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
         >
           <div 
@@ -341,7 +351,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => setIsHoveringVideo(false)}
-            className="group relative aspect-video w-full rounded-2xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
+            className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
           >
             <div 
               className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
@@ -357,30 +367,38 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             </div>
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`}
-              className="absolute inset-0 w-full h-full opacity-60 grayscale pointer-events-none"
-            />
+            
+            {/* Conditional render: Stop bg video when modal is open */}
+            {!isModalOpen && (
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
+                className="absolute inset-[-2%] w-[104%] h-[104%] opacity-60 grayscale pointer-events-none object-cover scale-110"
+                style={{ border: 'none' }}
+              />
+            )}
           </div>
         </div>
       </div>
 
       {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[10px] p-4 md:p-10">
-          {/* Closer to the edge with larger hit area */}
-          <button onClick={() => setIsModalOpen(false)} className="absolute top-2 right-2 md:top-4 md:right-4 p-6 z-[110] group">
-            <X className="w-8 h-8 md:w-12 md:h-12 text-black group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
-          </button>
-          
-          <div className="relative w-full max-w-[95vw] h-full max-h-[90vh] flex items-center justify-center">
-            <div className="w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-zinc-200">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
-                className="w-full h-full"
-                allow="autoplay; encrypted-media; fullscreen"
-              />
-            </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
+            <button 
+              onClick={() => setIsModalOpen(false)} 
+              className="absolute top-4 right-4 p-3 z-[130] group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-all"
+              aria-label="Close video"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+            
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&modestbranding=1&rel=0&showinfo=0`}
+              className="w-[102%] h-[102%] ml-[-1%] mt-[-1%] scale-105"
+              allow="autoplay; encrypted-media; fullscreen"
+              title="Intro Video"
+              style={{ border: 'none' }}
+            />
           </div>
         </div>
       )}
