@@ -53,8 +53,8 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-12 bg-black text-white w-full border-t border-white/5">
-      {/* Add Custom Arrow Animation Style */}
+    <section ref={sectionRef} className="py-12 md:py-20 bg-black text-white w-full border-t border-white/5">
+      {/* Custom Arrow Animation Style */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes subtleBounce {
           0%, 100% { transform: translateX(0); }
@@ -65,34 +65,41 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
         }
       `}} />
 
-      <div className="max-w-2xl mx-auto px-6">
+      {/* Main Container - max-width increased for PC (md:max-w-3xl) */}
+      <div className="max-w-2xl md:max-w-3xl mx-auto px-6">
         
-        {/* Compressed Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold tracking-tight mb-1">{t.workWithUs}</h2>
-          <p className="text-xs text-gray-500">{t.workWithUsDesc}</p>
+        {/* Header - Scaled text and margins for PC */}
+        <div className="mb-6 md:mb-10">
+          <h2 className="text-2xl md:text-4xl font-bold tracking-tight mb-1 md:mb-3">
+            {t.workWithUs}
+          </h2>
+          <p className="text-xs md:text-sm text-gray-500">
+            {t.workWithUsDesc}
+          </p>
         </div>
 
-        {/* Console Box (Now strictly for text) */}
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-5 mb-8">
-          <div className="space-y-2.5">
+        {/* Console Box - Increased padding and inner line spacing for PC */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-5 md:p-8 mb-8 md:mb-12">
+          <div className="space-y-2.5 md:space-y-4">
             {planSteps.map((_, index) => (
               <div 
                 key={index} 
-                className={`flex items-center gap-3 transition-opacity duration-300 ${
+                className={`flex items-center gap-3 md:gap-5 transition-opacity duration-300 ${
                   activeStep >= index ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 transition-colors duration-300 ${
+                {/* Icon scaled up on PC */}
+                <CheckCircle2 className={`w-3.5 h-3.5 md:w-5 md:h-5 shrink-0 transition-colors duration-300 ${
                   typedText[index].length === planSteps[index].length 
                     ? 'text-green-500' 
                     : 'text-white/10'
                 }`} />
                 
-                <p className="font-mono text-[13px] text-gray-300 leading-none">
+                {/* Text scaled up on PC (md:text-[17px]) */}
+                <p className="font-mono text-[13px] md:text-[17px] text-gray-300 leading-none">
                   {typedText[index]}
                   {activeStep === index && typedText[index].length < planSteps[index].length && (
-                    <span className="inline-block w-1.5 h-3 ml-1 bg-white animate-pulse" />
+                    <span className="inline-block w-1.5 h-3 md:w-2 md:h-4 ml-1 bg-white animate-pulse" />
                   )}
                 </p>
               </div>
@@ -100,22 +107,22 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
           </div>
         </div>
 
-        {/* CTA Button - Outside and Animated */}
+        {/* CTA Button - Increased padding and text size for PC */}
         <div className={`flex justify-center transition-all duration-1000 transform ${
           showButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}>
           <button
             onClick={onBookingClick}
-            className="group relative flex items-center gap-3 rounded-full bg-white px-8 py-3 text-sm font-black text-black hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            className="group relative flex items-center gap-3 rounded-full bg-white px-8 py-3 md:px-10 md:py-4 text-sm md:text-base font-black text-black hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
           >
             <span className="uppercase tracking-wider">{t.bookCall}</span>
-            <ArrowRight className="w-4 h-4 animate-arrow-bounce" />
+            <ArrowRight className="w-4 h-4 md:w-5 md:h-5 animate-arrow-bounce" />
           </button>
         </div>
 
-        {/* Minimal Copyright */}
-        <div className="mt-12 text-center opacity-20">
-          <p className="text-[9px] tracking-[0.4em] uppercase">
+        {/* Minimal Copyright - Slightly adjusted size for better PC balance */}
+        <div className="mt-12 md:mt-20 text-center opacity-20">
+          <p className="text-[9px] md:text-[11px] tracking-[0.4em] uppercase">
             © {new Date().getFullYear()} Halovision AI
           </p>
         </div>
