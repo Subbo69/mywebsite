@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 import { useEffect, useRef, useState } from 'react';
 
@@ -11,140 +11,104 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   const t = translations[language];
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [animationProgress, setAnimationProgress] = useState(-90);
-  const [lightOpacity, setLightOpacity] = useState(0);
-  const [animationCount, setAnimationCount] = useState(0);
-  const timersRef = useRef<NodeJS.Timeout[]>([]);
+  
+  const [activeStep, setActiveStep] = useState(0);
+  const [typedText, setTypedText] = useState(['', '', '', '']);
+  const [showButton, setShowButton] = useState(false);
 
-  const currentYear = new Date().getFullYear();
-
-  // --- BUTTON SWEEP ANIMATION LOGIC ---
-  const runAnimation = () => {
-    let startTime: number | null = null;
-    const duration = 3294;
-
-    const animateSweep = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const eased =
-        progress < 0.5
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      if (progress < 0.05) {
-        setLightOpacity(progress / 0.05);
-      } else if (progress > 0.92) {
-        setLightOpacity((1 - progress) / 0.08);
-      } else {
-        setLightOpacity(1);
-      }
-
-      setAnimationProgress(-90 + eased * 360);
-
-      if (progress < 1) {
-        requestAnimationFrame(animateSweep);
-      } else {
-        setAnimationCount((prev) => prev + 1);
-      }
-    };
-
-    requestAnimationFrame(animateSweep);
-  };
+  const planSteps = [
+    t.planStep1,
+    t.planStep2,
+    t.planStep3,
+    t.planStep4
+  ];
 
   useEffect(() => {
-    timersRef.current.forEach((timer) => clearTimeout(timer));
-    timersRef.current = [];
+    if (isVisible && activeStep < planSteps.length) {
+      const currentFullText = planSteps[activeStep];
+      const currentTyped = typedText[activeStep];
 
-    if (isVisible) {
-      const firstTimer = setTimeout(() => { runAnimation(); }, 2300);
-      timersRef.current.push(firstTimer);
-      const secondTimer = setTimeout(() => { runAnimation(); }, 27000);
-      timersRef.current.push(secondTimer);
+      if (currentTyped.length < currentFullText.length) {
+        const timeout = setTimeout(() => {
+          const newTyped = [...typedText];
+          newTyped[activeStep] = currentFullText.slice(0, currentTyped.length + 1);
+          setTypedText(newTyped);
+        }, 15); // Etwas schneller, da mehr Zeilen
+        return () => clearTimeout(timeout);
+      } else {
+        const nextStepTimeout = setTimeout(() => {
+          setActiveStep(prev => prev + 1);
+        }, 300);
+        return () => clearTimeout(nextStepTimeout);
+      }
+    } else if (activeStep === planSteps.length) {
+      const btnTimeout = setTimeout(() => setShowButton(true), 400);
+      return () => clearTimeout(btnTimeout);
     }
-
-    return () => {
-      timersRef.current.forEach((timer) => clearTimeout(timer));
-    };
-  }, [isVisible]);
+  }, [isVisible, activeStep, typedText, planSteps]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setIsVisible(true);
-          else setIsVisible(false);
-        });
-      },
-      { threshold: 0.3 }
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.2 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => { if (sectionRef.current) observer.unobserve(sectionRef.current); };
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-16 bg-black text-white overflow-hidden">
+    <section ref={sectionRef} className="relative py-24 bg-black text-white overflow-hidden">
       <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-        <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
           {t.workWithUs}
         </h2>
 
-        <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
           {t.workWithUsDesc}
         </p>
 
-        <div className="relative inline-block">
-          {/* Animated Border/Glow effect */}
-          <div
-            className="absolute inset-0 rounded-full pointer-events-none"
-            style={{
-              padding: '1px',
-              transform: 'scale(1.06)',
-            }}
-          >
-            <div
-              className="absolute w-full h-full rounded-full"
-              style={{
-                background: `conic-gradient(from ${animationProgress}deg, transparent 0%, transparent 85%, rgba(255,255,255,0.2) 88%, rgba(255,255,255,0.7) 90%, #ffffff 91.5%, #ffffff 92%, rgba(255,255,255,0.7) 93%, rgba(255,255,255,0.2) 95%, transparent 97%)`,
-                filter: 'blur(0.3px)',
-                opacity: lightOpacity,
-              }}
-            />
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 md:p-12 mb-12 max-w-xl mx-auto text-left backdrop-blur-sm shadow-2xl">
+          <div className="grid grid-cols-1 gap-8">
+            {planSteps.map((_, index) => (
+              <div 
+                key={index} 
+                className={`flex items-start gap-4 transition-all duration-700 ${
+                  activeStep >= index ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+                }`}
+              >
+                <div className="mt-1">
+                  <CheckCircle2 className={`w-5 h-5 transition-colors duration-500 ${
+                    typedText[index].length === planSteps[index].length 
+                      ? 'text-green-400' 
+                      : 'text-white/5'
+                  }`} />
+                </div>
+                {/* whitespace-pre-line ist hier der entscheidende Teil für das "Enter" */}
+                <p className="font-mono text-sm md:text-base leading-relaxed text-gray-300 whitespace-pre-line">
+                  {typedText[index]}
+                  {activeStep === index && typedText[index].length < planSteps[index].length && (
+                    <span className="inline-block w-2 h-4 ml-1 bg-white animate-pulse" />
+                  )}
+                </p>
+              </div>
+            ))}
           </div>
+        </div>
 
+        <div 
+          className={`transition-all duration-1000 transform ${
+            showButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
+          }`}
+        >
           <button
             onClick={onBookingClick}
-            className="
-              relative
-              rounded-full
-              bg-white
-              px-10
-              py-4
-              text-lg
-              font-bold
-              flex
-              items-center
-              gap-3
-              text-black
-              hover:scale-105
-              active:scale-95
-              transition-all
-              duration-200
-              shadow-[0_0_20px_rgba(255,255,255,0.3)]
-            "
+            className="group relative inline-flex items-center gap-3 rounded-full bg-white px-10 py-4 text-lg font-bold text-black hover:bg-gray-100 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
           >
             <span>{t.bookCall}</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>
       </div>
-
-      <footer className="relative z-10 mt-16 border-t border-white/10 pt-8 text-center text-xs text-gray-500">
-        <div className="max-w-4xl mx-auto px-6">
-          <p>© {currentYear} Halovision AI. All rights reserved.</p>
-        </div>
-      </footer>
     </section>
   );
 }
