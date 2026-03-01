@@ -76,10 +76,16 @@ export const translations = {
     rapidDeployment:
       "Focus on scaling your company while intelligent systems handle the operational workload.",
 
-    workWithUs: "Work With Us",
+    workWithUs: "Ready to Automate?",
     workWithUsDesc:
-      "Start with a free 30-minute Automation Audit to uncover inefficiencies and revenue opportunities.",
+      "Follow our 4-step process to transform your business operations with custom AI agents.",
     bookCall: "Book Your Free Automation Audit",
+
+    // 4-Step Plan (Improved Action-First)
+    planStep1: "1. Discovery: Identify operational bottlenecks.",
+    planStep2: "2. Strategy: Map measurable ROI opportunities.",
+    planStep3: "3. Blueprint: Design custom AI architecture.",
+    planStep4: "4. Scale: Automate and accelerate growth.",
 
     growthMappingCall: "Free Automation Audit",
     growthMappingDesc:
@@ -237,10 +243,16 @@ export const translations = {
     rapidDeployment:
       "Konzentriere dich auf Wachstum, während intelligente Systeme deine Prozesse übernehmen.",
 
-    workWithUs: "Mit uns arbeiten",
+    workWithUs: "Bereit für Automatisierung?",
     workWithUsDesc:
-      "Starte mit einem kostenlosen 30-minütigen Automations-Audit.",
+      "Unser 4-Schritt-Prozess transformiert Ihre operativen Abläufe durch maßgeschneiderte KI-Agenten.",
     bookCall: "Kostenlosen Automations-Audit buchen",
+
+    // 4-Schritt-Plan (Optimiert)
+    planStep1: "1. Analyse: Engpässe präzise identifizieren.",
+    planStep2: "2. Strategie: Messbare ROI-Ziele definieren.",
+    planStep3: "3. Blueprint: KI-Architektur konzipieren.",
+    planStep4: "4. Scale: Wachstum nachhaltig automatisieren.",
 
     growthMappingCall: "Kostenloser Automations-Audit",
     growthMappingDesc:
@@ -385,10 +397,16 @@ export const translations = {
     rapidDeployment:
       "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations quotidiennes.",
 
-    workWithUs: "Travaillez avec nous",
+    workWithUs: "Prêt pour l'automatisation ?",
     workWithUsDesc:
-      "Commencez avec un audit IA gratuit de 30 minutes pour découvrir vos opportunités.",
+      "Suivez notre processus en 4 étapes pour transformer vos opérations grâce à des agents IA sur mesure.",
     bookCall: "Réservez votre audit IA gratuit",
+
+    // Plan en 4 étapes (Action-First)
+    planStep1: "1. Analyse : Identifier les blocages opérationnels.",
+    planStep2: "2. Stratégie : Définir des objectifs ROI mesurables.",
+    planStep3: "3. Architecture : Concevoir votre système IA sur mesure.",
+    planStep4: "4. Scale : Automatiser et accélérer la croissance.",
 
     growthMappingCall: "Audit IA gratuit",
     growthMappingDesc:
