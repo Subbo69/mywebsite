@@ -238,7 +238,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
-      {/* Styles for the custom blinking gradient cursor */}
+      {/* Styles for the custom gradient cursor */}
       <style>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }
@@ -252,6 +252,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           vertical-align: middle;
           background: linear-gradient(to bottom, #a855f7, #3b82f6);
           animation: blink 1s step-end infinite;
+        }
+        /* Pauses the blink while the "is-typing" class is present */
+        .typewriter-cursor.is-typing {
+          animation: none;
+          opacity: 1;
         }
       `}</style>
 
@@ -268,8 +273,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             style={{ fontFamily: '"Montserrat", sans-serif' }}
           >
             <span>{displayText}</span>
-            {/* Improved Gradient Blinking Cursor */}
-            {isTyping && <span className="typewriter-cursor" />}
+            {/* Added is-typing class here based on isTyping state */}
+            {displayText.length < fullText.length && (
+               <span className={`typewriter-cursor ${isTyping ? 'is-typing' : ''}`} />
+            )}
             <span className="opacity-0 select-none" aria-hidden="true">
               {fullText.slice(displayText.length)}
             </span>
