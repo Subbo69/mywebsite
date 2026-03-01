@@ -112,10 +112,10 @@ export const translations = {
     workWithUsDesc: "Follow our 4-step process to transform your business operations with custom AI agents.",
     bookCall: "Book Your Free Automation Audit",
 
-    planStep1: "1. Discovery: Identify operational bottlenecks.",
-    planStep2: "2. Strategy: Map measurable ROI opportunities.",
-    planStep3: "3. Blueprint: Design custom AI architecture.",
-    planStep4: "4. Scale: Automate and accelerate growth.",
+    planStep1: "1. Audit: 30-min strategy call to find your best AI leverage.",
+    planStep2: "2. Prototype: We build your custom AI agent & logic backend.",
+    planStep3: "3. Integrate: Seamless connection to your CRM & existing tools.",
+    planStep4: "4. Deploy: Go live with 24/7 autonomous revenue engines.",
 
     growthMappingCall: "Free Automation Audit",
     growthMappingDesc: "30-minute strategy session. Includes:",
