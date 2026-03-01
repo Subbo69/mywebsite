@@ -121,7 +121,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
         </div>
 
         {/* Minimal Copyright - Slightly adjusted size for better PC balance */}
-        <div className="mt-12 md:mt-20 text-center opacity-20">
+        <div className="mt-12 md:mt-20 text-center opacity-60">
           <p className="text-[9px] md:text-[11px] tracking-[0.4em] uppercase">
             © {new Date().getFullYear()} Halovision AI
           </p>
