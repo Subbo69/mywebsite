@@ -428,10 +428,10 @@ export const translations = {
     workWithUsDesc: "Suivez notre processus en 4 étapes pour transformer vos opérations grâce à des agents IA sur mesure.",
     bookCall: "Réservez votre audit IA gratuit",
 
-    planStep1: "1. Audit : Appel stratégique de 30 min pour cibler l'IA.",
-    planStep2: "2. Prototype : Création de votre agent IA et du backend logic.",
-    planStep3: "3. Intégration : Connexion fluide à votre CRM et vos outils.",
-    planStep4: "4. Déploiement : Mise en service de vos moteurs de revenus 24/7.",
+    planStep1: "1. Audit : Session stratégique de 30 min pour identifier vos flux à haut ROI.",
+    planStep2: "2. Stratégie : Cartographie de votre architecture IA et de la logique des agents.",
+    planStep3: "3. Construction : Développement de vos agents et connexion à vos outils.",
+    planStep4: "4. Go Live : Lancez vos automatisations personnalisées avec IA intégrée.",
 
     growthMappingCall: "Audit IA gratuit",
     growthMappingDesc: "Session stratégique de 30 minutes incluant:",
