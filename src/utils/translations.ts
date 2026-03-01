@@ -29,24 +29,58 @@ export const translations = {
     videoFullTitle: "Full Video",
 
     servicesTitle: "What AI Automation Does For You",
-    servicesSubtitle:
-      "We design and deploy AI agents tailored to your workflows to eliminate manual work, unlock efficiency, and drive predictable growth.",
+    servicesSubtitle: "We design and deploy AI agents tailored to your workflows to eliminate manual work, unlock efficiency, and drive predictable growth.",
 
+    // 12 Granular Nodes for the Marquee
+    node1Title: "Save 20+ Hours",
+    node1Desc: "Eliminate repetitive admin work. Free your team from the manual grind and redirect energy toward high-level strategy.",
+    node2Title: "Lead Acquisition",
+    node2Desc: "Deploy autonomous systems that identify and qualify leads 24/7. Never let a warm prospect go cold again.",
+    node3Title: "Custom n8n Flows",
+    node3Desc: "Architecting complex logic between your tools. We build the 'brain' that connects your entire tech stack.",
+    node4Title: "Instant Response",
+    node4Desc: "AI agents that reply to customer inquiries in seconds with perfect accuracy, increasing conversion rates.",
+    node5Title: "LLM Integration",
+    node5Desc: "Deep integration of GPT-4o, Claude, and Llama into your private business data for intelligent decision making.",
+    node6Title: "ROI Dashboards",
+    node6Desc: "Live transparency. See exactly how much time and money your automations are saving you every single day.",
+    node7Title: "Auto-Onboarding",
+    node7Desc: "Automate client contracts, folder creation, and welcome sequences. First impressions, handled perfectly.",
+    node8Title: "Error Reduction",
+    node8Desc: "AI doesn't get tired. Eliminate human data-entry errors through structured, automated validation flows.",
+    node9Title: "API Connectivity",
+    node9Desc: "We bridge the gap between tools that don't talk to each other, creating a unified flow of information.",
+    node10Title: "Sales Nurturing",
+    node10Desc: "Intelligent follow-ups that adapt based on prospect sentiment, booking meetings while you sleep.",
+    node11Title: "Task Automation",
+    node11Desc: "Routine document generation, meeting summaries, and report filing handled by background agents.",
+    node12Title: "Agent Strategy",
+    node12Desc: "Consulting on the 'Automation First' mindset. We help you identify where AI yields the highest ROI.",
+
+    // Categories & UI for Modal
+    catEfficiency: "Efficiency",
+    catGrowth: "Growth",
+    catTech: "Tech",
+    catSupport: "Support",
+    catInfra: "Infrastructure",
+    catData: "Data",
+    catOps: "Ops",
+    catQuality: "Quality",
+    catConsulting: "Consulting",
+    exploreAI: "Explore with AI",
+    close: "Close",
+    impactTime: "-20hrs/week",
+    impactLive: "24/7",
+
+    // Original Service Keys (For backward compatibility if needed)
     leadGeneration: "AI-Powered Lead Acquisition",
-    leadGenerationDesc:
-      "Deploy autonomous systems that identify, qualify, and nurture leads 24/7. No missed opportunities. No manual tracking. Just a continuously optimized pipeline that turns traffic into revenue.",
-
+    leadGenerationDesc: "Deploy autonomous systems that identify, qualify, and nurture leads 24/7. No missed opportunities. No manual tracking. Just a continuously optimized pipeline that turns traffic into revenue.",
     customSolutions: "Deep Workflow Automation",
-    customSolutionsDesc:
-      "We analyze your internal processes and remove bottlenecks using advanced LLM integrations and intelligent automation flows. From CRM to operations — fully connected, fully optimized.",
-
+    customSolutionsDesc: "We analyze your internal processes and remove bottlenecks using advanced LLM integrations and intelligent automation flows. From CRM to operations — fully connected, fully optimized.",
     saveTime: "Eliminate 20+ Hours Per Week",
-    saveTimeDesc:
-      "Manual data entry, follow-ups, internal coordination — automated. Free your team from repetitive work and redirect that energy toward sales, strategy, and growth.",
-
+    saveTimeDesc: "Manual data entry, follow-ups, internal coordination — automated. Free your team from repetitive work and redirect that energy toward sales, strategy, and growth.",
     exampleAgents: "Example Automation Systems",
-    exampleAgentsDesc:
-      "We build intelligent systems across departments:",
+    exampleAgentsDesc: "We build intelligent systems across departments:",
     exampleAgentsList: [
       "Autonomous inbound & outbound lead qualification",
       "AI customer support agents integrated with your knowledge base",
@@ -70,36 +104,27 @@ export const translations = {
     ],
 
     customBuilt: "Jayden Mikus – AI Automation Architect",
-    customBuiltDesc:
-      "I'm Jayden Mikus, an AI automation specialist focused on building scalable backend systems using LLMs and n8n. I design intelligent automation architectures that eliminate manual workflows and transform them into revenue-generating systems. My expertise lies in connecting APIs, structuring automation logic, optimizing prompts, and deploying production-ready AI solutions that create measurable business impact.",
+    customBuiltDesc: "I'm Jayden Mikus, an AI automation specialist focused on building scalable backend systems using LLMs and n8n. I design intelligent automation architectures that eliminate manual workflows and transform them into revenue-generating systems. My expertise lies in connecting APIs, structuring automation logic, optimizing prompts, and deploying production-ready AI solutions that create measurable business impact.",
 
-    rapidDeployment:
-      "Focus on scaling your company while intelligent systems handle the operational workload.",
+    rapidDeployment: "Focus on scaling your company while intelligent systems handle the operational workload.",
 
     workWithUs: "Ready to Automate?",
-    workWithUsDesc:
-      "Follow our 4-step process to transform your business operations with custom AI agents.",
+    workWithUsDesc: "Follow our 4-step process to transform your business operations with custom AI agents.",
     bookCall: "Book Your Free Automation Audit",
 
-    // 4-Step Plan (Improved Action-First)
     planStep1: "1. Discovery: Identify operational bottlenecks.",
     planStep2: "2. Strategy: Map measurable ROI opportunities.",
     planStep3: "3. Blueprint: Design custom AI architecture.",
     planStep4: "4. Scale: Automate and accelerate growth.",
 
     growthMappingCall: "Free Automation Audit",
-    growthMappingDesc:
-      "30-minute strategy session. Includes:",
+    growthMappingDesc: "30-minute strategy session. Includes:",
     duration: "30 Min",
     locale: "en-US",
-    analysisStep:
-      "Workflow breakdown & bottleneck identification.",
-    auditStep:
-      "Automation opportunity mapping (revenue + time savings).",
-    nextSteps:
-      "Clear implementation roadmap tailored to your business.",
-    agencyNote:
-      "For serious businesses ready to scale with AI.",
+    analysisStep: "Workflow breakdown & bottleneck identification.",
+    auditStep: "Automation opportunity mapping (revenue + time savings).",
+    nextSteps: "Clear implementation roadmap tailored to your business.",
+    agencyNote: "For serious businesses ready to scale with AI.",
 
     testimonialsTitle: "Results",
     clientReviewsTitle: "Client Results",
@@ -118,51 +143,26 @@ export const translations = {
     selectRevenueRange: "Select revenue range",
     website: "Business Website",
     websitePlaceholder: "https://example.com",
-    businessDescription:
-      "Describe your current workflows & biggest bottlenecks",
-    businessDescriptionPlaceholder:
-      "Explain your manual processes, tools used, and growth goals...",
+    businessDescription: "Describe your current workflows & biggest bottlenecks",
+    businessDescriptionPlaceholder: "Explain your manual processes, tools used, and growth goals...",
     reason: "Primary Goal With AI?",
-    reasonPlaceholder:
-      "Increase revenue, reduce costs, improve efficiency, etc.",
+    reasonPlaceholder: "Increase revenue, reduce costs, improve efficiency, etc.",
     back: "Back",
     submit: "Schedule Audit",
     submitting: "Submitting...",
-    bookingError:
-      "There was an error submitting your booking. Please try again.",
+    bookingError: "There was an error submitting your booking. Please try again.",
 
-    chatGreeting:
-      "Hi, I'm your automation assistant. Ask me how AI can optimize your business.",
+    chatGreeting: "Hi, I'm your automation assistant. Ask me how AI can optimize your business.",
     chatSub: "Automation Support",
     chatInputPlaceholder: "Ask about automations...",
     suggestions: "Suggested questions",
 
     chatRecommendations: {
-      general: [
-        "Where can AI save me the most time?",
-        "How do I automate my lead generation?",
-        "What workflows should I automate first?",
-      ],
-      "lead-generation": [
-        "How can AI qualify leads automatically?",
-        "Can I automate outbound prospecting?",
-        "How do I connect AI to my CRM?",
-      ],
-      "custom-solutions": [
-        "Can you integrate AI into my existing tools?",
-        "How do LLM-based systems work in operations?",
-        "What backend automation do you build?",
-      ],
-      "save-time": [
-        "Which manual tasks should I eliminate first?",
-        "How many hours can automation realistically save?",
-        "How do I measure ROI from AI automation?",
-      ],
-      examples: [
-        "What real automation systems have you built?",
-        "How does n8n connect with LLMs?",
-        "Can you automate my onboarding process?",
-      ],
+      general: ["Where can AI save me the most time?", "How do I automate my lead generation?", "What workflows should I automate first?"],
+      "lead-generation": ["How can AI qualify leads automatically?", "Can I automate outbound prospecting?", "How do I connect AI to my CRM?"],
+      "custom-solutions": ["Can you integrate AI into my existing tools?", "How do LLM-based systems work in operations?", "What backend automation do you build?"],
+      "save-time": ["Which manual tasks should I eliminate first?", "How many hours can automation realistically save?", "How do I measure ROI from AI automation?"],
+      examples: ["What real automation systems have you built?", "How does n8n connect with LLMs?", "Can you automate my onboarding process?"],
     },
   },
 
@@ -196,24 +196,57 @@ export const translations = {
     videoFullTitle: "Vollständiges Video",
 
     servicesTitle: "Was KI-Automatisierung für dich leistet",
-    servicesSubtitle:
-      "Wir analysieren deine Prozesse und bauen intelligente Systeme, die manuelle Arbeit eliminieren und Effizienz freisetzen.",
+    servicesSubtitle: "Wir analysieren deine Prozesse und bauen intelligente Systeme, die manuelle Arbeit eliminieren und Effizienz freisetzen.",
+
+    // 12 Granular Nodes (German)
+    node1Title: "20+ Std. sparen",
+    node1Desc: "Eliminieren Sie repetitive Admin-Aufgaben. Befreien Sie Ihr Team von Routinearbeit für strategisches Wachstum.",
+    node2Title: "Lead-Akquise",
+    node2Desc: "Autonome Systeme, die Leads rund um die Uhr identifizieren und qualifizieren. Kein Lead geht mehr verloren.",
+    node3Title: "Eigene n8n Flows",
+    node3Desc: "Komplexe Logik zwischen Ihren Tools. Wir bauen das 'Gehirn', das Ihren gesamten Tech-Stack verbindet.",
+    node4Title: "Sofort-Antwort",
+    node4Desc: "KI-Agenten, die Kundenanfragen in Sekunden präzise beantworten und die Konversionsrate steigern.",
+    node5Title: "LLM Integration",
+    node5Desc: "Tiefe Integration von GPT-4o und Claude in Ihre privaten Geschäftsdaten für intelligente Entscheidungen.",
+    node6Title: "ROI Dashboards",
+    node6Desc: "Live-Transparenz. Sehen Sie täglich, wie viel Zeit und Geld Ihre Automatisierungen einsparen.",
+    node7Title: "Auto-Onboarding",
+    node7Desc: "Automatisieren Sie Verträge und Begrüßungssequenzen. Ein perfekter erster Eindruck, ganz automatisch.",
+    node8Title: "Fehlerreduktion",
+    node8Desc: "KI wird nicht müde. Eliminieren Sie Tippfehler durch strukturierte, automatisierte Validierungsprozesse.",
+    node9Title: "API Konnektivität",
+    node9Desc: "Wir schließen die Lücke zwischen isolierten Tools und schaffen einen nahtlosen Informationsfluss.",
+    node10Title: "Sales Nurturing",
+    node10Desc: "Intelligente Follow-ups, die sich dem Kunden anpassen und Termine buchen, während Sie schlafen.",
+    node11Title: "Task Automation",
+    node11Desc: "Dokumentenerstellung und Berichte werden im Hintergrund von intelligenten Agenten erledigt.",
+    node12Title: "Agenten-Strategie",
+    node12Desc: "Beratung zum 'Automation First'-Mindset. Wir finden die Hebel mit dem höchsten ROI.",
+
+    // Categories & UI (German)
+    catEfficiency: "Effizienz",
+    catGrowth: "Wachstum",
+    catTech: "Technik",
+    catSupport: "Support",
+    catInfra: "Infrastruktur",
+    catData: "Daten",
+    catOps: "Betrieb",
+    catQuality: "Qualität",
+    catConsulting: "Beratung",
+    exploreAI: "Mit KI erkunden",
+    close: "Schließen",
+    impactTime: "-20 Std/Woche",
+    impactLive: "24/7 Live",
 
     leadGeneration: "KI-gestützte Leadgenerierung",
-    leadGenerationDesc:
-      "Autonome Systeme identifizieren, qualifizieren und pflegen Leads rund um die Uhr. Keine verpassten Chancen. Keine manuelle Nachverfolgung. Nur ein optimierter Umsatzprozess.",
-
+    leadGenerationDesc: "Autonome Systeme identifizieren, qualifizieren und pflegen Leads rund um die Uhr. Keine verpassten Chancen. Keine manuelle Nachverfolgung. Nur ein optimierter Umsatzprozess.",
     customSolutions: "Tiefgehende Workflow-Automatisierung",
-    customSolutionsDesc:
-      "Wir entfernen Engpässe durch LLM-Integrationen und intelligente Automationsarchitekturen – von CRM bis Operations vollständig vernetzt.",
-
+    customSolutionsDesc: "Wir entfernen Engpässe durch LLM-Integrationen und intelligente Automationsarchitekturen – von CRM bis Operations vollständig vernetzt.",
     saveTime: "20+ Stunden pro Woche einsparen",
-    saveTimeDesc:
-      "Dateneingabe, Follow-ups, interne Abstimmungen – automatisiert. Dein Team fokussiert sich auf Wachstum statt Routinearbeit.",
-
+    saveTimeDesc: "Dateneingabe, Follow-ups, interne Abstimmungen – automatisiert. Dein Team fokussiert sich auf Wachstum statt Routinearbeit.",
     exampleAgents: "Beispiel-Systeme",
-    exampleAgentsDesc:
-      "Wir entwickeln intelligente Automationen für:",
+    exampleAgentsDesc: "Wir entwickeln intelligente Automationen für:",
     exampleAgentsList: [
       "Lead-Qualifizierung in Echtzeit",
       "KI-Kundensupport mit Wissensdatenbank",
@@ -223,12 +256,7 @@ export const translations = {
     ],
 
     whyUsTitle: "Warum mit uns arbeiten",
-    reasons: [
-      "LLM- & Automationsarchitektur-Expertise",
-      "ROI-Fokus",
-      "Technisch skalierbare Lösungen",
-      "Individuelle Performance-Dashboards",
-    ],
+    reasons: ["LLM- & Automationsarchitektur-Expertise", "ROI-Fokus", "Technisch skalierbare Lösungen", "Individuelle Performance-Dashboards"],
     reasonsDesc: [
       "Spezialisiert auf LLM-Integrationen und skalierbare Automationsarchitekturen mit n8n.",
       "Jede Lösung ist auf messbaren Geschäftserfolg ausgerichtet.",
@@ -237,26 +265,21 @@ export const translations = {
     ],
 
     customBuilt: "Jayden Mikus – KI-Automationsarchitekt",
-    customBuiltDesc:
-      "Ich entwickle skalierbare KI-Backendsysteme mit LLMs und n8n, die manuelle Prozesse eliminieren und in produktive Umsatzsysteme verwandeln.",
+    customBuiltDesc: "Ich entwickle skalierbare KI-Backendsysteme mit LLMs und n8n, die manuelle Prozesse eliminieren und in produktive Umsatzsysteme verwandeln.",
 
-    rapidDeployment:
-      "Konzentriere dich auf Wachstum, während intelligente Systeme deine Prozesse übernehmen.",
+    rapidDeployment: "Konzentriere dich auf Wachstum, während intelligente Systeme deine Prozesse übernehmen.",
 
     workWithUs: "Bereit für Automatisierung?",
-    workWithUsDesc:
-      "Unser 4-Schritt-Prozess transformiert Ihre operativen Abläufe durch maßgeschneiderte KI-Agenten.",
+    workWithUsDesc: "Unser 4-Schritt-Prozess transformiert Ihre operativen Abläufe durch maßgeschneiderte KI-Agenten.",
     bookCall: "Kostenlosen Automations-Audit buchen",
 
-    // 4-Schritt-Plan (Optimiert)
     planStep1: "1. Analyse: Engpässe präzise identifizieren.",
     planStep2: "2. Strategie: Messbare ROI-Ziele definieren.",
     planStep3: "3. Blueprint: KI-Architektur konzipieren.",
     planStep4: "4. Scale: Wachstum nachhaltig automatisieren.",
 
     growthMappingCall: "Kostenloser Automations-Audit",
-    growthMappingDesc:
-      "30-minütige Strategie-Session. Enthält:",
+    growthMappingDesc: "30-minütige Strategie-Session. Enthält:",
     duration: "30 Min",
     locale: "de-DE",
     analysisStep: "Workflow-Analyse & Engpass-Identifikation.",
@@ -282,41 +305,19 @@ export const translations = {
     back: "Zurück",
     submit: "Audit planen",
     submitting: "Wird gesendet...",
-    bookingError:
-      "Fehler beim Absenden. Bitte erneut versuchen.",
+    bookingError: "Fehler beim Absenden. Bitte erneut versuchen.",
 
-    chatGreeting:
-      "Hi, ich bin dein Automations-Assistent. Frag mich, wie KI dein Business optimieren kann.",
+    chatGreeting: "Hi, ich bin dein Automations-Assistent. Frag mich, wie KI dein Business optimieren kann.",
     chatSub: "Automation Support",
     chatInputPlaceholder: "Frage zur Automatisierung...",
     suggestions: "Vorschläge",
 
     chatRecommendations: {
-      general: [
-        "Wo spare ich am meisten Zeit?",
-        "Wie automatisiere ich Leadgenerierung?",
-        "Welche Prozesse zuerst automatisieren?",
-      ],
-      "lead-generation": [
-        "Wie kann KI Leads automatisch qualifizieren?",
-        "Kann ich Outbound-Prospecting automatisieren?",
-        "Wie verbinde ich KI mit meinem CRM?",
-      ],
-      "custom-solutions": [
-        "Können Sie KI in meine Tools integrieren?",
-        "Wie funktionieren LLM-Systeme im Betrieb?",
-        "Welche Backend-Automatisierung bauen Sie?",
-      ],
-      "save-time": [
-        "Welche manuellen Aufgaben zuerst eliminieren?",
-        "Wie viele Stunden spart Automatisierung wirklich?",
-        "Wie messe ich den ROI von KI-Automatisierung?",
-      ],
-      examples: [
-        "Welche Automationssysteme haben Sie gebaut?",
-        "Wie verbindet sich n8n mit LLMs?",
-        "Kann Onboarding automatisiert werden?",
-      ],
+      general: ["Wo spare ich am meisten Zeit?", "Wie automatisiere ich Leadgenerierung?", "Welche Prozesse zuerst automatisieren?"],
+      "lead-generation": ["Wie kann KI Leads automatisch qualifizieren?", "Kann ich Outbound-Prospecting automatisieren?", "Wie verbinde ich KI mit meinem CRM?"],
+      "custom-solutions": ["Können Sie KI in meine Tools integrieren?", "Wie funktionieren LLM-Systeme im Betrieb?", "Welche Backend-Automatisierung bauen Sie?"],
+      "save-time": ["Welche manuellen Aufgaben zuerst eliminieren?", "Wie viele Stunden spart Automatisierung wirklich?", "Wie messe ich den ROI von KI-Automatisierung?"],
+      examples: ["Welche Automationssysteme haben Sie gebaut?", "Wie verbindet sich n8n mit LLMs?", "Kann Onboarding automatisiert werden?"],
     },
   },
 
@@ -350,24 +351,57 @@ export const translations = {
     videoFullTitle: "Vidéo complète",
 
     servicesTitle: "Ce que l'automatisation IA vous apporte",
-    servicesSubtitle:
-      "Nous analysons vos processus et construisons des systèmes intelligents pour éliminer le travail manuel et améliorer l'efficacité.",
+    servicesSubtitle: "Nous analysons vos processus et construisons des systèmes intelligents pour éliminer le travail manuel et améliorer l'efficacité.",
+
+    // 12 Granular Nodes (French)
+    node1Title: "Gagnez 20+ Heures",
+    node1Desc: "Éliminez les tâches administratives répétitives. Libérez votre équipe pour des missions à haute valeur ajoutée.",
+    node2Title: "Acquisition de Leads",
+    node2Desc: "Déployez des systèmes autonomes qui qualifient vos prospects 24h/24 et 7j/7.",
+    node3Title: "Flux n8n Sur Mesure",
+    node3Desc: "Architecture de logique complexe entre vos outils. Nous créons le 'cerveau' de votre stack technique.",
+    node4Title: "Réponse Instantanée",
+    node4Desc: "Des agents IA qui répondent aux clients en quelques secondes avec une précision parfaite.",
+    node5Title: "Intégration LLM",
+    node5Desc: "Intégration profonde de GPT-4o et Claude dans vos données privées pour des décisions intelligentes.",
+    node6Title: "Tableaux de Bord ROI",
+    node6Desc: "Transparence totale. Visualisez le temps et l'argent économisés par vos automatisations en temps réel.",
+    node7Title: "Auto-Onboarding",
+    node7Desc: "Automatisez les contrats et les séquences d'accueil pour une première impression irréprochable.",
+    node8Title: "Réduction d'Erreurs",
+    node8Desc: "L'IA ne fatigue jamais. Éliminez les erreurs de saisie manuelle via des flux de validation automatisés.",
+    node9Title: "Connectivité API",
+    node9Desc: "Nous relions les outils qui ne communiquent pas, créant un flux d'information unifié.",
+    node10Title: "Nurturing de Vente",
+    node10Desc: "Relances intelligentes qui s'adaptent au sentiment du prospect et prennent des rendez-vous pour vous.",
+    node11Title: "Automation de Tâches",
+    node11Desc: "Génération de documents et rapports gérés en arrière-plan par des agents intelligents.",
+    node12Title: "Stratégie d'Agents",
+    node12Desc: "Conseil sur la mentalité 'Automation First'. Identifiez les leviers IA au ROI le plus élevé.",
+
+    // Categories & UI (French)
+    catEfficiency: "Efficacité",
+    catGrowth: "Croissance",
+    catTech: "Technique",
+    catSupport: "Support",
+    catInfra: "Infrastructure",
+    catData: "Données",
+    catOps: "Opérations",
+    catQuality: "Qualité",
+    catConsulting: "Conseil",
+    exploreAI: "Explorer avec l'IA",
+    close: "Fermer",
+    impactTime: "-20h/semaine",
+    impactLive: "24/7 Live",
 
     leadGeneration: "Génération de leads IA",
-    leadGenerationDesc:
-      "Des systèmes autonomes qualifient et nourrissent vos prospects en continu pour optimiser vos revenus sans suivi manuel.",
-
+    leadGenerationDesc: "Des systèmes autonomes qualifient et nourrissent vos prospects en continu pour optimiser vos revenus sans suivi manuel.",
     customSolutions: "Automatisation avancée des workflows",
-    customSolutionsDesc:
-      "Intégrations LLM et architecture intelligente pour connecter CRM, opérations et ventes de manière fluide.",
-
+    customSolutionsDesc: "Intégrations LLM et architecture intelligente pour connecter CRM, opérations et ventes de manière fluide.",
     saveTime: "Économisez 20+ heures par semaine",
-    saveTimeDesc:
-      "Automatisez la saisie de données et les relances. Libérez votre équipe pour qu'elle se concentre sur la stratégie.",
-
+    saveTimeDesc: "Automatisez la saisie de données et les relances. Libérez votre équipe pour qu'elle se concentre sur la stratégie.",
     exampleAgents: "Exemples de systèmes",
-    exampleAgentsDesc:
-      "Nous développons des automatisations pour:",
+    exampleAgentsDesc: "Nous développons des automatisations pour:",
     exampleAgentsList: [
       "Qualification automatique des leads",
       "Support client IA avec base de connaissances",
@@ -377,12 +411,7 @@ export const translations = {
     ],
 
     whyUsTitle: "Pourquoi nous choisir",
-    reasons: [
-      "Expertise LLM & n8n",
-      "Focus ROI",
-      "Solutions évolutives",
-      "Dashboards personnalisés",
-    ],
+    reasons: ["Expertise LLM & n8n", "Focus ROI", "Solutions évolutives", "Dashboards personnalisés"],
     reasonsDesc: [
       "Spécialistes des architectures IA avancées et des intégrations API.",
       "Chaque solution vise un impact business mesurable et concret.",
@@ -391,26 +420,21 @@ export const translations = {
     ],
 
     customBuilt: "Jayden Mikus – Architecte IA",
-    customBuiltDesc:
-      "Spécialisé dans la création de systèmes IA scalables qui transforment les processus manuels en moteurs de revenus via n8n et les LLM.",
+    customBuiltDesc: "Spécialisé dans la création de systèmes IA scalables qui transforment les processus manuels en moteurs de revenus via n8n et les LLM.",
 
-    rapidDeployment:
-      "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations quotidiennes.",
+    rapidDeployment: "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations quotidiennes.",
 
     workWithUs: "Prêt pour l'automatisation ?",
-    workWithUsDesc:
-      "Suivez notre processus en 4 étapes pour transformer vos opérations grâce à des agents IA sur mesure.",
+    workWithUsDesc: "Suivez notre processus en 4 étapes pour transformer vos opérations grâce à des agents IA sur mesure.",
     bookCall: "Réservez votre audit IA gratuit",
 
-    // Plan en 4 étapes (Action-First)
     planStep1: "1. Analyse : Identifier les blocages opérationnels.",
     planStep2: "2. Stratégie : Définir des objectifs ROI mesurables.",
     planStep3: "3. Architecture : Concevoir votre système IA sur mesure.",
     planStep4: "4. Scale : Automatiser et accélérer la croissance.",
 
     growthMappingCall: "Audit IA gratuit",
-    growthMappingDesc:
-      "Session stratégique de 30 minutes incluant:",
+    growthMappingDesc: "Session stratégique de 30 minutes incluant:",
     duration: "30 Min",
     locale: "fr-FR",
     analysisStep: "Analyse détaillée des processus.",
@@ -436,41 +460,19 @@ export const translations = {
     back: "Retour",
     submit: "Planifier l'audit",
     submitting: "Envoi...",
-    bookingError:
-      "Erreur lors de l'envoi. Veuillez réessayer.",
+    bookingError: "Erreur lors de l'envoi. Veuillez réessayer.",
 
-    chatGreeting:
-      "Bonjour, je suis votre assistant automatisation. Demandez-moi comment l'IA peut optimiser votre entreprise.",
+    chatGreeting: "Bonjour, je suis votre assistant automatisation. Demandez-moi comment l'IA peut optimiser votre entreprise.",
     chatSub: "Support IA",
     chatInputPlaceholder: "Question sur l'automatisation...",
     suggestions: "Suggestions",
 
     chatRecommendations: {
-      general: [
-        "Où l'IA peut-elle m'aider à gagner du temps ?",
-        "Comment automatiser ma génération de leads ?",
-        "Par quels processus devrais-je commencer ?",
-      ],
-      "lead-generation": [
-        "Comment l'IA peut-elle qualifier mes prospects ?",
-        "Puis-je automatiser la prospection sortante ?",
-        "Comment connecter l'IA à mon CRM ?",
-      ],
-      "custom-solutions": [
-        "Pouvez-vous intégrer l'IA à mes outils actuels ?",
-        "Comment fonctionnent les systèmes LLM en entreprise ?",
-        "Quelles automatisations backend construisez-vous ?",
-      ],
-      "save-time": [
-        "Quelles tâches manuelles éliminer en priorité ?",
-        "Combien d'heures l'IA peut-elle vraiment sauver ?",
-        "Comment mesurer le ROI de l'automatisation ?",
-      ],
-      examples: [
-        "Quels systèmes d'automatisation avez-vous déjà créés ?",
-        "Comment n8n se connecte-t-il aux LLM ?",
-        "Pouvez-vous automatiser mon onboarding ?",
-      ],
+      general: ["Où l'IA peut-elle m'aider à gagner du temps ?", "Comment automatiser ma génération de leads ?", "Par quels processus devrais-je commencer ?"],
+      "lead-generation": ["Comment l'IA peut-elle qualifier mes prospects ?", "Puis-je automatiser la prospection sortante ?", "Comment connecter l'IA à mon CRM ?"],
+      "custom-solutions": ["Pouvez-vous intégrer l'IA à mes outils actuels ?", "Comment fonctionnent les systèmes LLM en entreprise ?", "Quelles automatisations backend construisez-vous ?"],
+      "save-time": ["Quelles tâches manuelles éliminer en priorité ?", "Combien d'heures l'IA peut-elle vraiment sauver ?", "Comment mesurer le ROI de l'automatisation ?"],
+      examples: ["Quels systèmes d'automatisation avez-vous déjà créés ?", "Comment n8n se connecte-t-il aux LLM ?", "Pouvez-vous automatiser mon onboarding ?"],
     },
   },
 };
