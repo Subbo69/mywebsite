@@ -273,10 +273,10 @@ export const translations = {
     workWithUsDesc: "Unser 4-Schritt-Prozess transformiert Ihre operativen Abläufe durch maßgeschneiderte KI-Agenten.",
     bookCall: "Kostenlosen Automations-Audit buchen",
 
-    planStep1: "1. Audit: 30-Min. Strategie-Call für Ihre KI-Potenziale.",
-    planStep2: "2. Prototyp: Wir bauen Ihren KI-Agenten & Backend-Logik.",
-    planStep3: "3. Integration: Nahtlose Anbindung an CRM & bestehende Tools.",
-    planStep4: "4. Deployment: Live-Gang Ihrer 24/7 autonomen Umsatz-Systeme.",
+    planStep1: "1. Audit: 30-minütiger Strategie-Call zur Analyse Ihrer lukrativsten Workflows.",
+    planStep2: "2. Strategie: Planung Ihrer individuellen KI-Architektur und Agenten-Logik.",
+    planStep3: "3. Entwicklung: Bau Ihrer Agenten und Anbindung an Ihren Tech-Stack.",
+    planStep4: "4. Go Live: Starten Sie Ihre maßgeschneiderten KI-Automatisierungen und skalieren Sie.",
 
     growthMappingCall: "Kostenloser Automations-Audit",
     growthMappingDesc: "30-minütige Strategie-Session. Enthält:",
