@@ -238,7 +238,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
-      {/* Styles for the custom gradient cursor */}
       <style>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }
@@ -253,7 +252,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           background: linear-gradient(to bottom, #a855f7, #3b82f6);
           animation: blink 1s step-end infinite;
         }
-        /* Pauses the blink while the "is-typing" class is present */
         .typewriter-cursor.is-typing {
           animation: none;
           opacity: 1;
@@ -273,7 +271,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             style={{ fontFamily: '"Montserrat", sans-serif' }}
           >
             <span>{displayText}</span>
-            {/* Added is-typing class here based on isTyping state */}
             {displayText.length < fullText.length && (
                <span className={`typewriter-cursor ${isTyping ? 'is-typing' : ''}`} />
             )}
@@ -370,16 +367,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/60 backdrop-blur-[4px]">
-          <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-4">
-            <X className="w-10 h-10 text-black" />
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[10px] p-4 md:p-10">
+          <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 md:top-8 md:right-8 p-4 z-[110]">
+            <X className="w-8 h-8 md:w-10 md:h-10 text-black hover:scale-110 transition-transform" />
           </button>
-          <div className="w-[95vw] max-w-7xl aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
-              className="w-full h-full"
-              allow="autoplay; encrypted-media; fullscreen"
-            />
+          <div className="relative w-full max-w-[95vw] h-full max-h-[90vh] flex items-center justify-center">
+            <div className="w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-zinc-200">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
+                className="w-full h-full"
+                allow="autoplay; encrypted-media; fullscreen"
+              />
+            </div>
           </div>
         </div>
       )}
