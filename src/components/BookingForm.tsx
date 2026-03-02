@@ -3,8 +3,11 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 
 interface BookingFormProps {
+  selectedDate: Date;
+  selectedTime: string;
+  selectedTimezone: string;
   onBack: () => void;
-  onSuccess: (data: any) => void;
+  onFormSubmit: (formData: any) => void;
   language: Language;
 }
 
@@ -224,7 +227,7 @@ export default function BookingForm({
   selectedTime,
   selectedTimezone,
   onBack,
-  onSuccess,
+  onFormSubmit,
   language,
 }: BookingFormProps) {
   const t = translations[language];
@@ -253,35 +256,7 @@ export default function BookingForm({
     setIsSubmitting(true);
 
     try {
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-      const fullPhone = `${formData.countryCode}${formData.phone}`;
-
-      const formBody = new URLSearchParams();
-      formBody.append('firstName', formData.firstName);
-      formBody.append('lastName', formData.lastName);
-      formBody.append('email', formData.email);
-      formBody.append('countryCode', formData.countryCode);
-      formBody.append('phone', formData.phone);
-      formBody.append('fullPhone', fullPhone);
-      formBody.append('revenueRange', formData.revenueRange);
-      formBody.append('website', formData.website);
-      formBody.append('businessDescription', formData.businessDescription);
-      formBody.append('reason', formData.reason);
-      formBody.append('date', formattedDate);
-      formBody.append('time', selectedTime);
-      formBody.append('timezone', selectedTimezone);
-
-      await fetch('https://n8n.halovisionai.cloud/webhook/halovisionschedule880088', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody.toString(),
-        mode: 'no-cors',
-      });
-
-      onSuccess();
-    } catch (error) {
-      console.error('Booking error:', error);
-      alert(t.bookingError);
+      onFormSubmit(formData);
     } finally {
       setIsSubmitting(false);
     }
@@ -415,7 +390,7 @@ export default function BookingForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full flex justify-center items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold"
+          className="w-full flex justify-center items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
         >
           {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
           {isSubmitting ? t.submitting : t.submit}

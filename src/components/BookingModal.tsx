@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar as CalIcon, Clock, Timer } from 'lucide-react';
+import { X, Calendar as CalIcon, Clock, Timer, ArrowLeft, Check } from 'lucide-react';
 import Calendar from './Calendar';
 import BookingForm from './BookingForm';
 import { translations, Language } from '../utils/translations';
@@ -10,7 +10,7 @@ interface BookingModalProps {
   language: Language;
 }
 
-type Step = 'calendar' | 'form';
+type Step = 'calendar' | 'form' | 'confirmation';
 
 export default function BookingModal({ isOpen, onClose, language }: BookingModalProps) {
   const t = translations[language];
@@ -19,6 +19,7 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedTimezone, setSelectedTimezone] = useState<string>('UTC+1');
+  const [submittedFormData, setSubmittedFormData] = useState<any>(null);
 
   // Animation visibility state
   const [visible, setVisible] = useState(false);
@@ -42,12 +43,24 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
     setStep('form');
   };
 
-  const handleBack = () => setStep('calendar');
+  const handleBack = () => {
+    if (step === 'confirmation') {
+      setStep('form');
+    } else if (step === 'form') {
+      setStep('calendar');
+    }
+  };
+
+  const handleFormSubmit = (formData: any) => {
+    setSubmittedFormData(formData);
+    setStep('confirmation');
+  };
 
   const handleClose = () => {
     setStep('calendar');
     setSelectedDate(null);
     setSelectedTime('');
+    setSubmittedFormData(null);
     onClose();
   };
 
@@ -111,8 +124,8 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
               </div>
             </div>
 
-            {/* Selection Details (Only visible in Form step) */}
-            {step === 'form' && selectedDate && (
+            {/* Selection Details (Only visible in Calendar step) */}
+            {step === 'calendar' && selectedDate && (
               <div className="mt-auto space-y-3 md:space-y-4 pt-6 md:pt-8 border-t border-white/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
                 <SummaryRow
                   icon={<CalIcon className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
@@ -123,13 +136,13 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
                     day: 'numeric',
                   })}
                 />
-                <SummaryRow 
-                  icon={<Clock className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />} 
-                  label={selectedTime} 
+                <SummaryRow
+                  icon={<Clock className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
+                  label={selectedTime}
                 />
-                <SummaryRow 
-                  icon={<Timer className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />} 
-                  label={t.duration} 
+                <SummaryRow
+                  icon={<Timer className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
+                  label={t.duration}
                 />
               </div>
             )}
@@ -140,17 +153,27 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
             </p>
           </div>
 
-          {/* RIGHT PANEL: Dynamic Content (Calendar/Form) */}
+          {/* RIGHT PANEL: Dynamic Content (Calendar/Form/Confirmation) */}
           <div className="w-full md:w-3/5 bg-gray-900/50 overflow-y-auto flex-1 custom-scrollbar">
             {step === 'calendar' ? (
-              <Calendar onSelectDateTime={handleDateTimeSelect} />
-            ) : (
+              <Calendar onSelectDateTime={handleDateTimeSelect} language={language} />
+            ) : step === 'form' ? (
               <BookingForm
                 selectedDate={selectedDate!}
                 selectedTime={selectedTime}
                 selectedTimezone={selectedTimezone}
                 onBack={handleBack}
-                onSuccess={handleClose}
+                onFormSubmit={handleFormSubmit}
+                language={language}
+              />
+            ) : (
+              <ConfirmationPage
+                selectedDate={selectedDate!}
+                selectedTime={selectedTime}
+                selectedTimezone={selectedTimezone}
+                formData={submittedFormData}
+                onBack={handleBack}
+                onConfirm={handleClose}
                 language={language}
               />
             )}
@@ -166,6 +189,149 @@ function SummaryRow({ icon, label }: { icon: React.ReactNode; label: string }) {
     <div className="flex items-center gap-4 text-gray-200">
       <div className="flex-shrink-0">{icon}</div>
       <span className="text-xs md:text-sm font-medium tracking-wide">{label}</span>
+    </div>
+  );
+}
+
+interface ConfirmationPageProps {
+  selectedDate: Date;
+  selectedTime: string;
+  selectedTimezone: string;
+  formData: any;
+  onBack: () => void;
+  onConfirm: () => void;
+  language: Language;
+}
+
+function ConfirmationPage({
+  selectedDate,
+  selectedTime,
+  selectedTimezone,
+  formData,
+  onBack,
+  onConfirm,
+  language,
+}: ConfirmationPageProps) {
+  const t = translations[language];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const fullPhone = `${formData.countryCode}${formData.phone}`;
+
+      const formBody = new URLSearchParams();
+      formBody.append('firstName', formData.firstName);
+      formBody.append('lastName', formData.lastName);
+      formBody.append('email', formData.email);
+      formBody.append('countryCode', formData.countryCode);
+      formBody.append('phone', formData.phone);
+      formBody.append('fullPhone', fullPhone);
+      formBody.append('revenueRange', formData.revenueRange);
+      formBody.append('website', formData.website);
+      formBody.append('businessDescription', formData.businessDescription);
+      formBody.append('reason', formData.reason);
+      formBody.append('date', formattedDate);
+      formBody.append('time', selectedTime);
+      formBody.append('timezone', selectedTimezone);
+
+      await fetch('https://n8n.halovisionai.cloud/webhook/halovisionschedule880088', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formBody.toString(),
+        mode: 'no-cors',
+      });
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        onConfirm();
+      }, 2000);
+    } catch (error) {
+      console.error('Booking error:', error);
+      alert(t.bookingError);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSuccess) {
+    return (
+      <div className="p-6 md:p-10 bg-black/50 rounded-xl shadow-xl max-w-3xl mx-auto min-h-[400px] flex flex-col items-center justify-center text-center">
+        <div className="mb-6 animate-in zoom-in duration-500">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 md:w-10 md:h-10 text-green-400" />
+          </div>
+        </div>
+        <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Booking Confirmed!</h3>
+        <p className="text-gray-400 text-sm md:text-base">Your audit has been scheduled successfully.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-10 bg-black/50 rounded-xl shadow-xl max-w-3xl mx-auto">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        {t.back}
+      </button>
+
+      <div className="mb-8">
+        <h3 className="text-xl md:text-2xl font-bold text-white mb-6">Review Your Booking</h3>
+
+        <div className="space-y-4 mb-8">
+          <ConfirmationRow label="Date" value={selectedDate.toLocaleDateString(t.locale, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })} />
+          <ConfirmationRow label="Time" value={selectedTime} />
+          <ConfirmationRow label="Timezone" value={selectedTimezone} />
+
+          <div className="border-t border-gray-700 pt-4 mt-4">
+            <ConfirmationRow label="Name" value={`${formData.firstName} ${formData.lastName}`} />
+            <ConfirmationRow label="Email" value={formData.email} />
+            <ConfirmationRow label="Phone" value={`${formData.countryCode}${formData.phone}`} />
+            <ConfirmationRow label="Revenue" value={formData.revenueRange} />
+            <ConfirmationRow label="Website" value={formData.website} />
+          </div>
+
+          <div className="border-t border-gray-700 pt-4 mt-4">
+            <p className="text-gray-400 text-sm mb-2">Workflows & Bottlenecks:</p>
+            <p className="text-gray-300 text-sm bg-gray-800/50 p-3 rounded-lg">{formData.businessDescription}</p>
+          </div>
+
+          {formData.reason && (
+            <div className="border-t border-gray-700 pt-4 mt-4">
+              <p className="text-gray-400 text-sm mb-2">Primary Goal:</p>
+              <p className="text-gray-300 text-sm bg-gray-800/50 p-3 rounded-lg">{formData.reason}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <button
+        onClick={handleConfirm}
+        disabled={isSubmitting}
+        className="w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+      >
+        {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+      </button>
+    </div>
+  );
+}
+
+function ConfirmationRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between items-start py-2">
+      <span className="text-gray-400 text-sm">{label}:</span>
+      <span className="text-white text-sm font-medium text-right max-w-xs">{value}</span>
     </div>
   );
 }

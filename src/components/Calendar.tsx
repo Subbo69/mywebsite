@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { timezones, convertTimeToTimezone } from '../utils/timezones';
+import { translations, Language } from '../utils/translations';
 
 interface CalendarProps {
   onSelectDateTime: (date: Date, time: string, timezone: string) => void;
+  language?: Language;
 }
 
-export default function Calendar({ onSelectDateTime }: CalendarProps) {
+export default function Calendar({ onSelectDateTime, language = 'en' }: CalendarProps) {
+  const t = translations[language];
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimezone, setSelectedTimezone] = useState('UTC+1');
@@ -135,7 +138,7 @@ export default function Calendar({ onSelectDateTime }: CalendarProps) {
   return (
     <div className="p-4 md:p-8">
       <div className="mb-4 md:mb-6">
-        <label className="block text-gray-400 text-xs md:text-sm mb-2">Timezone</label>
+        <label className="block text-white text-xs md:text-sm mb-2">{t.timezone}</label>
         <select
           value={selectedTimezone}
           onChange={(e) => {
