@@ -99,11 +99,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
               heroInputRef.current?.focus({ preventScroll: true });
             }, 600);
             return () => clearTimeout(t4);
-          }, 300); // Reduced delay for faster entry
+          }, 500);
           return () => clearTimeout(t3);
-        }, 300); // Reduced delay
+        }, 500);
         return () => clearTimeout(t2);
-      }, 200);
+      }, 300);
       return () => clearTimeout(t1);
     }
   }, [isTyping, displayText, fullText]);
@@ -185,6 +185,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
     let particles: Particle[] = [];
 
+    // Shared mouse state
     const mouseState = {
       x: -9999, y: -9999,
       vx: 0, vy: 0,
@@ -293,7 +294,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }
     };
 
+    // ─── IMPROVED MOUSE HANDLERS (Fixed Glitch) ──────────────────────────────
     const onMouseMove = (e: MouseEvent) => {
+      // If the mouse was previously outside (-9999), reset to current pos with 0 velocity
       if (mouseState.prevX === -9999) {
         mouseState.x = e.clientX;
         mouseState.y = e.clientY;
@@ -303,6 +306,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         mouseState.vy = 0;
         return;
       }
+
       const rawVx = e.clientX - mouseState.prevX;
       const rawVy = e.clientY - mouseState.prevY;
       mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
@@ -323,27 +327,36 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     };
 
     const onMouseLeave = () => {
-      mouseState.x = -9999; mouseState.y = -9999;
-      mouseState.prevX = -9999; mouseState.prevY = -9999;
-      mouseState.vx = 0; mouseState.vy = 0;
+      mouseState.x = -9999;
+      mouseState.y = -9999;
+      mouseState.prevX = -9999;
+      mouseState.prevY = -9999;
+      mouseState.vx = 0;
+      mouseState.vy = 0;
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 0) return;
       const tx = e.touches[0].clientX;
       const ty = e.touches[0].clientY;
-      if (mouseState.prevX === -9999) { mouseState.prevX = tx; mouseState.prevY = ty; }
+      if (mouseState.prevX === -9999) {
+        mouseState.prevX = tx; mouseState.prevY = ty;
+      }
       const rawVx = tx - mouseState.prevX;
       const rawVy = ty - mouseState.prevY;
       mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
       mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
-      mouseState.prevX = tx; mouseState.prevY = ty;
-      mouseState.x = tx; mouseState.y = ty;
+      mouseState.prevX = tx;
+      mouseState.prevY = ty;
+      mouseState.x = tx;
+      mouseState.y = ty;
     };
 
     const onTouchEnd = () => {
-      mouseState.x = -9999; mouseState.prevX = -9999;
-      mouseState.vx = 0; mouseState.vy = 0;
+      mouseState.x = -9999;
+      mouseState.prevX = -9999;
+      mouseState.vx = 0;
+      mouseState.vy = 0;
     };
 
     const onVisibility = () => { paused = document.hidden; };
@@ -391,7 +404,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
   return (
     <section
-      className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
+      className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
@@ -409,9 +422,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`}
       />
 
-      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full justify-center">
-        {/* ── Title (Reduced margin-bottom to fit) ── */}
-        <div className="min-h-[120px] md:min-h-[180px] flex items-center justify-center w-full mb-6">
+      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
+        <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
           <h1 className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block" style={{ fontFamily: '"Montserrat", sans-serif' }}>
             <span>{displayText}</span>
             {displayText.length < fullText.length && (
@@ -421,12 +433,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </h1>
         </div>
 
-        <p className={`text-base md:text-2xl text-zinc-500 mb-8 max-w-2xl font-light italic transition-all duration-1000 ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <p className={`text-base md:text-2xl text-zinc-500 mb-16 max-w-2xl font-light italic transition-all duration-1000 ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           {t.heroSubtitle}
         </p>
 
-        {/* ── CTA + Input (Compact layout to stay above fold) ── */}
-        <div className="flex flex-col items-center gap-10 w-full max-w-md">
+        <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
             className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 active:scale-95 transition-all duration-700 shadow-xl ${
@@ -437,11 +448,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flex-shrink-0" />
           </button>
 
-          <div className={`w-full space-y-3 transition-all duration-1000 delay-300 ${showInput ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95 pointer-events-none'}`}>
-            {/* Header: 10% bigger (text-xs to text-[13.2px]), More Tracking, Closer to box (space-y-3 instead of 6) */}
-            <h3 className="text-[11px] md:text-[13px] uppercase tracking-[0.45em] font-black text-black text-center">
-              {isSent ? t.openingChat : t.askAiAgent}
-            </h3>
+          <div className={`w-full space-y-6 transition-all duration-1000 delay-300 ${showInput ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95 pointer-events-none'}`}>
+            <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-black text-center">{isSent ? t.openingChat : t.askAiAgent}</h3>
             <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-lg focus-within:shadow-xl ${isSent ? 'border-green-600 bg-green-50' : ''}`}>
               <input
                 ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
@@ -456,8 +464,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        {/* ── Video section (Visible on scroll) ── */}
-        <div className="w-full max-w-[90rem] mt-24 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        <div className="w-full max-w-[90rem] sticky top-32 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)}
