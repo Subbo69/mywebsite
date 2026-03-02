@@ -1,9 +1,6 @@
 import { ArrowRight, Send, Play, X } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { useEffect, useRef, useState, useMemo } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Bloom, EffectComposer } from '@react-three/postprocessing';
-import * as THREE from 'three';
+import { useEffect, useRef, useState } from 'react';
 
 interface HeroProps {
   onBookingClick: () => void;
@@ -11,77 +8,9 @@ interface HeroProps {
   language: Language;
 }
 
-// --- 3D PARTICLE ENGINE ---
-function FluidParticles({ count = 8278 }) {
-  const mesh = useRef<THREE.Points>(null);
-  const { mouse, viewport } = useThree();
-
-  const particles = useMemo(() => {
-    const positions = new Float32Array(count * 3);
-    const randoms = new Float32Array(count);
-    const angleStep = Math.PI * (3 - Math.sqrt(5));
-    
-    for (let i = 0; i < count; i++) {
-      const angle = i * angleStep;
-      const radius = Math.sqrt(i) * 0.5;
-      positions[i * 3] = Math.cos(angle) * radius;
-      positions[i * 3 + 1] = Math.sin(angle) * radius;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 5;
-      randoms[i] = Math.random();
-    }
-    return { positions, randoms };
-  }, [count]);
-
-  useFrame((state) => {
-    if (!mesh.current) return;
-    const time = state.clock.getElapsedTime();
-    const pos = mesh.current.geometry.attributes.position.array as Float32Array;
-
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      // Fluid movement
-      pos[i3] += Math.sin(time * 0.2 + particles.randoms[i] * 10) * 0.003;
-      pos[i3 + 1] += Math.cos(time * 0.2 + particles.randoms[i] * 10) * 0.003;
-
-      // Magnetic Mouse Pull
-      const mx = (mouse.x * viewport.width) / 2;
-      const my = (mouse.y * viewport.height) / 2;
-      const dx = mx - pos[i3];
-      const dy = my - pos[i3 + 1];
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      
-      if (dist < 4) {
-        pos[i3] += dx * 0.015;
-        pos[i3 + 1] += dy * 0.015;
-      }
-    }
-    mesh.current.geometry.attributes.position.needsUpdate = true;
-  });
-
-  return (
-    <points ref={mesh}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={particles.positions.length / 3}
-          array={particles.positions}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.06}
-        color="#a855f7"
-        transparent
-        opacity={0.6}
-        blending={THREE.NormalBlending} // FIXED: Prevents "white-out" on light backgrounds
-        sizeAttenuation={true}
-      />
-    </points>
-  );
-}
-
 export default function Hero({ onBookingClick, onAskAIClick, language }: HeroProps) {
   const t = translations[language];
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   
@@ -93,6 +22,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Choreography States
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
@@ -107,6 +37,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
+  // --- MAGNETIC BUTTON STATES ---
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -114,6 +45,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const fullText = t.heroTitle;
   const VIDEO_ID = "Py1ClI35v_k";
 
+  // --- MOUSE TRACKING FOR VIDEO ---
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
@@ -123,9 +55,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
+  // --- SPRING PHYSICS ENGINE ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
+    
     const followMouse = () => {
       setCurrentPos(prev => ({
         x: prev.x + (targetPos.x - prev.x) * 0.12, 
@@ -133,10 +67,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }));
       animationFrame = requestAnimationFrame(followMouse);
     };
+    
     animationFrame = requestAnimationFrame(followMouse);
     return () => cancelAnimationFrame(animationFrame);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
+  // --- CHOREOGRAPHY SYNCHRONIZATION ---
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const subTimeout = setTimeout(() => {
@@ -159,6 +95,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
+  // --- INFINITE TYPEWRITER (PLACEHOLDER) ---
   useEffect(() => {
     let currentText = "";
     let isDeleting = false;
@@ -188,6 +125,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
+  // --- TYPEWRITER (TITLE) ---
   useEffect(() => {
     let i = 0;
     let isMounted = true;
@@ -213,6 +151,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { isMounted = false; clearTimeout(startTimeout); };
   }, [fullText]);
 
+  // --- VIDEO SCROLL LOGIC ---
   useEffect(() => {
     const handleScroll = () => {
       const progress = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
@@ -223,6 +162,69 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- PARTICLE ENGINE ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const PARTICLE_COUNT = 8278; 
+    let particles: any[] = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let ticker = 0;
+    
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    const getParticleColor = (x: number, y: number, opacity: number) => {
+      const diagScore = (x + y) / (canvas.width + canvas.height);
+      const hue = diagScore > 0.45 ? 212 : 272; 
+      return `hsla(${hue}, 85%, 45%, ${opacity})`;
+    };
+    
+    const init = () => {
+      particles = [];
+      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = i * angleStep;
+        const radius = Math.sqrt(i) * 21.12; 
+        const z = 0.5 + Math.random();
+        particles.push({
+          x: mouse.x + (Math.cos(angle) * radius * z),
+          y: mouse.y + (Math.sin(angle) * radius * z),
+          offsetX: (Math.cos(angle) * radius),
+          offsetY: (Math.sin(angle) * radius),
+          z: z, 
+          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
+          baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
+          randomOffset: Math.random() * 600
+        });
+      }
+    };
+    
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ticker += 0.005;
+      particles.forEach((p) => {
+        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 4);
+        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
+        p.x += (targetX - p.x) * (0.018 * p.z);
+        p.y += (targetY - p.y) * (0.018 * p.z);
+        const color = getParticleColor(p.x, p.y, p.baseOpacity);
+        ctx.beginPath(); ctx.fillStyle = color;
+        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
+      });
+      requestAnimationFrame(animate);
+    };
+    
+    window.addEventListener('resize', () => { resize(); init(); });
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    resize(); init(); animate();
+  }, []);
+
+  // ESC Key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsModalOpen(false);
@@ -265,19 +267,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         }
       `}</style>
 
-      {/* --- 3D PARTICLE BACKGROUND --- */}
-      <div className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`}>
-        {/* FIXED: Added explicit dimensions and modified Bloom for light theme */}
-        <Canvas camera={{ position: [0, 0, 15], fov: 60 }} style={{ height: '100vh', width: '100vw' }}>
-          <FluidParticles count={8000} />
-          <EffectComposer>
-            {/* Intensity lowered for white background to prevent washing out */}
-            <Bloom intensity={0.5} luminanceThreshold={0.9} radius={0.3} />
-          </EffectComposer>
-        </Canvas>
-      </div>
+      <canvas 
+        ref={canvasRef} 
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
+      />
       
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
+        {/* --- TITLE SECTION --- */}
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
           <h1 
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
@@ -297,6 +293,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
+        {/* --- BUTTON & INPUT SECTION --- */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -343,6 +340,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
+        {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
         <div 
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
@@ -370,6 +368,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             
+            {/* Conditional render: Stop bg video when modal is open */}
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
