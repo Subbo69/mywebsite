@@ -177,12 +177,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-    
-    const getParticleColor = (x: number, y: number, opacity: number) => {
-      const diagScore = (x + y) / (canvas.width + canvas.height);
-      const hue = diagScore > 0.45 ? 212 : 272; 
-      return `hsla(${hue}, 85%, 45%, ${opacity})`;
-    };
+
+    // Google brand colors: Blue, Red, Yellow, Green
+    // Each particle gets a color assigned at init time based on its index,
+    // cycling through the four Google hues for a vibrant, intentional palette.
+    const GOOGLE_COLORS = [
+      { h: 217, s: 89, l: 61 }, // Google Blue  #4285F4
+      { h: 5,   s: 80, l: 56 }, // Google Red   #EA4335
+      { h: 44,  s: 96, l: 50 }, // Google Yellow #FBBC04
+      { h: 142, s: 52, l: 43 }, // Google Green  #34A853
+    ];
     
     const init = () => {
       particles = [];
@@ -191,6 +195,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         const angle = i * angleStep;
         const radius = Math.sqrt(i) * 21.12; 
         const z = 0.5 + Math.random();
+        const colorIdx = i % 4;
+        const { h, s, l } = GOOGLE_COLORS[colorIdx];
         particles.push({
           x: mouse.x + (Math.cos(angle) * radius * z),
           y: mouse.y + (Math.sin(angle) * radius * z),
@@ -199,7 +205,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           z: z, 
           baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
           baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
-          randomOffset: Math.random() * 600
+          randomOffset: Math.random() * 600,
+          h, s, l,
         });
       }
     };
@@ -212,9 +219,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
         p.x += (targetX - p.x) * (0.018 * p.z);
         p.y += (targetY - p.y) * (0.018 * p.z);
-        const color = getParticleColor(p.x, p.y, p.baseOpacity);
-        ctx.beginPath(); ctx.fillStyle = color;
-        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = `hsla(${p.h}, ${p.s}%, ${p.l}%, ${p.baseOpacity})`;
+        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2);
+        ctx.fill();
       });
       requestAnimationFrame(animate);
     };
