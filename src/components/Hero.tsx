@@ -46,7 +46,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const VIDEO_ID = "Py1ClI35v_k";
 
   // --- MOUSE TRACKING FOR VIDEO ---
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMoveVideo = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
     setTargetPos({
@@ -55,7 +55,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
-  // --- SPRING PHYSICS ENGINE ---
+  // --- SPRING PHYSICS ENGINE (VIDEO BUTTON) ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
@@ -162,66 +162,109 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- PARTICLE ENGINE ---
+  // --- ANTIGRAVITY PARTICLE ENGINE ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const PARTICLE_COUNT = 8278; 
+
     let particles: any[] = [];
-    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let ticker = 0;
-    
+    const mouse = { x: -1000, y: -1000, radius: 180 };
+    let animationFrame: number;
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      init();
     };
-    
-    const getParticleColor = (x: number, y: number, opacity: number) => {
-      const diagScore = (x + y) / (canvas.width + canvas.height);
-      const hue = diagScore > 0.45 ? 212 : 272; 
-      return `hsla(${hue}, 85%, 45%, ${opacity})`;
-    };
-    
+
+    class Particle {
+      x: number; y: number; baseX: number; baseY: number;
+      size: number; density: number; color: string; drift: number;
+
+      constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+        this.baseX = x;
+        this.baseY = y;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.density = (Math.random() * 25) + 5;
+        this.drift = Math.random() * 2;
+        
+        const hue = Math.random() > 0.6 ? 215 : 280; // Blue or Purple
+        this.color = `hsla(${hue}, 60%, 50%, ${Math.random() * 0.3 + 0.1})`;
+      }
+
+      draw() {
+        if (!ctx) return;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      update() {
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < mouse.radius) {
+          const force = (mouse.radius - distance) / mouse.radius;
+          const directionX = (dx / distance) * force * this.density;
+          const directionY = (dy / distance) * force * this.density;
+          this.x -= directionX;
+          this.y -= directionY;
+        } else {
+          // Floating back to base position
+          if (this.x !== this.baseX) {
+            this.x -= (this.x - this.baseX) * 0.05;
+          }
+          if (this.y !== this.baseY) {
+            this.y -= (this.y - this.baseY) * 0.05;
+          }
+        }
+        // Subtle ambient drifting
+        this.baseY += Math.sin(Date.now() * 0.001 + this.baseX) * 0.05;
+      }
+    }
+
     const init = () => {
       particles = [];
-      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const angle = i * angleStep;
-        const radius = Math.sqrt(i) * 21.12; 
-        const z = 0.5 + Math.random();
-        particles.push({
-          x: mouse.x + (Math.cos(angle) * radius * z),
-          y: mouse.y + (Math.sin(angle) * radius * z),
-          offsetX: (Math.cos(angle) * radius),
-          offsetY: (Math.sin(angle) * radius),
-          z: z, 
-          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
-          baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
-          randomOffset: Math.random() * 600
-        });
+      const gap = 45; 
+      for (let y = 0; y < canvas.height; y += gap) {
+        for (let x = 0; x < canvas.width; x += gap) {
+          const posX = x + (Math.random() * 20);
+          const posY = y + (Math.random() * 20);
+          particles.push(new Particle(posX, posY));
+        }
       }
     };
-    
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ticker += 0.005;
-      particles.forEach((p) => {
-        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 4);
-        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
-        p.x += (targetX - p.x) * (0.018 * p.z);
-        p.y += (targetY - p.y) * (0.018 * p.z);
-        const color = getParticleColor(p.x, p.y, p.baseOpacity);
-        ctx.beginPath(); ctx.fillStyle = color;
-        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
+      particles.forEach(p => {
+        p.update();
+        p.draw();
       });
-      requestAnimationFrame(animate);
+      animationFrame = requestAnimationFrame(animate);
     };
-    
-    window.addEventListener('resize', () => { resize(); init(); });
-    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
-    resize(); init(); animate();
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', handleMouseMove);
+    resize();
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrame);
+    };
   }, []);
 
   // ESC Key to close modal
@@ -348,7 +391,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           <div 
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
-            onMouseMove={handleMouseMove}
+            onMouseMove={handleMouseMoveVideo}
             onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => setIsHoveringVideo(false)}
             className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
@@ -368,7 +411,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             
-            {/* Conditional render: Stop bg video when modal is open */}
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
