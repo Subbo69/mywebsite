@@ -13,7 +13,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-
+  
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
   const [scrollOpacity, setScrollOpacity] = useState(0);
@@ -21,17 +21,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [displayText, setDisplayText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
-
+  
   const [placeholder, setPlaceholder] = useState("");
   const placeholderPhrases = [
-    t.howCanWeHelp,
-    t.heroPlaceholder1,
-    t.heroPlaceholder2,
+    t.howCanWeHelp, 
+    t.heroPlaceholder1, 
+    t.heroPlaceholder2, 
     t.heroPlaceholder3
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -46,7 +46,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
-    setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setTargetPos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
   };
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     let animationFrame: number;
     const followMouse = () => {
       setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.12,
+        x: prev.x + (targetPos.x - prev.x) * 0.12, 
         y: prev.y + (targetPos.y - prev.y) * 0.12
       }));
       animationFrame = requestAnimationFrame(followMouse);
@@ -114,16 +117,21 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   useEffect(() => {
     let i = 0;
     let isMounted = true;
-    setDisplayText(""); setIsTyping(true);
-    setShowSubtitle(false); setShowCTA(false);
-    setShowInput(false); setShowParticles(false);
+    setDisplayText("");
+    setIsTyping(true);
+    setShowSubtitle(false);
+    setShowCTA(false);
+    setShowInput(false);
+    setShowParticles(false);
     const type = () => {
       if (!isMounted) return;
       if (i <= fullText.length) {
         setDisplayText(fullText.slice(0, i));
         i++;
         setTimeout(type, Math.random() * 25 + 45);
-      } else { setIsTyping(false); }
+      } else {
+        setIsTyping(false);
+      }
     };
     const startTimeout = setTimeout(type, 280);
     return () => { isMounted = false; clearTimeout(startTimeout); };
@@ -139,250 +147,132 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // ─── ANTIGRAVITY-STYLE PARTICLE ENGINE ───────────────────────────────────
+  // --- PARTICLE ENGINE (Google Antigravity Style) ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // ── Config ────────────────────────────────────────────────────────────
-    const PARTICLE_COUNT  = 420;
-    const FOV             = 380;
-    const Z_RANGE         = 1100;
-    const MOUSE_RADIUS    = 200;    // attraction radius
-    const ATTRACT_FORCE   = 0.012;  // how strongly particles drift toward mouse
-    const DRIFT_RETURN    = 0.0018; // how slowly they return to home
-    const DAMPING         = 0.96;
-    const BASE_SPEED      = 0.28;   // ambient float speed
+    let animationId: number;
+    let mouse = { x: -9999, y: -9999 };
 
-    // Google Antigravity color palette — vivid, sparse, on white
+    const COLS_SPACING = 22;
+    const ROWS_SPACING = 22;
+    const MOUSE_RADIUS = 120;
+    const REPULSION = 8;
+    const SPRING = 0.035;
+    const FRICTION = 0.82;
+
+    // Blue + red/purple palette like Antigravity
     const COLORS = [
-      { r: 234, g:  67, b:  53 },  // Google Red
-      { r: 251, g: 188, b:   4 },  // Google Yellow
-      { r:  66, g: 133, b: 244 },  // Google Blue
-      { r:  52, g: 168, b:  83 },  // Google Green
-      { r: 156, g:  39, b: 176 },  // Purple
-      { r: 255, g: 109, b:   0 },  // Deep Orange
-      { r: 173, g:  20, b:  87 },  // Pink/Crimson
-      { r:   3, g: 169, b: 244 },  // Light Blue
+      { r: 66,  g: 133, b: 244 }, // Google Blue
+      { r: 66,  g: 133, b: 244 },
+      { r: 66,  g: 133, b: 244 },
+      { r: 66,  g: 133, b: 244 },
+      { r: 180, g: 60,  b: 100 }, // Red/purple accent (sparse)
+      { r: 120, g: 60,  b: 180 }, // Purple accent (sparse)
     ];
 
-    let animId: number;
-    let tick = 0;
-    let W = 0, H = 0;
-    const mouse = { x: -9999, y: -9999, active: false };
-
-    interface Particle {
-      // 3D home position
-      bx: number; by: number; bz: number;
-      // current 3D position
-      x: number; y: number; z: number;
-      // velocity
-      vx: number; vy: number; vz: number;
-      // visual heading angle (rotates the dash shape)
-      angle: number;
-      angleV: number;       // angular velocity
-      // ambient drift
-      driftPhase: number;
-      driftFreq: number;
-      driftAmp: number;
-      // visual
-      color: { r: number; g: number; b: number };
-      // base dimensions of the dash
-      len: number;   // length of the dash
-      wid: number;   // width/thickness
-    }
-
-    const particles: Particle[] = [];
-
-    const resize = () => {
-      W = canvas.width  = window.innerWidth;
-      H = canvas.height = window.innerHeight;
+    type Particle = {
+      x: number; y: number;
+      originX: number; originY: number;
+      vx: number; vy: number;
+      r: number; g: number; b: number;
+      baseSize: number;
     };
 
-    const project = (x: number, y: number, z: number) => {
-      const scale = FOV / (FOV + z + Z_RANGE * 0.5);
-      return { sx: x * scale + W * 0.5, sy: y * scale + H * 0.5, scale };
+    let particles: Particle[] = [];
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
 
     const init = () => {
-      particles.length = 0;
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const bx = (Math.random() - 0.5) * W * 1.8;
-        const by = (Math.random() - 0.5) * H * 1.8;
-        const bz = (Math.random() - 0.5) * Z_RANGE;
-        const angle = Math.random() * Math.PI * 2;
-        particles.push({
-          bx, by, bz,
-          x: bx, y: by, z: bz,
-          vx: Math.cos(angle) * BASE_SPEED * (0.5 + Math.random()),
-          vy: Math.sin(angle) * BASE_SPEED * (0.5 + Math.random()),
-          vz: (Math.random() - 0.5) * 0.4,
-          angle,
-          angleV: (Math.random() - 0.5) * 0.008,
-          driftPhase: Math.random() * Math.PI * 2,
-          driftFreq:  0.0002 + Math.random() * 0.0003,
-          driftAmp:   18 + Math.random() * 30,
-          color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          len: 6 + Math.random() * 9,    // dash length (world units)
-          wid: 1.4 + Math.random() * 1.4, // dash thickness
-        });
+      particles = [];
+      const cols = Math.ceil(canvas.width / COLS_SPACING) + 2;
+      const rows = Math.ceil(canvas.height / ROWS_SPACING) + 2;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          // Fade out dots on the left side (like in the screenshot)
+          const xFraction = col / cols;
+          if (Math.random() > xFraction * 1.1) continue;
+
+          const x = col * COLS_SPACING;
+          const y = row * ROWS_SPACING;
+
+          // Randomly pick color – mostly blue, occasionally red/purple
+          const colorIdx = Math.random() < 0.08 ? (Math.random() < 0.5 ? 4 : 5) : Math.floor(Math.random() * 4);
+          const col_ = COLORS[colorIdx];
+
+          particles.push({
+            x, y,
+            originX: x,
+            originY: y,
+            vx: 0, vy: 0,
+            r: col_.r, g: col_.g, b: col_.b,
+            baseSize: Math.random() * 1.5 + 1,
+          });
+        }
       }
     };
 
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      tick++;
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Sort back → front
-      particles.sort((a, b) => b.z - a.z);
+      particles.forEach((p) => {
+        const dx = mouse.x - p.x;
+        const dy = mouse.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      for (const p of particles) {
-        // ── Ambient sinusoidal drift ──────────────────────────────────────
-        // Slow steering force, not position override — keeps movement organic
-        const driftFX = Math.sin(tick * p.driftFreq + p.driftPhase) * p.driftAmp * 0.0004;
-        const driftFY = Math.cos(tick * p.driftFreq * 0.77 + p.driftPhase) * p.driftAmp * 0.0004;
-        p.vx += driftFX;
-        p.vy += driftFY;
-
-        // ── Gentle return toward home ─────────────────────────────────────
-        p.vx += (p.bx - p.x) * DRIFT_RETURN;
-        p.vy += (p.by - p.y) * DRIFT_RETURN;
-        p.vz += (p.bz - p.z) * DRIFT_RETURN * 0.5;
-
-        // ── Mouse attraction ──────────────────────────────────────────────
-        if (mouse.active) {
-          const { sx, sy } = project(p.x, p.y, p.z);
-          const dx = mouse.x - sx;
-          const dy = mouse.y - sy;
-          const d2 = dx * dx + dy * dy;
-
-          if (d2 < MOUSE_RADIUS * MOUSE_RADIUS && d2 > 1) {
-            const d = Math.sqrt(d2);
-            const t = 1 - d / MOUSE_RADIUS;       // 0..1 falloff
-            const sc = FOV / (FOV + p.z + Z_RANGE * 0.5);
-
-            // Attract laterally
-            p.vx += (dx / d) * t * t * ATTRACT_FORCE / sc;
-            p.vy += (dy / d) * t * t * ATTRACT_FORCE / sc;
-
-            // Slight Z pull (come slightly forward)
-            p.vz -= t * 0.08;
-
-            // Steer angle toward movement direction
-            const targetAngle = Math.atan2(dy, dx);
-            let da = targetAngle - p.angle;
-            while (da >  Math.PI) da -= Math.PI * 2;
-            while (da < -Math.PI) da += Math.PI * 2;
-            p.angleV += da * 0.03;
-          }
+        if (dist < MOUSE_RADIUS && dist > 0) {
+          const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+          const angle = Math.atan2(dy, dx);
+          p.vx -= Math.cos(angle) * force * REPULSION;
+          p.vy -= Math.sin(angle) * force * REPULSION;
         }
 
-        // ── Integrate ─────────────────────────────────────────────────────
-        p.vx    *= DAMPING;
-        p.vy    *= DAMPING;
-        p.vz    *= DAMPING;
-        p.angleV *= 0.92;
-
+        // Spring back to grid origin
+        p.vx += (p.originX - p.x) * SPRING;
+        p.vy += (p.originY - p.y) * SPRING;
+        p.vx *= FRICTION;
+        p.vy *= FRICTION;
         p.x += p.vx;
         p.y += p.vy;
-        p.z += p.vz;
-        p.angle += p.angleV;
 
-        // Steer angle toward current velocity direction (natural orientation)
-        if (Math.abs(p.vx) + Math.abs(p.vy) > 0.05) {
-          const velAngle = Math.atan2(p.vy, p.vx);
-          let da = velAngle - p.angle;
-          while (da >  Math.PI) da -= Math.PI * 2;
-          while (da < -Math.PI) da += Math.PI * 2;
-          p.angle += da * 0.06;
-        }
-
-        // Soft boundary wrap
-        const halfW = W * 0.95, halfH = H * 0.95;
-        if (p.x >  halfW) p.vx -= 0.15;
-        if (p.x < -halfW) p.vx += 0.15;
-        if (p.y >  halfH) p.vy -= 0.15;
-        if (p.y < -halfH) p.vy += 0.15;
-        if (p.z < -FOV * 0.85) p.z = -FOV * 0.85;
-
-        // ── Project ───────────────────────────────────────────────────────
-        const { sx, sy, scale } = project(p.x, p.y, p.z);
-
-        if (sx < -80 || sx > W + 80 || sy < -80 || sy > H + 80) continue;
-
-        // Depth metrics
-        const zNorm   = Math.max(0, Math.min(1, (p.z + Z_RANGE * 0.5) / Z_RANGE)); // 0=close 1=far
-        const opacity = 0.12 + (1 - zNorm) * 0.72;
-        const dashLen = Math.max(1, p.len * scale * (0.8 + (1 - zNorm) * 1.8));
-        const dashWid = Math.max(0.5, p.wid * scale * (0.8 + (1 - zNorm) * 1.4));
-
-        const { r, g, b } = p.color;
-
-        // ── Draw rotated dash ─────────────────────────────────────────────
-        ctx.save();
-        ctx.translate(sx, sy);
-        ctx.rotate(p.angle);
-
-        // Rounded capsule: two semicircles + rectangle
-        const halfL = dashLen / 2;
-        const halfW2 = dashWid / 2;
+        // Size grows slightly when displaced
+        const displacement = Math.sqrt((p.x - p.originX) ** 2 + (p.y - p.originY) ** 2);
+        const size = p.baseSize + Math.min(displacement * 0.06, 2.5);
+        const opacity = Math.min(0.85, 0.35 + displacement * 0.015);
 
         ctx.beginPath();
-        ctx.moveTo(-halfL + halfW2, -halfW2);
-        ctx.lineTo( halfL - halfW2, -halfW2);
-        ctx.arc(halfL - halfW2, 0, halfW2, -Math.PI / 2, Math.PI / 2);
-        ctx.lineTo(-halfL + halfW2,  halfW2);
-        ctx.arc(-halfL + halfW2, 0, halfW2, Math.PI / 2, -Math.PI / 2);
-        ctx.closePath();
-
-        ctx.fillStyle = `rgba(${r},${g},${b},${opacity.toFixed(3)})`;
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity})`;
         ctx.fill();
+      });
 
-        // Subtle glow for close particles
-        if (zNorm < 0.18) {
-          const glowR = dashLen * 1.8;
-          const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
-          grd.addColorStop(0,   `rgba(${r},${g},${b},${(opacity * 0.18).toFixed(3)})`);
-          grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-          ctx.beginPath();
-          ctx.arc(0, 0, glowR, 0, Math.PI * 2);
-          ctx.fillStyle = grd;
-          ctx.fill();
-        }
-
-        ctx.restore();
-
-        // Very far particles render as tiny dots (matches Antigravity look)
-        if (zNorm > 0.78) {
-          ctx.beginPath();
-          ctx.arc(sx, sy, Math.max(0.6, scale * 1.2), 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${r},${g},${b},${(opacity * 0.9).toFixed(3)})`;
-          ctx.fill();
-        }
-      }
-
-      animId = requestAnimationFrame(draw);
+      animationId = requestAnimationFrame(animate);
     };
 
-    const onMM = (e: MouseEvent) => {
-      mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
-    };
-    const onML = () => { mouse.active = false; };
+    const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+    const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999; };
     const onResize = () => { resize(); init(); };
 
-    window.addEventListener('mousemove', onMM);
-    window.addEventListener('mouseleave', onML);
     window.addEventListener('resize', onResize);
+    window.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
 
-    resize(); init(); draw();
+    resize();
+    init();
+    animate();
 
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('mousemove', onMM);
-      window.removeEventListener('mouseleave', onML);
+      cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseleave', onMouseLeave);
     };
   }, []);
 
@@ -404,7 +294,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   return (
-    <section
+    <section 
       className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
@@ -428,16 +318,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         }
       `}</style>
 
-      <canvas
-        ref={canvasRef}
-        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`}
+      <canvas 
+        ref={canvasRef} 
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
       />
-
+      
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
-
-        {/* --- TITLE SECTION --- */}
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
-          <h1
+          <h1 
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
             style={{ fontFamily: '"Montserrat", sans-serif' }}
           >
@@ -455,7 +343,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
-        {/* --- BUTTON & INPUT SECTION --- */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -471,14 +358,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-black text-center">
               {isSent ? t.openingChat : t.askAiAgent}
             </h3>
-
-            <form
+            <form 
               onSubmit={handleAISubmit}
               className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-lg focus-within:shadow-xl ${
                 isSent ? 'border-green-600 bg-green-50' : ''
               }`}
             >
-              <input
+              <input 
                 ref={heroInputRef}
                 type="text"
                 value={query}
@@ -488,7 +374,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 className="w-full bg-transparent px-5 py-3 text-base outline-none text-black font-medium placeholder:text-zinc-400"
                 style={{ fontFamily: 'Georgia, serif' }}
               />
-              <button
+              <button 
                 type="submit"
                 disabled={!query.trim() || isSent}
                 className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
@@ -502,12 +388,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
-        <div
+        <div 
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
         >
-          <div
+          <div 
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
@@ -515,11 +400,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseLeave={() => setIsHoveringVideo(false)}
             className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
           >
-            <div
+            <div 
               className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-              style={{
-                left: `${currentPos.x}px`,
-                top: `${currentPos.y}px`,
+              style={{ 
+                left: `${currentPos.x}px`, 
+                top: `${currentPos.y}px`, 
                 transform: 'translate(-50%, -50%)',
                 fontFamily: '"Montserrat", sans-serif'
               }}
@@ -529,7 +414,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             </div>
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
-
+            
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
@@ -541,18 +426,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
-      {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
-            <button
-              onClick={() => setIsModalOpen(false)}
+            <button 
+              onClick={() => setIsModalOpen(false)} 
               className="absolute top-4 right-4 p-3 z-[130] group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-all"
               aria-label="Close video"
             >
               <X className="w-6 h-6 text-white" />
             </button>
-
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&modestbranding=1&rel=0&showinfo=0`}
               className="w-[102%] h-[102%] ml-[-1%] mt-[-1%] scale-105"
