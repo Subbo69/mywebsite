@@ -151,7 +151,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // ─── PARTICLE ENGINE — velocity-wind system ───────────────────────────────
+  // ─── PARTICLE ENGINE — loose-follow / wave-drag system ───────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -175,15 +175,35 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       { r: 251, g: 188, b: 5   }, // Google Yellow
     ];
 
-    // Physics constants
-    const SPRING   = 0.032;   // how strongly particles return to origin
-    const FRICTION = 0.80;    // velocity damping per frame (< 1 = decay)
-    // Wind influence: mouse velocity is scaled by this before being added to particle velocity.
-    // Higher = more sensitive to fast movement.
-    const WIND_SCALE  = 0.18;
-    // How quickly the wind influence fades with distance from cursor.
-    // Particles far away are barely affected; close ones get full push.
-    const WIND_RADIUS = 380;  // px — anything beyond this gets no wind
+    // ── Physics constants ────────────────────────────────────────────────────
+    //
+    // ATTRACTION: how strongly each particle is pulled *toward* the cursor
+    // position every frame. Intentionally weak — particles drift toward the
+    // mouse but will never fully reach it before friction bleeds off the
+    // velocity. Think of it like dragging through thick water.
+    const ATTRACTION        = 0.007;
+    // Particles within this radius feel the positional attraction.
+    const ATTRACTION_RADIUS = 700;
+    // Inside this radius the attraction flips to a soft push so particles
+    // don't cluster right under the cursor.
+    const REPULSION_RADIUS  = 55;
+    // Velocity wind: fast mouse sweeps add momentum in the sweep direction,
+    // creating a "wave" effect. Scaled by this factor before being added to
+    // particle velocity.
+    const WIND_SCALE        = 0.20;
+    // Distance beyond which wind has zero effect.
+    const WIND_RADIUS       = 500;
+    // Very weak spring back toward spawn position. Prevents particles from
+    // drifting off-screen permanently when the cursor is gone for a while.
+    // Low enough that you can push them far from home before they slowly
+    // wander back.
+    const HOME_SPRING       = 0.003;
+    // Velocity damping. Higher = particles stop faster and feel "heavier".
+    // Lower = floatier, waves travel further.
+    const FRICTION          = 0.91;
+    // Maximum speed cap to prevent any single frame from launching a particle
+    // across the screen.
+    const MAX_SPEED         = 18;
 
     type Particle = {
       x: number; y: number;
@@ -275,41 +295,78 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Decay mouse velocity each frame so it smoothly fades to zero
-      mouseState.vx *= 0.85;
-      mouseState.vy *= 0.85;
+      // Decay mouse velocity smoothly each frame so sweeps fade out naturally
+      mouseState.vx *= 0.82;
+      mouseState.vy *= 0.82;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
 
-        // Distance from cursor to particle
-        const dx = p.x - mouseState.x;
-        const dy = p.y - mouseState.y;
-        const distToCursor = Math.sqrt(dx * dx + dy * dy);
+        if (mouseState.x !== -9999) {
+          const dx = mouseState.x - p.x;
+          const dy = mouseState.y - p.y;
+          const distToCursor = Math.sqrt(dx * dx + dy * dy) || 0.001;
 
-        // Wind influence falls off linearly with distance
-        if (distToCursor < WIND_RADIUS && mouseState.x !== -9999) {
-          const falloff = 1 - distToCursor / WIND_RADIUS;
-          p.vx += mouseState.vx * WIND_SCALE * falloff;
-          p.vy += mouseState.vy * WIND_SCALE * falloff;
+          // ── 1. Velocity wind (sweep creates waves) ──────────────────────
+          // Fast mouse movement injects momentum into nearby particles in the
+          // direction of travel. Particles far away get barely any push;
+          // close ones get the full effect. This is what lets you create
+          // rightward "waves" by sweeping the cursor quickly.
+          if (distToCursor < WIND_RADIUS) {
+            const windFalloff = 1 - distToCursor / WIND_RADIUS;
+            p.vx += mouseState.vx * WIND_SCALE * windFalloff;
+            p.vy += mouseState.vy * WIND_SCALE * windFalloff;
+          }
+
+          // ── 2. Positional attraction toward cursor ──────────────────────
+          // Each frame, particles within ATTRACTION_RADIUS get a tiny nudge
+          // toward the cursor. Because ATTRACTION is small and FRICTION is
+          // high, they never fully reach it — they drift closer but always
+          // lag behind. Moving the cursor creates an ever-changing "target"
+          // so the gap between cursor and particle constantly shifts.
+          if (distToCursor < ATTRACTION_RADIUS && distToCursor > REPULSION_RADIUS) {
+            const attrFalloff = 1 - distToCursor / ATTRACTION_RADIUS;
+            const normX = dx / distToCursor;
+            const normY = dy / distToCursor;
+            p.vx += normX * ATTRACTION * attrFalloff;
+            p.vy += normY * ATTRACTION * attrFalloff;
+          }
+
+          // ── 3. Soft repulsion — cursor's immediate vicinity ─────────────
+          // Prevents all particles from piling up exactly on the cursor.
+          // Instead they orbit loosely around it at ~REPULSION_RADIUS px.
+          if (distToCursor <= REPULSION_RADIUS) {
+            const pushStrength = (1 - distToCursor / REPULSION_RADIUS) * 0.06;
+            p.vx -= (dx / distToCursor) * pushStrength;
+            p.vy -= (dy / distToCursor) * pushStrength;
+          }
         }
 
-        // Spring back to origin
-        p.vx += (p.originX - p.x) * SPRING;
-        p.vy += (p.originY - p.y) * SPRING;
+        // ── 4. Very weak home spring ──────────────────────────────────────
+        // Gently nudges each particle back toward its spawn point so they
+        // don't drift off-screen permanently. Weak enough that aggressive
+        // sweeping can carry them far away for several seconds first.
+        p.vx += (p.originX - p.x) * HOME_SPRING;
+        p.vy += (p.originY - p.y) * HOME_SPRING;
 
-        // Friction
+        // ── 5. Friction ───────────────────────────────────────────────────
         p.vx *= FRICTION;
         p.vy *= FRICTION;
+
+        // ── 6. Speed cap ──────────────────────────────────────────────────
+        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        if (speed > MAX_SPEED) {
+          p.vx = (p.vx / speed) * MAX_SPEED;
+          p.vy = (p.vy / speed) * MAX_SPEED;
+        }
 
         p.x += p.vx;
         p.y += p.vy;
 
-        // Slight rotation proportional to speed
-        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        // Slight rotation proportional to speed for organic feel
         p.angle += speed * 0.012;
 
-        // Draw pill
+        // ── Draw pill ─────────────────────────────────────────────────────
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
@@ -331,13 +388,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }
     };
 
-    // Track raw mouse position and compute velocity
+    // Track raw mouse position and compute smoothed velocity
     const onMouseMove = (e: MouseEvent) => {
       const rawVx = e.clientX - mouseState.prevX;
       const rawVy = e.clientY - mouseState.prevY;
-      // Smooth velocity with exponential moving average
-      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
-      mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
+      // Exponential moving average keeps velocity smooth, not jittery
+      mouseState.vx = mouseState.vx * 0.55 + rawVx * 0.45;
+      mouseState.vy = mouseState.vy * 0.55 + rawVy * 0.45;
       mouseState.prevX = mouseState.x;
       mouseState.prevY = mouseState.y;
       mouseState.x = e.clientX;
@@ -356,8 +413,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       const ty = e.touches[0].clientY;
       const rawVx = tx - (mouseState.prevX === -9999 ? tx : mouseState.prevX);
       const rawVy = ty - (mouseState.prevY === -9999 ? ty : mouseState.prevY);
-      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
-      mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
+      mouseState.vx = mouseState.vx * 0.55 + rawVx * 0.45;
+      mouseState.vy = mouseState.vy * 0.55 + rawVy * 0.45;
       mouseState.prevX = mouseState.x;
       mouseState.prevY = mouseState.y;
       mouseState.x = tx;
@@ -371,12 +428,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const onVisibility = () => { paused = document.hidden; };
     const onResize = () => { clearTimeout(rzTimer); rzTimer = setTimeout(() => { resize(); init(); }, 200); };
 
-    window.addEventListener('mousemove',        onMouseMove,  { passive: true });
-    window.addEventListener('touchmove',        onTouchMove,  { passive: true });
-    window.addEventListener('touchstart',       onTouchMove,  { passive: true });
-    window.addEventListener('touchend',         onTouchEnd,   { passive: true });
-    window.addEventListener('resize',           onResize,     { passive: true });
-    document.addEventListener('mouseleave',     onMouseLeave);
+    window.addEventListener('mousemove',          onMouseMove,  { passive: true });
+    window.addEventListener('touchmove',          onTouchMove,  { passive: true });
+    window.addEventListener('touchstart',         onTouchMove,  { passive: true });
+    window.addEventListener('touchend',           onTouchEnd,   { passive: true });
+    window.addEventListener('resize',             onResize,     { passive: true });
+    document.addEventListener('mouseleave',       onMouseLeave);
     document.addEventListener('visibilitychange', onVisibility);
 
     resize(); init();
@@ -385,12 +442,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(rzTimer);
-      window.removeEventListener('mousemove',        onMouseMove);
-      window.removeEventListener('touchmove',        onTouchMove);
-      window.removeEventListener('touchstart',       onTouchMove);
-      window.removeEventListener('touchend',         onTouchEnd);
-      window.removeEventListener('resize',           onResize);
-      document.removeEventListener('mouseleave',     onMouseLeave);
+      window.removeEventListener('mousemove',          onMouseMove);
+      window.removeEventListener('touchmove',          onTouchMove);
+      window.removeEventListener('touchstart',         onTouchMove);
+      window.removeEventListener('touchend',           onTouchEnd);
+      window.removeEventListener('resize',             onResize);
+      document.removeEventListener('mouseleave',       onMouseLeave);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
