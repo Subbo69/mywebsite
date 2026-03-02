@@ -350,3 +350,4 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     </section>
   );
 }
+
