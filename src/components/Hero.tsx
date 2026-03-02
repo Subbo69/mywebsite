@@ -46,10 +46,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
-    setTargetPos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
+    setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
   useEffect(() => {
@@ -57,7 +54,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     let animationFrame: number;
     const followMouse = () => {
       setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.12, 
+        x: prev.x + (targetPos.x - prev.x) * 0.12,
         y: prev.y + (targetPos.y - prev.y) * 0.12
       }));
       animationFrame = requestAnimationFrame(followMouse);
@@ -147,7 +144,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- PARTICLE ENGINE (Google Antigravity Style) ---
+  // --- PARTICLE ENGINE (Google Antigravity Blob Style) ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -155,86 +152,115 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     if (!ctx) return;
 
     let animationId: number;
-    let mouse = { x: -9999, y: -9999 };
 
-    const COLS_SPACING = 22;
-    const ROWS_SPACING = 22;
-    const MOUSE_RADIUS = 120;
-    const REPULSION = 8;
-    const SPRING = 0.035;
-    const FRICTION = 0.82;
+    // Smooth mouse position (lagged)
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let smoothMouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    // Blue + red/purple palette like Antigravity
-    const COLORS = [
+    // Google brand colors
+    const GOOGLE_COLORS = [
       { r: 66,  g: 133, b: 244 }, // Google Blue
       { r: 66,  g: 133, b: 244 },
       { r: 66,  g: 133, b: 244 },
-      { r: 66,  g: 133, b: 244 },
-      { r: 180, g: 60,  b: 100 }, // Red/purple accent (sparse)
-      { r: 120, g: 60,  b: 180 }, // Purple accent (sparse)
+      { r: 52,  g: 168, b: 83  }, // Google Green
+      { r: 251, g: 188, b: 5   }, // Google Yellow
+      { r: 234, g: 67,  b: 53  }, // Google Red
     ];
 
-    type Particle = {
+    const BLOB_RADIUS = 180;       // radius of the blob sphere
+    const PARTICLE_COUNT = 600;    // particles in the blob
+    const GRID_SPACING = 24;       // background grid spacing
+    const SPRING = 0.055;
+    const FRICTION = 0.78;
+
+    type BlobParticle = {
+      // position in 3D sphere (normalized -1 to 1)
+      nx: number; ny: number; nz: number;
+      // screen position
+      x: number; y: number;
+      vx: number; vy: number;
+      r: number; g: number; b: number;
+    };
+
+    type GridParticle = {
       x: number; y: number;
       originX: number; originY: number;
       vx: number; vy: number;
       r: number; g: number; b: number;
-      baseSize: number;
     };
 
-    let particles: Particle[] = [];
+    let blobParticles: BlobParticle[] = [];
+    let gridParticles: GridParticle[] = [];
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
 
-    const init = () => {
-      particles = [];
-      const cols = Math.ceil(canvas.width / COLS_SPACING) + 2;
-      const rows = Math.ceil(canvas.height / ROWS_SPACING) + 2;
+    const initBlob = () => {
+      blobParticles = [];
+      // Distribute points on a sphere using Fibonacci lattice
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const y = 1 - (i / (PARTICLE_COUNT - 1)) * 2;
+        const radiusAtY = Math.sqrt(1 - y * y);
+        const theta = goldenAngle * i;
+        const nx = Math.cos(theta) * radiusAtY;
+        const nz = Math.sin(theta) * radiusAtY;
+        const col = GOOGLE_COLORS[i % GOOGLE_COLORS.length];
+        blobParticles.push({
+          nx, ny: y, nz,
+          x: smoothMouse.x + nx * BLOB_RADIUS,
+          y: smoothMouse.y + y * BLOB_RADIUS,
+          vx: 0, vy: 0,
+          r: col.r, g: col.g, b: col.b,
+        });
+      }
+    };
 
+    const initGrid = () => {
+      gridParticles = [];
+      const cols = Math.ceil(canvas.width / GRID_SPACING) + 2;
+      const rows = Math.ceil(canvas.height / GRID_SPACING) + 2;
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          // Fade out dots on the left side (like in the screenshot)
           const xFraction = col / cols;
-          if (Math.random() > xFraction * 1.1) continue;
-
-          const x = col * COLS_SPACING;
-          const y = row * ROWS_SPACING;
-
-          // Randomly pick color – mostly blue, occasionally red/purple
-          const colorIdx = Math.random() < 0.08 ? (Math.random() < 0.5 ? 4 : 5) : Math.floor(Math.random() * 4);
-          const col_ = COLORS[colorIdx];
-
-          particles.push({
-            x, y,
-            originX: x,
-            originY: y,
+          if (Math.random() > xFraction * 1.2) continue;
+          const x = col * GRID_SPACING;
+          const y = row * GRID_SPACING;
+          gridParticles.push({
+            x, y, originX: x, originY: y,
             vx: 0, vy: 0,
-            r: col_.r, g: col_.g, b: col_.b,
-            baseSize: Math.random() * 1.5 + 1,
+            r: 66, g: 133, b: 244, // all blue for background
           });
         }
       }
     };
 
+    let ticker = 0;
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ticker += 0.008;
 
-      particles.forEach((p) => {
-        const dx = mouse.x - p.x;
-        const dy = mouse.y - p.y;
+      // Smooth mouse follow (blob lags behind)
+      smoothMouse.x += (mouse.x - smoothMouse.x) * 0.07;
+      smoothMouse.y += (mouse.y - smoothMouse.y) * 0.07;
+
+      // --- DRAW BACKGROUND GRID (repelled by blob) ---
+      gridParticles.forEach((p) => {
+        const dx = smoothMouse.x - p.x;
+        const dy = smoothMouse.y - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        const repelRadius = BLOB_RADIUS * 1.3;
 
-        if (dist < MOUSE_RADIUS && dist > 0) {
-          const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+        if (dist < repelRadius && dist > 0) {
+          const force = ((repelRadius - dist) / repelRadius) * 5;
           const angle = Math.atan2(dy, dx);
-          p.vx -= Math.cos(angle) * force * REPULSION;
-          p.vy -= Math.sin(angle) * force * REPULSION;
+          p.vx -= Math.cos(angle) * force;
+          p.vy -= Math.sin(angle) * force;
         }
 
-        // Spring back to grid origin
         p.vx += (p.originX - p.x) * SPRING;
         p.vy += (p.originY - p.y) * SPRING;
         p.vx *= FRICTION;
@@ -242,11 +268,54 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         p.x += p.vx;
         p.y += p.vy;
 
-        // Size grows slightly when displaced
         const displacement = Math.sqrt((p.x - p.originX) ** 2 + (p.y - p.originY) ** 2);
-        const size = p.baseSize + Math.min(displacement * 0.06, 2.5);
-        const opacity = Math.min(0.85, 0.35 + displacement * 0.015);
+        const size = 1.2 + Math.min(displacement * 0.04, 1.5);
+        const opacity = 0.25 + Math.min(displacement * 0.01, 0.3);
 
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity})`;
+        ctx.fill();
+      });
+
+      // --- DRAW BLOB (3D sphere effect) ---
+      // Sort by nz so "back" particles draw first
+      const sorted = [...blobParticles].sort((a, b) => a.nz - b.nz);
+
+      sorted.forEach((p) => {
+        // Breathing animation
+        const breathe = 1 + Math.sin(ticker * 1.2) * 0.04;
+        const wobbleX = Math.sin(ticker * 0.7 + p.ny * 3) * 6;
+        const wobbleY = Math.cos(ticker * 0.5 + p.nx * 3) * 6;
+
+        // Target = smoothMouse + sphere position + wobble
+        const targetX = smoothMouse.x + p.nx * BLOB_RADIUS * breathe + wobbleX;
+        const targetY = smoothMouse.y + p.ny * BLOB_RADIUS * breathe + wobbleY;
+
+        p.vx += (targetX - p.x) * 0.06;
+        p.vy += (targetY - p.y) * 0.06;
+        p.vx *= 0.82;
+        p.vy *= 0.82;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // 3D depth cues: nz ranges -1 (back) to +1 (front)
+        const depth = (p.nz + 1) / 2; // 0 = back, 1 = front
+        const size = 1.2 + depth * 3.5;
+        const opacity = 0.15 + depth * 0.85;
+
+        // Glow for front particles
+        if (depth > 0.6) {
+          const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 5);
+          glow.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity * 0.35})`);
+          glow.addColorStop(1, `rgba(${p.r}, ${p.g}, ${p.b}, 0)`);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size * 5, 0, Math.PI * 2);
+          ctx.fillStyle = glow;
+          ctx.fill();
+        }
+
+        // Core dot
         ctx.beginPath();
         ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity})`;
@@ -257,22 +326,20 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     };
 
     const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
-    const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999; };
-    const onResize = () => { resize(); init(); };
+    const onResize = () => { resize(); initBlob(); initGrid(); };
 
     window.addEventListener('resize', onResize);
     window.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseleave', onMouseLeave);
 
     resize();
-    init();
+    initBlob();
+    initGrid();
     animate();
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseleave', onMouseLeave);
     };
   }, []);
 
