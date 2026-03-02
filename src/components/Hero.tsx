@@ -46,7 +46,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const VIDEO_ID = "Py1ClI35v_k";
 
   // --- MOUSE TRACKING FOR VIDEO ---
-  const handleMouseMoveVideo = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
     setTargetPos({
@@ -55,7 +55,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
-  // --- SPRING PHYSICS FOR MAGNETIC PLAY BUTTON ---
+  // --- SPRING PHYSICS ENGINE ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
@@ -162,111 +162,75 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- 3D DEPTH PARTICLE ENGINE ---
+  // --- PARTICLE ENGINE ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    const PARTICLE_COUNT = 1100; 
+    const PARTICLE_COUNT = 8278; 
     let particles: any[] = [];
     let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let lastMouse = { x: mouse.x, y: mouse.y };
-    let movement = { x: 0, y: 0 };
-
+    let ticker = 0;
+    
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-
+    
+    const getParticleColor = (x: number, y: number, opacity: number) => {
+      const diagScore = (x + y) / (canvas.width + canvas.height);
+      const hue = diagScore > 0.45 ? 212 : 272; 
+      return `hsla(${hue}, 85%, 45%, ${opacity})`;
+    };
+    
     const init = () => {
       particles = [];
+      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
       for (let i = 0; i < PARTICLE_COUNT; i++) {
-        // Z-axis: 0.4 (far) to 1.0 (near)
-        const z = Math.random() * 0.6 + 0.4; 
+        const angle = i * angleStep;
+        const radius = Math.sqrt(i) * 21.12; 
+        const z = 0.5 + Math.random();
         particles.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          originX: Math.random() * canvas.width,
-          originY: Math.random() * canvas.height,
-          vx: 0,
-          vy: 0,
-          z: z,
-          baseSize: z * 3.5 + 1, // Larger base size for near particles
-          friction: 0.9 + (z * 0.05),
-          colorHue: Math.random() > 0.5 ? 212 : 272,
+          x: mouse.x + (Math.cos(angle) * radius * z),
+          y: mouse.y + (Math.sin(angle) * radius * z),
+          offsetX: (Math.cos(angle) * radius),
+          offsetY: (Math.sin(angle) * radius),
+          z: z, 
+          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
+          baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
+          randomOffset: Math.random() * 600
         });
       }
     };
-
+    
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      movement.x = mouse.x - lastMouse.x;
-      movement.y = mouse.y - lastMouse.y;
-      lastMouse.x = mouse.x;
-      lastMouse.y = mouse.y;
-
+      ticker += 0.005;
       particles.forEach((p) => {
-        const dx = mouse.x - p.x;
-        const dy = mouse.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const maxDist = 250;
-        const force = Math.max(0, (maxDist - dist) / maxDist);
-
-        // Movement physics influenced by Z (Closer = more reactive)
-        p.vx += (dx / dist) * force * 1.2 * p.z;
-        p.vy += (dy / dist) * force * 1.2 * p.z;
-
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= p.friction;
-        p.vy *= p.friction;
-
-        // 3D Swell Logic
-        const swell = force * 18 * p.z; 
-        const stretch = (Math.abs(movement.x) + Math.abs(movement.y)) * 0.15 * p.z;
-        
-        const w = p.baseSize + stretch + swell;
-        const h = p.baseSize + (swell * 0.5);
-        const op = Math.min(0.5, (0.12 * p.z) + (force * 0.35));
-
-        ctx.beginPath();
-        ctx.fillStyle = `hsla(${p.colorHue}, 85%, 55%, ${op})`;
-        
-        // Use ellipse for directional stretch
-        ctx.ellipse(
-          p.x, 
-          p.y, 
-          w / 2, 
-          h / 2, 
-          Math.atan2(movement.y, movement.x), 
-          0, 
-          Math.PI * 2
-        );
-        ctx.fill();
-
-        // Return to natural position over time
-        p.x += (p.originX - p.x) * 0.01;
-        p.y += (p.originY - p.y) * 0.01;
+        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 4);
+        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
+        p.x += (targetX - p.x) * (0.018 * p.z);
+        p.y += (targetY - p.y) * (0.018 * p.z);
+        const color = getParticleColor(p.x, p.y, p.baseOpacity);
+        ctx.beginPath(); ctx.fillStyle = color;
+        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
       });
       requestAnimationFrame(animate);
     };
-
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    resize(); init(); animate();
     
-    return () => {
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('resize', () => { resize(); init(); });
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    resize(); init(); animate();
+  }, []);
+
+  // ESC Key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
     };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleAISubmit = (e: React.FormEvent) => {
@@ -384,7 +348,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           <div 
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
-            onMouseMove={handleMouseMoveVideo}
+            onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => setIsHoveringVideo(false)}
             className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
@@ -404,6 +368,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             
+            {/* Conditional render: Stop bg video when modal is open */}
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
