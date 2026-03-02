@@ -22,6 +22,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Choreography States
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
@@ -36,6 +37,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
+  // --- MAGNETIC BUTTON STATES ---
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -43,7 +45,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const fullText = t.heroTitle;
   const VIDEO_ID = "Py1ClI35v_k";
 
-  // --- MOUSE TRACKING ---
+  // --- MOUSE TRACKING FOR VIDEO ---
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
@@ -53,10 +55,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
-  // --- SPRING PHYSICS FOR VIDEO BUTTON ---
+  // --- SPRING PHYSICS ENGINE ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
+    
     const followMouse = () => {
       setCurrentPos(prev => ({
         x: prev.x + (targetPos.x - prev.x) * 0.12, 
@@ -64,11 +67,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }));
       animationFrame = requestAnimationFrame(followMouse);
     };
+    
     animationFrame = requestAnimationFrame(followMouse);
     return () => cancelAnimationFrame(animationFrame);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // --- CHOREOGRAPHY ---
+  // --- CHOREOGRAPHY SYNCHRONIZATION ---
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const subTimeout = setTimeout(() => {
@@ -91,7 +95,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // --- INFINITE TYPEWRITER ---
+  // --- INFINITE TYPEWRITER (PLACEHOLDER) ---
   useEffect(() => {
     let currentText = "";
     let isDeleting = false;
@@ -158,104 +162,69 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- GOOGLE FLUID MESH ENGINE ---
+  // --- PARTICLE ENGINE ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    let animationFrame: number;
-    let time = 0;
-    const points: any[] = [];
-    const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false };
-
-    // Official Google Colors (RGB)
-    const googleColors = [
-      '66, 133, 244',  // Blue
-      '234, 67, 53',   // Red
-      '251, 188, 5',   // Yellow
-      '52, 168, 83'    // Green
-    ];
-
-    const init = () => {
+    const PARTICLE_COUNT = 8278; 
+    let particles: any[] = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let ticker = 0;
+    
+    const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      points.length = 0;
-      const spacing = 200; // Wider spacing for cleaner Google look
-      for (let x = -spacing; x < canvas.width + spacing; x += spacing) {
-        for (let y = -spacing; y < canvas.height + spacing; y += spacing) {
-          points.push({
-            x: x, y: y, originX: x, originY: y,
-            vx: 0, vy: 0,
-            color: googleColors[Math.floor(Math.random() * googleColors.length)]
-          });
-        }
+    };
+    
+    const getParticleColor = (x: number, y: number, opacity: number) => {
+      const diagScore = (x + y) / (canvas.width + canvas.height);
+      const hue = diagScore > 0.45 ? 212 : 272; 
+      return `hsla(${hue}, 85%, 45%, ${opacity})`;
+    };
+    
+    const init = () => {
+      particles = [];
+      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = i * angleStep;
+        const radius = Math.sqrt(i) * 21.12; 
+        const z = 0.5 + Math.random();
+        particles.push({
+          x: mouse.x + (Math.cos(angle) * radius * z),
+          y: mouse.y + (Math.sin(angle) * radius * z),
+          offsetX: (Math.cos(angle) * radius),
+          offsetY: (Math.sin(angle) * radius),
+          z: z, 
+          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
+          baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
+          randomOffset: Math.random() * 600
+        });
       }
     };
-
-    const draw = () => {
+    
+    const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.0012; // Slower, more elegant movement
-
-      points.forEach(p => {
-        const noiseX = Math.sin(time + p.originX * 0.002) * 60;
-        const noiseY = Math.cos(time + p.originY * 0.002) * 60;
-        let targetX = p.originX + noiseX;
-        let targetY = p.originY + noiseY;
-
-        if (mouse.active) {
-          const dx = mouse.x - p.x;
-          const dy = mouse.y - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 900) {
-            const force = (900 - dist) / 900;
-            targetX += dx * force * 0.6;
-            targetY += dy * force * 0.6;
-          }
-        }
-
-        p.vx = (targetX - p.x) * 0.035;
-        p.vy = (targetY - p.y) * 0.035;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        const size = 600;
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-
-        // Very low alpha to keep the background clean and white-leaning
-        gradient.addColorStop(0, `rgba(${p.color}, 0.08)`);
-        gradient.addColorStop(1, `rgba(${p.color}, 0)`);
-
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        ctx.fill();
+      ticker += 0.005;
+      particles.forEach((p) => {
+        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 4);
+        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
+        p.x += (targetX - p.x) * (0.018 * p.z);
+        p.y += (targetY - p.y) * (0.018 * p.z);
+        const color = getParticleColor(p.x, p.y, p.baseOpacity);
+        ctx.beginPath(); ctx.fillStyle = color;
+        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
       });
-
-      animationFrame = requestAnimationFrame(draw);
+      requestAnimationFrame(animate);
     };
-
-    const handleResize = () => init();
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    init();
-    draw();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
-      cancelAnimationFrame(animationFrame);
-    };
+    
+    window.addEventListener('resize', () => { resize(); init(); });
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    resize(); init(); animate();
   }, []);
 
+  // ESC Key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsModalOpen(false);
@@ -289,7 +258,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           height: 0.9em;
           margin-left: 4px;
           vertical-align: middle;
-          background: linear-gradient(to bottom, #4285F4, #34A853);
+          background: linear-gradient(to bottom, #a855f7, #3b82f6);
           animation: blink 1s step-end infinite;
         }
         .typewriter-cursor.is-typing {
@@ -298,13 +267,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         }
       `}</style>
 
-      {/* --- GOOGLE-COLORED ANIMATED BACKGROUND --- */}
       <canvas 
         ref={canvasRef} 
-        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] blur-[100px] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
       />
       
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
+        {/* --- TITLE SECTION --- */}
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
           <h1 
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
@@ -324,6 +293,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
+        {/* --- BUTTON & INPUT SECTION --- */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -370,6 +340,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
+        {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
         <div 
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
@@ -397,6 +368,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             
+            {/* Conditional render: Stop bg video when modal is open */}
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
@@ -408,6 +380,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
+      {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
