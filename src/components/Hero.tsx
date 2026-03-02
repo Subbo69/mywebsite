@@ -8,23 +8,39 @@ interface HeroProps {
   language: Language;
 }
 
+// ─── Device Tier Detection ────────────────────────────────────────────────────
+function getDeviceTier(): 'low' | 'medium' | 'high' {
+  const cores   = navigator.hardwareConcurrency ?? 2;
+  const width   = window.innerWidth;
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isTouch || cores <= 2 || width < 768)  return 'low';
+  if (cores <= 4 || width < 1280)            return 'medium';
+  return 'high';
+}
+
+const TIER_CONFIG = {
+  low:    { pills: 220, dots: 60,  fps: 30 },
+  medium: { pills: 320, dots: 100, fps: 45 },
+  high:   { pills: 420, dots: 180, fps: 60 },
+};
+
 export default function Hero({ onBookingClick, onAskAIClick, language }: HeroProps) {
   const t = translations[language];
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const heroInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef         = useRef<HTMLCanvasElement>(null);
+  const heroInputRef      = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
-  const [query, setQuery] = useState("");
-  const [isSent, setIsSent] = useState(false);
+  const [query,         setQuery]         = useState("");
+  const [isSent,        setIsSent]        = useState(false);
   const [scrollOpacity, setScrollOpacity] = useState(0);
-  const [scrollScale, setScrollScale] = useState(0.85);
-  const [displayText, setDisplayText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [scrollScale,   setScrollScale]   = useState(0.85);
+  const [displayText,   setDisplayText]   = useState("");
+  const [isTyping,      setIsTyping]      = useState(false);
+  const [isModalOpen,   setIsModalOpen]   = useState(false);
 
-  const [showSubtitle, setShowSubtitle] = useState(false);
-  const [showCTA, setShowCTA] = useState(false);
-  const [showInput, setShowInput] = useState(false);
+  const [showSubtitle,  setShowSubtitle]  = useState(false);
+  const [showCTA,       setShowCTA]       = useState(false);
+  const [showInput,     setShowInput]     = useState(false);
   const [showParticles, setShowParticles] = useState(false);
 
   const [placeholder, setPlaceholder] = useState("");
@@ -36,127 +52,119 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+  const [targetPos,       setTargetPos]       = useState({ x: 0, y: 0 });
+  const [currentPos,      setCurrentPos]      = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
 
   const fullText = t.heroTitle;
   const VIDEO_ID = "Py1ClI35v_k";
 
+  const isTouch = typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  // ─── Mouse tracking for magnetic cursor ──────────────────────────────────
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
     setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
+  // ─── Spring physics (video cursor pill) ──────────────────────────────────
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
-    let animationFrame: number;
-    const followMouse = () => {
+    let af: number;
+    const follow = () => {
       setCurrentPos(prev => ({
         x: prev.x + (targetPos.x - prev.x) * 0.12,
-        y: prev.y + (targetPos.y - prev.y) * 0.12
+        y: prev.y + (targetPos.y - prev.y) * 0.12,
       }));
-      animationFrame = requestAnimationFrame(followMouse);
+      af = requestAnimationFrame(follow);
     };
-    animationFrame = requestAnimationFrame(followMouse);
-    return () => cancelAnimationFrame(animationFrame);
+    af = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
+  // ─── Choreography sync ───────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
-      const subTimeout = setTimeout(() => {
+      const t1 = setTimeout(() => {
         setShowSubtitle(true);
-        const ctaTimeout = setTimeout(() => {
+        const t2 = setTimeout(() => {
           setShowCTA(true);
-          const inputTimeout = setTimeout(() => {
+          const t3 = setTimeout(() => {
             setShowInput(true);
-            const particleTimeout = setTimeout(() => {
+            const t4 = setTimeout(() => {
               setShowParticles(true);
               heroInputRef.current?.focus({ preventScroll: true });
             }, 600);
-            return () => clearTimeout(particleTimeout);
+            return () => clearTimeout(t4);
           }, 500);
-          return () => clearTimeout(inputTimeout);
+          return () => clearTimeout(t3);
         }, 500);
-        return () => clearTimeout(ctaTimeout);
+        return () => clearTimeout(t2);
       }, 300);
-      return () => clearTimeout(subTimeout);
+      return () => clearTimeout(t1);
     }
   }, [isTyping, displayText, fullText]);
 
+  // ─── Placeholder typewriter ───────────────────────────────────────────────
   useEffect(() => {
-    let currentText = "";
-    let isDeleting = false;
-    let timer: NodeJS.Timeout;
+    let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
       const phrase = placeholderPhrases[phraseIdx];
       let speed = 80;
-      if (!isDeleting) {
-        currentText = phrase.slice(0, currentText.length + 1);
-        if (currentText === phrase) { speed = 3500; isDeleting = true; }
+      if (!del) {
+        cur = phrase.slice(0, cur.length + 1);
+        if (cur === phrase) { speed = 3500; del = true; }
       } else {
-        currentText = phrase.slice(0, currentText.length - 1);
-        speed = 40;
-        if (currentText === "") {
-          isDeleting = false;
-          setPhraseIdx((prev) => (prev + 1) % placeholderPhrases.length);
-          speed = 1000;
-        }
+        cur = phrase.slice(0, cur.length - 1); speed = 40;
+        if (cur === "") { del = false; setPhraseIdx(p => (p + 1) % placeholderPhrases.length); speed = 1000; }
       }
-      setPlaceholder(currentText);
-      timer = setTimeout(type, speed);
+      setPlaceholder(cur); timer = setTimeout(type, speed);
     };
     timer = setTimeout(type, 500);
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
+  // ─── Title typewriter ─────────────────────────────────────────────────────
   useEffect(() => {
-    let i = 0;
-    let isMounted = true;
-    setDisplayText("");
-    setIsTyping(true);
-    setShowSubtitle(false);
-    setShowCTA(false);
-    setShowInput(false);
-    setShowParticles(false);
+    let i = 0; let mounted = true;
+    setDisplayText(""); setIsTyping(true);
+    setShowSubtitle(false); setShowCTA(false);
+    setShowInput(false); setShowParticles(false);
     const type = () => {
-      if (!isMounted) return;
-      if (i <= fullText.length) {
-        setDisplayText(fullText.slice(0, i));
-        i++;
-        setTimeout(type, Math.random() * 25 + 45);
-      } else {
-        setIsTyping(false);
-      }
+      if (!mounted) return;
+      if (i <= fullText.length) { setDisplayText(fullText.slice(0, i++)); setTimeout(type, Math.random() * 25 + 45); }
+      else setIsTyping(false);
     };
-    const startTimeout = setTimeout(type, 280);
-    return () => { isMounted = false; clearTimeout(startTimeout); };
+    const t0 = setTimeout(type, 280);
+    return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
+  // ─── Scroll reveal ────────────────────────────────────────────────────────
   useEffect(() => {
-    const handleScroll = () => {
-      const progress = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
-      setScrollOpacity(progress);
-      setScrollScale(0.85 + (progress * 0.15));
+    const onScroll = () => {
+      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // --- PARTICLE ENGINE (Google Antigravity - exact replica) ---
+  // ─── PARTICLE ENGINE — velocity-wind system ───────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationId: number;
-    let mouse = { x: -9999, y: -9999 };
+    const tier = getDeviceTier();
+    const cfg  = TIER_CONFIG[tier];
+    const FRAME_INTERVAL = 1000 / cfg.fps;
 
-    // Google brand colors – blue top/center, warm colors bottom/outer
+    // Google brand color bands — blue inner/top → warm outer/bottom
     const COLOR_BANDS = [
-      { r: 138, g: 143, b: 234 }, // soft indigo/blue-purple (inner top)
+      { r: 138, g: 143, b: 234 }, // soft indigo
       { r: 100, g: 120, b: 220 }, // blue
       { r: 66,  g: 133, b: 244 }, // Google Blue
       { r: 120, g: 80,  b: 200 }, // purple
@@ -167,29 +175,50 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       { r: 251, g: 188, b: 5   }, // Google Yellow
     ];
 
-    const PARTICLE_COUNT = 420;
-    const MOUSE_RADIUS = 150;
-    const REPULSION = 9;
-    const SPRING = 0.032;
-    const FRICTION = 0.80;
+    // Physics constants
+    const SPRING   = 0.032;   // how strongly particles return to origin
+    const FRICTION = 0.80;    // velocity damping per frame (< 1 = decay)
+    // Wind influence: mouse velocity is scaled by this before being added to particle velocity.
+    // Higher = more sensitive to fast movement.
+    const WIND_SCALE  = 0.18;
+    // How quickly the wind influence fades with distance from cursor.
+    // Particles far away are barely affected; close ones get full push.
+    const WIND_RADIUS = 380;  // px — anything beyond this gets no wind
 
     type Particle = {
       x: number; y: number;
       originX: number; originY: number;
       vx: number; vy: number;
-      angle: number;          // rotation of the pill/dash
-      width: number;          // length of the pill
-      height: number;         // thickness
+      angle: number;
+      width: number; height: number;
       r: number; g: number; b: number;
       opacity: number;
-      distFromCenter: number;
     };
 
     let particles: Particle[] = [];
 
+    // Shared mouse state — velocity tracked here (not in React state, for perf)
+    const mouseState = {
+      x: -9999, y: -9999,
+      vx: 0, vy: 0,       // smoothed velocity
+      prevX: -9999, prevY: -9999,
+    };
+
+    let last   = 0;
+    let rafId: number;
+    let rzTimer: ReturnType<typeof setTimeout>;
+    let paused = false;
+
     const resize = () => {
-      canvas.width = window.innerWidth;
+      canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
+    };
+
+    const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
+      const distFraction = dist / (maxDist * 0.85);
+      const yFraction    = oy / canvas.height;
+      const colorScore   = Math.min(distFraction * 0.5 + yFraction * 0.5, 0.999);
+      return COLOR_BANDS[Math.floor(colorScore * COLOR_BANDS.length)];
     };
 
     const init = () => {
@@ -198,163 +227,186 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       const cy = canvas.height / 2;
       const maxDist = Math.sqrt(cx * cx + cy * cy);
 
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        // Distribute radially – more dense near center
-        const t_val = Math.pow(Math.random(), 0.55); // bias toward center
-        const dist = t_val * maxDist * 0.85;
-        const angle = Math.random() * Math.PI * 2;
-
-        const ox = cx + Math.cos(angle) * dist;
-        const oy = cy + Math.sin(angle) * dist;
-
-        // Color based on distance from center + vertical position
-        // Blue at top/center, warm colors at bottom/outer
+      // Main pill particles — radially distributed, biased toward center
+      for (let i = 0; i < cfg.pills; i++) {
+        const t_val   = Math.pow(Math.random(), 0.55);
+        const dist    = t_val * maxDist * 0.85;
+        const angle   = Math.random() * Math.PI * 2;
+        const ox      = cx + Math.cos(angle) * dist;
+        const oy      = cy + Math.sin(angle) * dist;
+        const col     = getColor(ox, oy, dist, maxDist);
         const distFraction = dist / (maxDist * 0.85);
-        const yFraction = (oy / canvas.height); // 0=top, 1=bottom
-        const colorScore = distFraction * 0.5 + yFraction * 0.5;
-        const colorIdx = Math.min(
-          Math.floor(colorScore * COLOR_BANDS.length),
-          COLOR_BANDS.length - 1
-        );
-        const col = COLOR_BANDS[colorIdx];
-
-        // Pill dimensions – larger closer to center
-        const size = 1.5 + (1 - distFraction) * 3.5;
-        const w = size * (2.5 + Math.random() * 2);
-        const h = size * 0.6;
-
-        // Pill rotation: tangential to the radial direction (like in screenshot)
+        const size    = 1.5 + (1 - distFraction) * 3.5;
         const pillAngle = angle + Math.PI / 2 + (Math.random() - 0.5) * 0.6;
 
         particles.push({
-          x: ox, y: oy,
-          originX: ox, originY: oy,
+          x: ox, y: oy, originX: ox, originY: oy,
           vx: 0, vy: 0,
           angle: pillAngle,
-          width: w, height: h,
+          width: size * (2.5 + Math.random() * 2),
+          height: size * 0.6,
           r: col.r, g: col.g, b: col.b,
           opacity: 0.55 + Math.random() * 0.35,
-          distFromCenter: dist,
         });
       }
 
-      // Also scatter a few tiny dots everywhere for the fine grain feel
-      for (let i = 0; i < 180; i++) {
-        const ox = Math.random() * canvas.width;
-        const oy = Math.random() * canvas.height;
+      // Fine scatter dots
+      for (let i = 0; i < cfg.dots; i++) {
+        const ox   = Math.random() * canvas.width;
+        const oy   = Math.random() * canvas.height;
         const dist = Math.sqrt((ox - cx) ** 2 + (oy - cy) ** 2);
-        const distFraction = Math.min(dist / maxDist, 1);
-        const yFraction = oy / canvas.height;
-        const colorScore = distFraction * 0.5 + yFraction * 0.5;
-        const colorIdx = Math.min(Math.floor(colorScore * COLOR_BANDS.length), COLOR_BANDS.length - 1);
-        const col = COLOR_BANDS[colorIdx];
+        const col  = getColor(ox, oy, dist, maxDist);
 
         particles.push({
-          x: ox, y: oy,
-          originX: ox, originY: oy,
+          x: ox, y: oy, originX: ox, originY: oy,
           vx: 0, vy: 0,
           angle: Math.random() * Math.PI,
-          width: 1.5 + Math.random() * 2,
-          height: 0.8,
+          width: 1.5 + Math.random() * 2, height: 0.8,
           r: col.r, g: col.g, b: col.b,
           opacity: 0.2 + Math.random() * 0.25,
-          distFromCenter: dist,
         });
       }
     };
 
-    const animate = () => {
+    const animate = (ts: number) => {
+      rafId = requestAnimationFrame(animate);
+      if (paused || ts - last < FRAME_INTERVAL) return;
+      last = ts;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      particles.forEach((p) => {
-        // Mouse repulsion
-        const dx = mouse.x - p.x;
-        const dy = mouse.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+      // Decay mouse velocity each frame so it smoothly fades to zero
+      mouseState.vx *= 0.85;
+      mouseState.vy *= 0.85;
 
-        if (dist < MOUSE_RADIUS && dist > 0) {
-          const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
-          const a = Math.atan2(dy, dx);
-          p.vx -= Math.cos(a) * force * REPULSION;
-          p.vy -= Math.sin(a) * force * REPULSION;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Distance from cursor to particle
+        const dx = p.x - mouseState.x;
+        const dy = p.y - mouseState.y;
+        const distToCursor = Math.sqrt(dx * dx + dy * dy);
+
+        // Wind influence falls off linearly with distance
+        if (distToCursor < WIND_RADIUS && mouseState.x !== -9999) {
+          const falloff = 1 - distToCursor / WIND_RADIUS;
+          p.vx += mouseState.vx * WIND_SCALE * falloff;
+          p.vy += mouseState.vy * WIND_SCALE * falloff;
         }
 
-        // Spring back
+        // Spring back to origin
         p.vx += (p.originX - p.x) * SPRING;
         p.vy += (p.originY - p.y) * SPRING;
+
+        // Friction
         p.vx *= FRICTION;
         p.vy *= FRICTION;
+
         p.x += p.vx;
         p.y += p.vy;
 
-        // Slight rotation when displaced
+        // Slight rotation proportional to speed
         const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
         p.angle += speed * 0.012;
 
-        // Draw pill/dash shape
+        // Draw pill
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
         ctx.beginPath();
-
-        const w = p.width;
-        const h = p.height;
-        const r = h / 2;
-
-        // Rounded rect (pill)
-        ctx.moveTo(-w / 2 + r, -h / 2);
-        ctx.lineTo(w / 2 - r, -h / 2);
-        ctx.arcTo(w / 2, -h / 2, w / 2, h / 2, r);
-        ctx.lineTo(w / 2 - r, h / 2);
-        ctx.arcTo(w / 2, h / 2, -w / 2, h / 2, r);
-        ctx.lineTo(-w / 2 + r, h / 2);
-        ctx.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r);
-        ctx.lineTo(-w / 2 + r, -h / 2);
-        ctx.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r);
+        const w = p.width; const h = p.height; const rv = h / 2;
+        ctx.moveTo(-w / 2 + rv, -h / 2);
+        ctx.lineTo(w / 2 - rv, -h / 2);
+        ctx.arcTo(w / 2, -h / 2, w / 2, h / 2, rv);
+        ctx.lineTo(w / 2 - rv, h / 2);
+        ctx.arcTo(w / 2, h / 2, -w / 2, h / 2, rv);
+        ctx.lineTo(-w / 2 + rv, h / 2);
+        ctx.arcTo(-w / 2, h / 2, -w / 2, -h / 2, rv);
+        ctx.lineTo(-w / 2 + rv, -h / 2);
+        ctx.arcTo(-w / 2, -h / 2, w / 2, -h / 2, rv);
         ctx.closePath();
-
-        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${p.opacity})`;
+        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.opacity})`;
         ctx.fill();
         ctx.restore();
-      });
-
-      animationId = requestAnimationFrame(animate);
+      }
     };
 
-    const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
-    const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999; };
-    const onResize = () => { resize(); init(); };
+    // Track raw mouse position and compute velocity
+    const onMouseMove = (e: MouseEvent) => {
+      const rawVx = e.clientX - mouseState.prevX;
+      const rawVy = e.clientY - mouseState.prevY;
+      // Smooth velocity with exponential moving average
+      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
+      mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
+      mouseState.prevX = mouseState.x;
+      mouseState.prevY = mouseState.y;
+      mouseState.x = e.clientX;
+      mouseState.y = e.clientY;
+    };
 
-    window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseleave', onMouseLeave);
+    const onMouseLeave = () => {
+      mouseState.x = -9999; mouseState.y = -9999;
+      mouseState.vx = 0;    mouseState.vy = 0;
+    };
 
-    resize();
-    init();
-    animate();
+    // Touch: compute velocity from touch movement too
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      const tx = e.touches[0].clientX;
+      const ty = e.touches[0].clientY;
+      const rawVx = tx - (mouseState.prevX === -9999 ? tx : mouseState.prevX);
+      const rawVy = ty - (mouseState.prevY === -9999 ? ty : mouseState.prevY);
+      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4;
+      mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
+      mouseState.prevX = mouseState.x;
+      mouseState.prevY = mouseState.y;
+      mouseState.x = tx;
+      mouseState.y = ty;
+    };
+
+    const onTouchEnd = () => {
+      mouseState.vx = 0; mouseState.vy = 0;
+    };
+
+    const onVisibility = () => { paused = document.hidden; };
+    const onResize = () => { clearTimeout(rzTimer); rzTimer = setTimeout(() => { resize(); init(); }, 200); };
+
+    window.addEventListener('mousemove',        onMouseMove,  { passive: true });
+    window.addEventListener('touchmove',        onTouchMove,  { passive: true });
+    window.addEventListener('touchstart',       onTouchMove,  { passive: true });
+    window.addEventListener('touchend',         onTouchEnd,   { passive: true });
+    window.addEventListener('resize',           onResize,     { passive: true });
+    document.addEventListener('mouseleave',     onMouseLeave);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    resize(); init();
+    rafId = requestAnimationFrame(animate);
 
     return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseleave', onMouseLeave);
+      cancelAnimationFrame(rafId);
+      clearTimeout(rzTimer);
+      window.removeEventListener('mousemove',        onMouseMove);
+      window.removeEventListener('touchmove',        onTouchMove);
+      window.removeEventListener('touchstart',       onTouchMove);
+      window.removeEventListener('touchend',         onTouchEnd);
+      window.removeEventListener('resize',           onResize);
+      document.removeEventListener('mouseleave',     onMouseLeave);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
+  // ─── ESC closes modal ─────────────────────────────────────────────────────
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsModalOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsModalOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     onAskAIClick(query);
-    setIsSent(true);
-    setQuery("");
+    setIsSent(true); setQuery("");
     setTimeout(() => setIsSent(false), 3000);
   };
 
@@ -389,6 +441,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
+
+        {/* ── Title ── */}
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
           <h1
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
@@ -408,6 +462,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
+        {/* ── CTA + Input ── */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -453,6 +508,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
+        {/* ── Video ── */}
         <div
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
@@ -463,20 +519,37 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => setIsHoveringVideo(false)}
-            className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
+            onTouchEnd={(e) => { e.preventDefault(); setIsModalOpen(true); }}
+            className={`group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            <div
-              className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-              style={{
-                left: `${currentPos.x}px`,
-                top: `${currentPos.y}px`,
-                transform: 'translate(-50%, -50%)',
-                fontFamily: '"Montserrat", sans-serif'
-              }}
-            >
-              <Play className="w-4 h-4 fill-black" />
-              <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
-            </div>
+            {/* Desktop: magnetic floating pill */}
+            {!isTouch && (
+              <div
+                className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
+                style={{
+                  left: `${currentPos.x}px`,
+                  top:  `${currentPos.y}px`,
+                  transform: 'translate(-50%, -50%)',
+                  fontFamily: '"Montserrat", sans-serif',
+                }}
+              >
+                <Play className="w-4 h-4 fill-black" />
+                <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
+              </div>
+            )}
+
+            {/* Touch: static centred play pill */}
+            {isTouch && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+                <div
+                  className="flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl"
+                  style={{ fontFamily: '"Montserrat", sans-serif' }}
+                >
+                  <Play className="w-4 h-4 fill-black" />
+                  <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
+                </div>
+              </div>
+            )}
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
 
@@ -491,6 +564,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
+      {/* ── Modal ── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
