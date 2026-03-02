@@ -44,7 +44,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   
-  // Limits
+  // Safety & Usage Limits
   const [messageCount, setMessageCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -88,15 +88,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // ─── Choreography sync (Improved Timing) ──────────────────────────────────
+  // ─── Choreography Sync ────────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
         setShowSubtitle(true);
-        // Wait longer (1.2s) for user to read the subtitle before CTA
         const t2 = setTimeout(() => {
           setShowCTA(true);
-          // Wait 0.6s before showing the input box
           const t3 = setTimeout(() => {
             setShowInput(true);
             const t4 = setTimeout(() => {
@@ -104,16 +102,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
               heroInputRef.current?.focus({ preventScroll: true });
             }, 600);
             return () => clearTimeout(t4);
-          }, 600);
+          }, 800); // Slightly longer delay to let the UI breathe
           return () => clearTimeout(t3);
-        }, 1200);
+        }, 1000); // Give user time to read the subtitle
         return () => clearTimeout(t2);
       }, 400);
       return () => clearTimeout(t1);
     }
   }, [isTyping, displayText, fullText]);
 
-  // ─── Placeholder typewriter ───────────────────────────────────────────────
+  // ─── Placeholder Typewriter ───────────────────────────────────────────────
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
@@ -132,7 +130,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // ─── Title typewriter ─────────────────────────────────────────────────────
+  // ─── Title Typewriter ─────────────────────────────────────────────────────
   useEffect(() => {
     let i = 0; let mounted = true;
     setDisplayText(""); setIsTyping(true);
@@ -147,7 +145,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll reveal ────────────────────────────────────────────────────────
+  // ─── Scroll Reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
@@ -219,16 +217,15 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
-
     if (!query.trim()) return;
 
     if (messageCount >= 25) {
-      setErrorMessage("Message limit reached (25/25). Please contact us for more.");
+      setErrorMessage("Limit reached: You can send 25 messages maximum.");
       return;
     }
 
     if (query.length > 2000) {
-      setErrorMessage("Character limit exceeded (Max 2000).");
+      setErrorMessage("Message too long: 2000 character limit.");
       return;
     }
 
@@ -241,84 +238,83 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
   return (
     <section
-      className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
+      className="relative min-h-screen md:min-h-[140vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-24 md:pt-48 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+        @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
         .typewriter-cursor {
           display: inline-block; width: 4px; height: 0.9em; margin-left: 4px;
           vertical-align: middle; background: linear-gradient(to bottom, #a855f7, #3b82f6);
           animation: blink 1s step-end infinite;
         }
-        .animate-bounce-down { animation: bounce-down 1.5s ease-in-out infinite; }
+        .animate-bounce-subtle { animation: bounce-subtle 2s ease-in-out infinite; }
       `}</style>
 
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
-      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Title */}
-        <div className="min-h-[120px] md:min-h-[180px] flex items-center justify-center w-full mb-6">
-          <h1 className="text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
+        {/* Main Title - Increased size and spacing for PC */}
+        <div className="min-h-[160px] md:min-h-[300px] flex items-center justify-center w-full mb-8 md:mb-16">
+          <h1 className="text-4xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[1.1]" style={{ fontFamily: '"Montserrat", sans-serif' }}>
             <span>{displayText}</span>
             {displayText.length < fullText.length && <span className="typewriter-cursor" />}
           </h1>
         </div>
 
-        {/* Subtitle - More time/grace given to spawning */}
-        <p className={`text-base md:text-2xl text-zinc-500 mb-8 max-w-2xl font-light italic transition-all duration-[1500ms] ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+        {/* Subtitle - More space for readability */}
+        <p className={`text-base md:text-2xl text-zinc-500 mb-12 md:mb-24 max-w-3xl font-light italic transition-all duration-[1500ms] ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {t.heroSubtitle}
         </p>
 
-        {/* CTA + Input (Elevated Layout) */}
-        <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
+        {/* Interaction Group - Spaced for better layout balance */}
+        <div className="flex flex-col items-center gap-16 md:gap-24 w-full max-w-xl">
           <button
             onClick={onBookingClick}
-            className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${
-              showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'
+            className={`group bg-black text-white px-12 py-5 rounded-full text-lg font-medium flex items-center gap-3 hover:scale-105 transition-all duration-1000 shadow-2xl ${
+              showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-90 pointer-events-none'
             }`}
           >
             <span className="whitespace-nowrap">{t.startJourney}</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
 
-          <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
-            {/* Header: 10% Bigger, Bouncing Arrow, Extra Tracking */}
-            <div className="flex flex-col items-center gap-1">
-              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
+          <div className={`w-full space-y-4 transition-all duration-1000 delay-300 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'}`}>
+            <div className="flex flex-col items-center gap-2">
+              <h3 className="text-xs md:text-sm uppercase tracking-[0.4em] font-black text-black">
                 {isSent ? t.openingChat : t.askAiAgent}
               </h3>
-              {!isSent && <ChevronDown className="w-5 h-5 text-blue-500 animate-bounce-down" />}
+              {!isSent && <ChevronDown className="w-5 h-5 text-blue-500 animate-bounce-subtle" />}
             </div>
 
-            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${isSent ? 'border-green-600 bg-green-50' : ''}`}>
+            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-3xl p-2 transition-all duration-300 shadow-2xl ${isSent ? 'border-green-600 bg-green-50' : 'focus-within:border-blue-500'}`}>
               <input
                 ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder={isSent ? "" : placeholder} disabled={isSent}
-                className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
+                className="w-full bg-transparent px-6 py-4 text-lg outline-none text-black font-medium"
                 style={{ fontFamily: 'Georgia, serif' }}
               />
-              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}>
-                <Send className="w-5 h-5" />
+              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-14 h-14 rounded-2xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}>
+                <Send className="w-6 h-6" />
               </button>
             </form>
-            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2">{errorMessage}</p>}
+            {errorMessage && <p className="text-red-600 text-sm font-bold bg-red-50 py-2 px-4 rounded-lg inline-block">{errorMessage}</p>}
           </div>
         </div>
 
-        {/* Video Section (Visible on scroll) */}
-        <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        {/* Video Preview - Sticky Scroll Effect */}
+        <div className="w-full max-w-7xl mt-48 md:mt-64 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)}
-            className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
+            className={`group relative aspect-video w-full rounded-[3rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
             {!isTouch && (
-              <div className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
+              <div className={`pointer-events-none absolute z-50 flex items-center gap-4 px-8 py-4 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
                 style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}>
-                <Play className="w-4 h-4 fill-black" />
-                <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
+                <Play className="w-5 h-5 fill-black" />
+                <span className="text-sm uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
               </div>
             )}
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
@@ -333,12 +329,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
-      {/* Video Modal */}
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
-              <X className="w-6 h-6 text-white" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-md p-6">
+          <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.2)] bg-black">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 p-4 z-[130] bg-black/40 hover:bg-black/60 rounded-full transition-all text-white">
+              <X className="w-8 h-8" />
             </button>
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
