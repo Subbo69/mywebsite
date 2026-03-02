@@ -37,7 +37,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  // Magnetic Button/Video States
+  // --- MAGNETIC BUTTON STATES ---
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -45,8 +45,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const fullText = t.heroTitle;
   const VIDEO_ID = "Py1ClI35v_k";
 
-  // Mouse tracking for the magnetic "Play" button
-  const handleMouseMoveVideo = (e: React.MouseEvent<HTMLDivElement>) => {
+  // --- MOUSE TRACKING FOR VIDEO ---
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
     setTargetPos({
@@ -55,7 +55,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
-  // Magnetic Button Spring Physics
+  // --- SPRING PHYSICS ENGINE ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
@@ -72,107 +72,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(animationFrame);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // --- 3D PARTICLE ENGINE WITH SWELL & STRETCH ---
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const PARTICLE_COUNT = 2400; 
-    let particles: any[] = [];
-    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let lastMouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let velocity = { x: 0, y: 0 };
-    let ticker = 0;
-    
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    
-    const init = () => {
-      particles = [];
-      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const angle = i * angleStep;
-        const radius = Math.sqrt(i) * 22; 
-        // Z-Depth: 0.4 (far) to 1.0 (near)
-        const z = Math.random() * 0.6 + 0.4;
-        
-        particles.push({
-          offsetX: Math.cos(angle) * radius,
-          offsetY: Math.sin(angle) * radius,
-          x: mouse.x,
-          y: mouse.y,
-          z: z, 
-          baseSize: z * 2.8 + 0.6, // Foreground particles are naturally larger
-          randomOffset: Math.random() * 1000
-        });
-      }
-    };
-    
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ticker += 0.005;
-
-      // Calculate Mouse Velocity for dynamic effects
-      velocity.x = mouse.x - lastMouse.x;
-      velocity.y = mouse.y - lastMouse.y;
-      const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
-      
-      particles.forEach((p) => {
-        // Target calculation including subtle idle float
-        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 5);
-        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 5);
-        
-        // Follow cursor: Nearer particles (high Z) react faster
-        p.x += (targetX - p.x) * (0.08 * p.z);
-        p.y += (targetY - p.y) * (0.08 * p.z);
-
-        // 3D Swell: Increase size based on speed and proximity (Z)
-        const swell = (speed * 0.18) * p.z;
-        const stretch = speed * 0.12;
-        const currentSize = p.baseSize + swell;
-        
-        // Depth-based Opacity: Nearer particles are clearer
-        const diagScore = (p.x + p.y) / (canvas.width + canvas.height);
-        const hue = diagScore > 0.45 ? 212 : 272; 
-        const op = Math.min(0.5, (0.15 * p.z) + (speed * 0.004));
-        
-        ctx.beginPath();
-        ctx.fillStyle = `hsla(${hue}, 80%, 55%, ${op})`;
-        
-        // Stretch effect aligned to mouse movement direction
-        ctx.ellipse(
-          p.x, p.y, 
-          currentSize + stretch, 
-          currentSize, 
-          Math.atan2(velocity.y, velocity.x), 
-          0, Math.PI * 2
-        );
-        ctx.fill();
-      });
-
-      lastMouse.x = mouse.x;
-      lastMouse.y = mouse.y;
-      requestAnimationFrame(animate);
-    };
-    
-    const handleMouseMoveGlobal = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    window.addEventListener('resize', () => { resize(); init(); });
-    window.addEventListener('mousemove', handleMouseMoveGlobal);
-    resize(); init(); animate();
-
-    return () => window.removeEventListener('mousemove', handleMouseMoveGlobal);
-  }, []);
-
-  // --- REMAINING COMPONENT LOGIC ---
-
+  // --- CHOREOGRAPHY SYNCHRONIZATION ---
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const subTimeout = setTimeout(() => {
@@ -187,13 +87,15 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             }, 600);
             return () => clearTimeout(particleTimeout);
           }, 500);
-          return () => clearTimeout(ctaTimeout);
+          return () => clearTimeout(inputTimeout);
         }, 500);
-        return () => clearTimeout(subTimeout);
+        return () => clearTimeout(ctaTimeout);
       }, 300);
+      return () => clearTimeout(subTimeout);
     }
   }, [isTyping, displayText, fullText]);
 
+  // --- INFINITE TYPEWRITER (PLACEHOLDER) ---
   useEffect(() => {
     let currentText = "";
     let isDeleting = false;
@@ -203,14 +105,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       let speed = 80;
       if (!isDeleting) {
         currentText = phrase.slice(0, currentText.length + 1);
-        if (currentText === phrase) { speed = 3500; isDeleting = true; }
+        if (currentText === phrase) {
+          speed = 3500; 
+          isDeleting = true;
+        }
       } else {
         currentText = phrase.slice(0, currentText.length - 1);
-        speed = 40;
+        speed = 40; 
         if (currentText === "") {
           isDeleting = false;
           setPhraseIdx((prev) => (prev + 1) % placeholderPhrases.length);
-          speed = 1000;
+          speed = 1000; 
         }
       }
       setPlaceholder(currentText);
@@ -220,24 +125,33 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
+  // --- TYPEWRITER (TITLE) ---
   useEffect(() => {
     let i = 0;
     let isMounted = true;
     setDisplayText("");
     setIsTyping(true);
-    setShowSubtitle(false); setShowCTA(false); setShowInput(false); setShowParticles(false);
+    setShowSubtitle(false);
+    setShowCTA(false);
+    setShowInput(false);
+    setShowParticles(false);
+    
     const type = () => {
       if (!isMounted) return;
       if (i <= fullText.length) {
         setDisplayText(fullText.slice(0, i));
         i++;
         setTimeout(type, Math.random() * 25 + 45);
-      } else { setIsTyping(false); }
+      } else {
+        setIsTyping(false); 
+      }
     };
-    const startTimeout = setTimeout(type, 280);
+    
+    const startTimeout = setTimeout(type, 280); 
     return () => { isMounted = false; clearTimeout(startTimeout); };
   }, [fullText]);
 
+  // --- VIDEO SCROLL LOGIC ---
   useEffect(() => {
     const handleScroll = () => {
       const progress = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
@@ -248,6 +162,69 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- PARTICLE ENGINE ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const PARTICLE_COUNT = 8278; 
+    let particles: any[] = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let ticker = 0;
+    
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    const getParticleColor = (x: number, y: number, opacity: number) => {
+      const diagScore = (x + y) / (canvas.width + canvas.height);
+      const hue = diagScore > 0.45 ? 212 : 272; 
+      return `hsla(${hue}, 85%, 45%, ${opacity})`;
+    };
+    
+    const init = () => {
+      particles = [];
+      const angleStep = Math.PI * (3 - Math.sqrt(5)); 
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = i * angleStep;
+        const radius = Math.sqrt(i) * 21.12; 
+        const z = 0.5 + Math.random();
+        particles.push({
+          x: mouse.x + (Math.cos(angle) * radius * z),
+          y: mouse.y + (Math.sin(angle) * radius * z),
+          offsetX: (Math.cos(angle) * radius),
+          offsetY: (Math.sin(angle) * radius),
+          z: z, 
+          baseSize: Math.max(0.4, 1.72 * (1 - i / PARTICLE_COUNT)) * z,
+          baseOpacity: Math.max(0.06, 0.35 * (1 - i / PARTICLE_COUNT)),
+          randomOffset: Math.random() * 600
+        });
+      }
+    };
+    
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ticker += 0.005;
+      particles.forEach((p) => {
+        const targetX = mouse.x + (p.offsetX * p.z) + (Math.sin(ticker + p.randomOffset) * 4);
+        const targetY = mouse.y + (p.offsetY * p.z) + (Math.cos(ticker + p.randomOffset) * 4);
+        p.x += (targetX - p.x) * (0.018 * p.z);
+        p.y += (targetY - p.y) * (0.018 * p.z);
+        const color = getParticleColor(p.x, p.y, p.baseOpacity);
+        ctx.beginPath(); ctx.fillStyle = color;
+        ctx.arc(p.x, p.y, p.baseSize, 0, Math.PI * 2); ctx.fill();
+      });
+      requestAnimationFrame(animate);
+    };
+    
+    window.addEventListener('resize', () => { resize(); init(); });
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    resize(); init(); animate();
+  }, []);
+
+  // ESC Key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsModalOpen(false);
@@ -271,9 +248,23 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .typewriter-cursor { display: inline-block; width: 4px; height: 0.9em; margin-left: 4px; vertical-align: middle; background: linear-gradient(to bottom, #a855f7, #3b82f6); animation: blink 1s step-end infinite; }
-        .typewriter-cursor.is-typing { animation: none; opacity: 1; }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .typewriter-cursor {
+          display: inline-block;
+          width: 4px;
+          height: 0.9em;
+          margin-left: 4px;
+          vertical-align: middle;
+          background: linear-gradient(to bottom, #a855f7, #3b82f6);
+          animation: blink 1s step-end infinite;
+        }
+        .typewriter-cursor.is-typing {
+          animation: none;
+          opacity: 1;
+        }
       `}</style>
 
       <canvas 
@@ -282,7 +273,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       />
       
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
-        {/* TITLE SECTION */}
+        {/* --- TITLE SECTION --- */}
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
           <h1 
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
@@ -302,7 +293,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
-        {/* BUTTON & INPUT SECTION */}
+        {/* --- BUTTON & INPUT SECTION --- */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -342,13 +333,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                   query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
                 }`}
               >
+                <span className="sr-only">Send</span>
                 <Send className="w-5 h-5" />
               </button>
             </form>
           </div>
         </div>
 
-        {/* MAGNETIC VIDEO PLAYER */}
+        {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
         <div 
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
@@ -356,7 +348,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           <div 
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
-            onMouseMove={handleMouseMoveVideo}
+            onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => setIsHoveringVideo(false)}
             className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
@@ -376,6 +368,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             
+            {/* Conditional render: Stop bg video when modal is open */}
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
@@ -387,7 +380,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
-      {/* VIDEO MODAL */}
+      {/* --- VIDEO MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
