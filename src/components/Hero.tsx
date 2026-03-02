@@ -91,7 +91,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // --- INFINITE TYPEWRITER (PLACEHOLDER) ---
+  // --- INFINITE TYPEWRITER ---
   useEffect(() => {
     let currentText = "";
     let isDeleting = false;
@@ -158,7 +158,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- HIGH-END FLUID MESH ENGINE ---
+  // --- GOOGLE FLUID MESH ENGINE ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -170,20 +170,25 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const points: any[] = [];
     const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false };
 
-    // Premium Color Palette: Indigo, Soft Purple, Slate
-    const colors = ['#e0e7ff', '#fae8ff', '#f1f5f9', '#dbeafe']; 
+    // Official Google Colors (RGB)
+    const googleColors = [
+      '66, 133, 244',  // Blue
+      '234, 67, 53',   // Red
+      '251, 188, 5',   // Yellow
+      '52, 168, 83'    // Green
+    ];
 
     const init = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       points.length = 0;
-      const spacing = 180;
+      const spacing = 200; // Wider spacing for cleaner Google look
       for (let x = -spacing; x < canvas.width + spacing; x += spacing) {
         for (let y = -spacing; y < canvas.height + spacing; y += spacing) {
           points.push({
             x: x, y: y, originX: x, originY: y,
             vx: 0, vy: 0,
-            color: colors[Math.floor(Math.random() * colors.length)]
+            color: googleColors[Math.floor(Math.random() * googleColors.length)]
           });
         }
       }
@@ -191,11 +196,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.0015;
+      time += 0.0012; // Slower, more elegant movement
 
       points.forEach(p => {
-        const noiseX = Math.sin(time + p.originX * 0.003) * 40;
-        const noiseY = Math.cos(time + p.originY * 0.003) * 40;
+        const noiseX = Math.sin(time + p.originX * 0.002) * 60;
+        const noiseY = Math.cos(time + p.originY * 0.002) * 60;
         let targetX = p.originX + noiseX;
         let targetY = p.originY + noiseY;
 
@@ -203,25 +208,24 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           const dx = mouse.x - p.x;
           const dy = mouse.y - p.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 800) {
-            const force = (800 - dist) / 800;
-            targetX += dx * force * 0.5;
-            targetY += dy * force * 0.5;
+          if (dist < 900) {
+            const force = (900 - dist) / 900;
+            targetX += dx * force * 0.6;
+            targetY += dy * force * 0.6;
           }
         }
 
-        p.vx = (targetX - p.x) * 0.04;
-        p.vy = (targetY - p.y) * 0.04;
+        p.vx = (targetX - p.x) * 0.035;
+        p.vy = (targetY - p.y) * 0.035;
         p.x += p.vx;
         p.y += p.vy;
 
-        const size = 500;
+        const size = 600;
         const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        const rgb = p.color === '#e0e7ff' ? '224, 231, 255' : 
-                    p.color === '#fae8ff' ? '250, 232, 255' : '219, 234, 254';
 
-        gradient.addColorStop(0, `rgba(${rgb}, 0.2)`);
-        gradient.addColorStop(1, `rgba(${rgb}, 0)`);
+        // Very low alpha to keep the background clean and white-leaning
+        gradient.addColorStop(0, `rgba(${p.color}, 0.08)`);
+        gradient.addColorStop(1, `rgba(${p.color}, 0)`);
 
         ctx.globalCompositeOperation = 'multiply';
         ctx.fillStyle = gradient;
@@ -285,7 +289,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           height: 0.9em;
           margin-left: 4px;
           vertical-align: middle;
-          background: linear-gradient(to bottom, #a855f7, #3b82f6);
+          background: linear-gradient(to bottom, #4285F4, #34A853);
           animation: blink 1s step-end infinite;
         }
         .typewriter-cursor.is-typing {
@@ -294,10 +298,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         }
       `}</style>
 
-      {/* --- NEW ANIMATED BACKGROUND --- */}
+      {/* --- GOOGLE-COLORED ANIMATED BACKGROUND --- */}
       <canvas 
         ref={canvasRef} 
-        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] blur-[80px] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] blur-[100px] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
       />
       
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
