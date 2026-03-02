@@ -13,7 +13,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
   const [scrollOpacity, setScrollOpacity] = useState(0);
@@ -21,17 +21,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [displayText, setDisplayText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
-  
+
   const [placeholder, setPlaceholder] = useState("");
   const placeholderPhrases = [
-    t.howCanWeHelp, 
-    t.heroPlaceholder1, 
-    t.heroPlaceholder2, 
+    t.howCanWeHelp,
+    t.heroPlaceholder1,
+    t.heroPlaceholder2,
     t.heroPlaceholder3
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -144,7 +144,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- PARTICLE ENGINE (Google Antigravity Blob Style) ---
+  // --- PARTICLE ENGINE (Google Antigravity - exact replica) ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -152,115 +152,134 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     if (!ctx) return;
 
     let animationId: number;
+    let mouse = { x: -9999, y: -9999 };
 
-    // Smooth mouse position (lagged)
-    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let smoothMouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-
-    // Google brand colors
-    const GOOGLE_COLORS = [
+    // Google brand colors – blue top/center, warm colors bottom/outer
+    const COLOR_BANDS = [
+      { r: 138, g: 143, b: 234 }, // soft indigo/blue-purple (inner top)
+      { r: 100, g: 120, b: 220 }, // blue
       { r: 66,  g: 133, b: 244 }, // Google Blue
-      { r: 66,  g: 133, b: 244 },
-      { r: 66,  g: 133, b: 244 },
-      { r: 52,  g: 168, b: 83  }, // Google Green
-      { r: 251, g: 188, b: 5   }, // Google Yellow
+      { r: 120, g: 80,  b: 200 }, // purple
+      { r: 180, g: 60,  b: 160 }, // magenta-purple
+      { r: 210, g: 50,  b: 80  }, // red
       { r: 234, g: 67,  b: 53  }, // Google Red
+      { r: 240, g: 120, b: 30  }, // orange
+      { r: 251, g: 188, b: 5   }, // Google Yellow
     ];
 
-    const BLOB_RADIUS = 180;       // radius of the blob sphere
-    const PARTICLE_COUNT = 600;    // particles in the blob
-    const GRID_SPACING = 24;       // background grid spacing
-    const SPRING = 0.055;
-    const FRICTION = 0.78;
+    const PARTICLE_COUNT = 420;
+    const MOUSE_RADIUS = 150;
+    const REPULSION = 9;
+    const SPRING = 0.032;
+    const FRICTION = 0.80;
 
-    type BlobParticle = {
-      // position in 3D sphere (normalized -1 to 1)
-      nx: number; ny: number; nz: number;
-      // screen position
-      x: number; y: number;
-      vx: number; vy: number;
-      r: number; g: number; b: number;
-    };
-
-    type GridParticle = {
+    type Particle = {
       x: number; y: number;
       originX: number; originY: number;
       vx: number; vy: number;
+      angle: number;          // rotation of the pill/dash
+      width: number;          // length of the pill
+      height: number;         // thickness
       r: number; g: number; b: number;
+      opacity: number;
+      distFromCenter: number;
     };
 
-    let blobParticles: BlobParticle[] = [];
-    let gridParticles: GridParticle[] = [];
+    let particles: Particle[] = [];
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
 
-    const initBlob = () => {
-      blobParticles = [];
-      // Distribute points on a sphere using Fibonacci lattice
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const init = () => {
+      particles = [];
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const maxDist = Math.sqrt(cx * cx + cy * cy);
+
       for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const y = 1 - (i / (PARTICLE_COUNT - 1)) * 2;
-        const radiusAtY = Math.sqrt(1 - y * y);
-        const theta = goldenAngle * i;
-        const nx = Math.cos(theta) * radiusAtY;
-        const nz = Math.sin(theta) * radiusAtY;
-        const col = GOOGLE_COLORS[i % GOOGLE_COLORS.length];
-        blobParticles.push({
-          nx, ny: y, nz,
-          x: smoothMouse.x + nx * BLOB_RADIUS,
-          y: smoothMouse.y + y * BLOB_RADIUS,
+        // Distribute radially – more dense near center
+        const t_val = Math.pow(Math.random(), 0.55); // bias toward center
+        const dist = t_val * maxDist * 0.85;
+        const angle = Math.random() * Math.PI * 2;
+
+        const ox = cx + Math.cos(angle) * dist;
+        const oy = cy + Math.sin(angle) * dist;
+
+        // Color based on distance from center + vertical position
+        // Blue at top/center, warm colors at bottom/outer
+        const distFraction = dist / (maxDist * 0.85);
+        const yFraction = (oy / canvas.height); // 0=top, 1=bottom
+        const colorScore = distFraction * 0.5 + yFraction * 0.5;
+        const colorIdx = Math.min(
+          Math.floor(colorScore * COLOR_BANDS.length),
+          COLOR_BANDS.length - 1
+        );
+        const col = COLOR_BANDS[colorIdx];
+
+        // Pill dimensions – larger closer to center
+        const size = 1.5 + (1 - distFraction) * 3.5;
+        const w = size * (2.5 + Math.random() * 2);
+        const h = size * 0.6;
+
+        // Pill rotation: tangential to the radial direction (like in screenshot)
+        const pillAngle = angle + Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+
+        particles.push({
+          x: ox, y: oy,
+          originX: ox, originY: oy,
           vx: 0, vy: 0,
+          angle: pillAngle,
+          width: w, height: h,
           r: col.r, g: col.g, b: col.b,
+          opacity: 0.55 + Math.random() * 0.35,
+          distFromCenter: dist,
+        });
+      }
+
+      // Also scatter a few tiny dots everywhere for the fine grain feel
+      for (let i = 0; i < 180; i++) {
+        const ox = Math.random() * canvas.width;
+        const oy = Math.random() * canvas.height;
+        const dist = Math.sqrt((ox - cx) ** 2 + (oy - cy) ** 2);
+        const distFraction = Math.min(dist / maxDist, 1);
+        const yFraction = oy / canvas.height;
+        const colorScore = distFraction * 0.5 + yFraction * 0.5;
+        const colorIdx = Math.min(Math.floor(colorScore * COLOR_BANDS.length), COLOR_BANDS.length - 1);
+        const col = COLOR_BANDS[colorIdx];
+
+        particles.push({
+          x: ox, y: oy,
+          originX: ox, originY: oy,
+          vx: 0, vy: 0,
+          angle: Math.random() * Math.PI,
+          width: 1.5 + Math.random() * 2,
+          height: 0.8,
+          r: col.r, g: col.g, b: col.b,
+          opacity: 0.2 + Math.random() * 0.25,
+          distFromCenter: dist,
         });
       }
     };
 
-    const initGrid = () => {
-      gridParticles = [];
-      const cols = Math.ceil(canvas.width / GRID_SPACING) + 2;
-      const rows = Math.ceil(canvas.height / GRID_SPACING) + 2;
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const xFraction = col / cols;
-          if (Math.random() > xFraction * 1.2) continue;
-          const x = col * GRID_SPACING;
-          const y = row * GRID_SPACING;
-          gridParticles.push({
-            x, y, originX: x, originY: y,
-            vx: 0, vy: 0,
-            r: 66, g: 133, b: 244, // all blue for background
-          });
-        }
-      }
-    };
-
-    let ticker = 0;
-
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ticker += 0.008;
 
-      // Smooth mouse follow (blob lags behind)
-      smoothMouse.x += (mouse.x - smoothMouse.x) * 0.07;
-      smoothMouse.y += (mouse.y - smoothMouse.y) * 0.07;
-
-      // --- DRAW BACKGROUND GRID (repelled by blob) ---
-      gridParticles.forEach((p) => {
-        const dx = smoothMouse.x - p.x;
-        const dy = smoothMouse.y - p.y;
+      particles.forEach((p) => {
+        // Mouse repulsion
+        const dx = mouse.x - p.x;
+        const dy = mouse.y - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const repelRadius = BLOB_RADIUS * 1.3;
 
-        if (dist < repelRadius && dist > 0) {
-          const force = ((repelRadius - dist) / repelRadius) * 5;
-          const angle = Math.atan2(dy, dx);
-          p.vx -= Math.cos(angle) * force;
-          p.vy -= Math.sin(angle) * force;
+        if (dist < MOUSE_RADIUS && dist > 0) {
+          const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+          const a = Math.atan2(dy, dx);
+          p.vx -= Math.cos(a) * force * REPULSION;
+          p.vy -= Math.sin(a) * force * REPULSION;
         }
 
+        // Spring back
         p.vx += (p.originX - p.x) * SPRING;
         p.vy += (p.originY - p.y) * SPRING;
         p.vx *= FRICTION;
@@ -268,78 +287,57 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         p.x += p.vx;
         p.y += p.vy;
 
-        const displacement = Math.sqrt((p.x - p.originX) ** 2 + (p.y - p.originY) ** 2);
-        const size = 1.2 + Math.min(displacement * 0.04, 1.5);
-        const opacity = 0.25 + Math.min(displacement * 0.01, 0.3);
+        // Slight rotation when displaced
+        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        p.angle += speed * 0.012;
 
+        // Draw pill/dash shape
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity})`;
+
+        const w = p.width;
+        const h = p.height;
+        const r = h / 2;
+
+        // Rounded rect (pill)
+        ctx.moveTo(-w / 2 + r, -h / 2);
+        ctx.lineTo(w / 2 - r, -h / 2);
+        ctx.arcTo(w / 2, -h / 2, w / 2, h / 2, r);
+        ctx.lineTo(w / 2 - r, h / 2);
+        ctx.arcTo(w / 2, h / 2, -w / 2, h / 2, r);
+        ctx.lineTo(-w / 2 + r, h / 2);
+        ctx.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r);
+        ctx.lineTo(-w / 2 + r, -h / 2);
+        ctx.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r);
+        ctx.closePath();
+
+        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${p.opacity})`;
         ctx.fill();
-      });
-
-      // --- DRAW BLOB (3D sphere effect) ---
-      // Sort by nz so "back" particles draw first
-      const sorted = [...blobParticles].sort((a, b) => a.nz - b.nz);
-
-      sorted.forEach((p) => {
-        // Breathing animation
-        const breathe = 1 + Math.sin(ticker * 1.2) * 0.04;
-        const wobbleX = Math.sin(ticker * 0.7 + p.ny * 3) * 6;
-        const wobbleY = Math.cos(ticker * 0.5 + p.nx * 3) * 6;
-
-        // Target = smoothMouse + sphere position + wobble
-        const targetX = smoothMouse.x + p.nx * BLOB_RADIUS * breathe + wobbleX;
-        const targetY = smoothMouse.y + p.ny * BLOB_RADIUS * breathe + wobbleY;
-
-        p.vx += (targetX - p.x) * 0.06;
-        p.vy += (targetY - p.y) * 0.06;
-        p.vx *= 0.82;
-        p.vy *= 0.82;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // 3D depth cues: nz ranges -1 (back) to +1 (front)
-        const depth = (p.nz + 1) / 2; // 0 = back, 1 = front
-        const size = 1.2 + depth * 3.5;
-        const opacity = 0.15 + depth * 0.85;
-
-        // Glow for front particles
-        if (depth > 0.6) {
-          const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 5);
-          glow.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity * 0.35})`);
-          glow.addColorStop(1, `rgba(${p.r}, ${p.g}, ${p.b}, 0)`);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, size * 5, 0, Math.PI * 2);
-          ctx.fillStyle = glow;
-          ctx.fill();
-        }
-
-        // Core dot
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${opacity})`;
-        ctx.fill();
+        ctx.restore();
       });
 
       animationId = requestAnimationFrame(animate);
     };
 
     const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
-    const onResize = () => { resize(); initBlob(); initGrid(); };
+    const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999; };
+    const onResize = () => { resize(); init(); };
 
     window.addEventListener('resize', onResize);
     window.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
 
     resize();
-    initBlob();
-    initGrid();
+    init();
     animate();
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseleave', onMouseLeave);
     };
   }, []);
 
@@ -361,7 +359,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   return (
-    <section 
+    <section
       className="relative min-h-screen md:min-h-[170vh] flex flex-col items-center bg-white text-black overflow-x-hidden pt-36 pb-24"
       style={{ fontFamily: 'Georgia, serif' }}
     >
@@ -385,14 +383,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         }
       `}</style>
 
-      <canvas 
-        ref={canvasRef} 
-        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} 
+      <canvas
+        ref={canvasRef}
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`}
       />
-      
+
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
         <div className="min-h-[160px] md:min-h-[220px] flex items-center justify-center w-full mb-12">
-          <h1 
+          <h1
             className="text-4xl md:text-8xl font-bold tracking-[-0.02em] relative inline-block"
             style={{ fontFamily: '"Montserrat", sans-serif' }}
           >
@@ -425,13 +423,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-black text-center">
               {isSent ? t.openingChat : t.askAiAgent}
             </h3>
-            <form 
+            <form
               onSubmit={handleAISubmit}
               className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-lg focus-within:shadow-xl ${
                 isSent ? 'border-green-600 bg-green-50' : ''
               }`}
             >
-              <input 
+              <input
                 ref={heroInputRef}
                 type="text"
                 value={query}
@@ -441,7 +439,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 className="w-full bg-transparent px-5 py-3 text-base outline-none text-black font-medium placeholder:text-zinc-400"
                 style={{ fontFamily: 'Georgia, serif' }}
               />
-              <button 
+              <button
                 type="submit"
                 disabled={!query.trim() || isSent}
                 className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
@@ -455,11 +453,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        <div 
+        <div
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
         >
-          <div 
+          <div
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
@@ -467,11 +465,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseLeave={() => setIsHoveringVideo(false)}
             className="group relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border border-zinc-100 cursor-none"
           >
-            <div 
+            <div
               className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-              style={{ 
-                left: `${currentPos.x}px`, 
-                top: `${currentPos.y}px`, 
+              style={{
+                left: `${currentPos.x}px`,
+                top: `${currentPos.y}px`,
                 transform: 'translate(-50%, -50%)',
                 fontFamily: '"Montserrat", sans-serif'
               }}
@@ -481,7 +479,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             </div>
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
-            
+
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&iv_load_policy=3&rel=0`}
@@ -496,8 +494,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-7xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-zinc-200 bg-black">
-            <button 
-              onClick={() => setIsModalOpen(false)} 
+            <button
+              onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 p-3 z-[130] group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-all"
               aria-label="Close video"
             >
