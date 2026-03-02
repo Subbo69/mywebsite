@@ -37,7 +37,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  // --- MAGNETIC BUTTON STATES ---
+  // Magnetic Video States
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -55,11 +55,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
-  // --- SPRING PHYSICS ENGINE (VIDEO BUTTON) ---
+  // --- SPRING PHYSICS FOR VIDEO BUTTON ---
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen) return;
     let animationFrame: number;
-    
     const followMouse = () => {
       setCurrentPos(prev => ({
         x: prev.x + (targetPos.x - prev.x) * 0.12, 
@@ -67,12 +66,147 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }));
       animationFrame = requestAnimationFrame(followMouse);
     };
-    
     animationFrame = requestAnimationFrame(followMouse);
     return () => cancelAnimationFrame(animationFrame);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // --- CHOREOGRAPHY SYNCHRONIZATION ---
+  // --- ANTIGRAVITY PARTICLE ENGINE ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrame: number;
+    let particles: any[] = [];
+    const mouse = { x: -1000, y: -1000, radius: 180 };
+
+    class Particle {
+      x: number; y: number;
+      baseX: number; baseY: number;
+      vx: number; vy: number;
+      size: number;
+      density: number;
+      color: string;
+
+      constructor(canvasWidth: number, canvasHeight: number) {
+        this.x = Math.random() * canvasWidth;
+        this.y = Math.random() * canvasHeight;
+        this.baseX = this.x;
+        this.baseY = this.y;
+        this.vx = 0;
+        this.vy = 0;
+        this.size = Math.random() * 1.5 + 0.6;
+        this.density = (Math.random() * 25) + 5;
+        
+        const hue = Math.random() > 0.5 ? 212 : 272; // Blue or Purple
+        this.color = `hsla(${hue}, 80%, 60%, ${Math.random() * 0.35 + 0.1})`;
+      }
+
+      update() {
+        let dx = mouse.x - this.x;
+        let dy = mouse.y - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let forceDirectionX = dx / distance;
+        let forceDirectionY = dy / distance;
+
+        let maxDistance = mouse.radius;
+        let force = (maxDistance - distance) / maxDistance;
+        
+        if (distance < maxDistance) {
+          // Accelerate away from mouse
+          this.vx -= forceDirectionX * force * this.density;
+          this.vy -= forceDirectionY * force * this.density;
+        } else {
+          // Ease back to original position
+          if (this.x !== this.baseX) {
+            let dxBase = this.x - this.baseX;
+            this.vx -= dxBase / 25;
+          }
+          if (this.y !== this.baseY) {
+            let dyBase = this.y - this.baseY;
+            this.vy -= dyBase / 25;
+          }
+        }
+
+        this.vx *= 0.88; // Friction
+        this.vy *= 0.88;
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+
+      draw() {
+        if (!ctx) return;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const init = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particles = [];
+      // High density but performance-aware
+      const count = (canvas.width * canvas.height) / 4500;
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(canvas.width, canvas.height));
+      }
+    };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+      }
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    };
+
+    window.addEventListener('resize', init);
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    init();
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', init);
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  // --- TYPEWRITER & CHOREOGRAPHY ---
+  useEffect(() => {
+    let i = 0;
+    let isMounted = true;
+    setDisplayText("");
+    setIsTyping(true);
+    setShowSubtitle(false);
+    setShowCTA(false);
+    setShowInput(false);
+    setShowParticles(false);
+    
+    const type = () => {
+      if (!isMounted) return;
+      if (i <= fullText.length) {
+        setDisplayText(fullText.slice(0, i));
+        i++;
+        setTimeout(type, Math.random() * 25 + 45);
+      } else {
+        setIsTyping(false); 
+      }
+    };
+    
+    const startTimeout = setTimeout(type, 280); 
+    return () => { isMounted = false; clearTimeout(startTimeout); };
+  }, [fullText]);
+
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const subTimeout = setTimeout(() => {
@@ -95,7 +229,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // --- INFINITE TYPEWRITER (PLACEHOLDER) ---
+  // --- PLACEHOLDER CYCLE ---
   useEffect(() => {
     let currentText = "";
     let isDeleting = false;
@@ -125,33 +259,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // --- TYPEWRITER (TITLE) ---
-  useEffect(() => {
-    let i = 0;
-    let isMounted = true;
-    setDisplayText("");
-    setIsTyping(true);
-    setShowSubtitle(false);
-    setShowCTA(false);
-    setShowInput(false);
-    setShowParticles(false);
-    
-    const type = () => {
-      if (!isMounted) return;
-      if (i <= fullText.length) {
-        setDisplayText(fullText.slice(0, i));
-        i++;
-        setTimeout(type, Math.random() * 25 + 45);
-      } else {
-        setIsTyping(false); 
-      }
-    };
-    
-    const startTimeout = setTimeout(type, 280); 
-    return () => { isMounted = false; clearTimeout(startTimeout); };
-  }, [fullText]);
-
-  // --- VIDEO SCROLL LOGIC ---
+  // --- VIDEO SCROLL EFFECT ---
   useEffect(() => {
     const handleScroll = () => {
       const progress = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
@@ -162,112 +270,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- ANTIGRAVITY PARTICLE ENGINE ---
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let particles: any[] = [];
-    const mouse = { x: -1000, y: -1000, radius: 180 };
-    let animationFrame: number;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      init();
-    };
-
-    class Particle {
-      x: number; y: number; baseX: number; baseY: number;
-      size: number; density: number; color: string; drift: number;
-
-      constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-        this.baseX = x;
-        this.baseY = y;
-        this.size = Math.random() * 1.5 + 0.5;
-        this.density = (Math.random() * 25) + 5;
-        this.drift = Math.random() * 2;
-        
-        const hue = Math.random() > 0.6 ? 215 : 280; // Blue or Purple
-        this.color = `hsla(${hue}, 60%, 50%, ${Math.random() * 0.3 + 0.1})`;
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      update() {
-        const dx = mouse.x - this.x;
-        const dy = mouse.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < mouse.radius) {
-          const force = (mouse.radius - distance) / mouse.radius;
-          const directionX = (dx / distance) * force * this.density;
-          const directionY = (dy / distance) * force * this.density;
-          this.x -= directionX;
-          this.y -= directionY;
-        } else {
-          // Floating back to base position
-          if (this.x !== this.baseX) {
-            this.x -= (this.x - this.baseX) * 0.05;
-          }
-          if (this.y !== this.baseY) {
-            this.y -= (this.y - this.baseY) * 0.05;
-          }
-        }
-        // Subtle ambient drifting
-        this.baseY += Math.sin(Date.now() * 0.001 + this.baseX) * 0.05;
-      }
-    }
-
-    const init = () => {
-      particles = [];
-      const gap = 45; 
-      for (let y = 0; y < canvas.height; y += gap) {
-        for (let x = 0; x < canvas.width; x += gap) {
-          const posX = x + (Math.random() * 20);
-          const posY = y + (Math.random() * 20);
-          particles.push(new Particle(posX, posY));
-        }
-      }
-    };
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
-      animationFrame = requestAnimationFrame(animate);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', handleMouseMove);
-    resize();
-    animate();
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
-  // ESC Key to close modal
+  // --- MODAL ACCESSIBILITY ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsModalOpen(false);
@@ -336,7 +339,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
-        {/* --- BUTTON & INPUT SECTION --- */}
+        {/* --- ACTIONS --- */}
         <div className="flex flex-col items-center gap-16 mb-40 w-full max-w-md">
           <button
             onClick={onBookingClick}
@@ -383,7 +386,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        {/* --- MAGNETIC VIDEO PLAYER SECTION --- */}
+        {/* --- VIDEO PLAYER --- */}
         <div 
           className="w-full max-w-[90rem] sticky top-32 transition-all duration-700"
           style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}
