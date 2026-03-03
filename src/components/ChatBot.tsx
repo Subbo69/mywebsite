@@ -294,7 +294,7 @@ export default function ChatBot({ context, onContextUsed, language }: ChatBotPro
         <div
           ref={chatRef}
           className={`fixed bottom-24 left-6 z-50 w-11/12 max-w-[24rem]
-          h-[430px] md:h-[600px] flex flex-col backdrop-blur-2xl bg-white/60 border-2 border-black rounded-3xl
+          h-[420px] md:h-[600px] flex flex-col backdrop-blur-2xl bg-white/60 border-2 border-black rounded-3xl
           shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transform transition-all duration-300 ease-out
           ${animateOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         >
