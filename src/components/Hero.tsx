@@ -1,377 +1,330 @@
-import { useState, useEffect, useRef } from 'react';
-import { 
-  Rocket, Wrench, TrendingUp, Lightbulb, 
-  Clock, Zap, Shield, Cpu, 
-  BarChart, Users, Link, CheckCircle, 
-  X, Sparkles, Filter, Bot, GitMerge,
-  MessageCircle, Database, RefreshCw, Target, DollarSign, Activity
-} from 'lucide-react';
+import { ArrowRight, Send, Play, X, ChevronDown } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 
-interface ServicesProps {
-  onAskAIClick: (context: string) => void;
+interface HeroProps {
+  onBookingClick: () => void;
+  onAskAIClick: (initialMessage?: string) => void;
   language: Language;
 }
 
-interface ServiceNode {
-  id: number;
-  icon: any;
-  title: string;
-  description: string;
-  category: string;
-  filterGroup: 'all' | 'agents' | 'faq' | 'roi';
-  context: string;
-  impact?: string;
+function getDeviceTier(): 'low' | 'medium' | 'high' {
+  if (typeof window === 'undefined') return 'medium';
+  const cores = navigator.hardwareConcurrency ?? 2;
+  const width = window.innerWidth;
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isTouch || cores <= 2 || width < 768) return 'low';
+  if (cores <= 4 || width < 1280) return 'medium';
+  return 'high';
 }
 
-type FilterKey = 'all' | 'agents' | 'faq' | 'roi';
+const TIER_CONFIG = {
+  low: { pills: 220, dots: 60, fps: 30 },
+  medium: { pills: 320, dots: 100, fps: 45 },
+  high: { pills: 420, dots: 180, fps: 60 },
+};
 
-function useTypewriter(text: string, speed = 28, startDelay = 0, enabled = false) {
-  const [displayed, setDisplayed] = useState('');
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) return;
-    setDisplayed('');
-    setDone(false);
-    let i = 0;
-    const outerTimer = setTimeout(() => {
-      const interval = setInterval(() => {
-        i++;
-        setDisplayed(text.slice(0, i));
-        if (i >= text.length) {
-          clearInterval(interval);
-          setDone(true);
-        }
-      }, speed);
-      return () => clearInterval(interval);
-    }, startDelay);
-    return () => clearTimeout(outerTimer);
-  }, [enabled]);
-
-  return { displayed, done };
-}
-
-export default function Services({ onAskAIClick, language }: ServicesProps) {
+export default function Hero({ onBookingClick, onAskAIClick, language }: HeroProps) {
   const t = translations[language];
-  const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+
+  const [query, setQuery] = useState("");
+  const [isSent, setIsSent] = useState(false);
+  const [scrollOpacity, setScrollOpacity] = useState(0);
+  const [scrollScale, setScrollScale] = useState(0.85);
+  const [displayText, setDisplayText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [showSubtitle, setShowSubtitle] = useState(false);
+  const [showCTA, setShowCTA] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [showParticles, setShowParticles] = useState(false);
+  
+  const [messageCount, setMessageCount] = useState(0);
+  const [placeholder, setPlaceholder] = useState("");
+  const placeholderPhrases = [t.howCanWeHelp, t.heroPlaceholder1, t.heroPlaceholder2, t.heroPlaceholder3];
+  const [phraseIdx, setPhraseIdx] = useState(0);
+
+  const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
+  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+  const [isHoveringVideo, setIsHoveringVideo] = useState(false);
+
+  const fullText = t.heroTitle;
+  const VIDEO_ID = "Py1ClI35v_k";
+
+  const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoContainerRef.current) return;
+    const rect = videoContainerRef.current.getBoundingClientRect();
+    setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
 
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setHasAnimated(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (!isHoveringVideo || isModalOpen) return;
+    let af: number;
+    const follow = () => {
+      setCurrentPos(prev => ({
+        x: prev.x + (targetPos.x - prev.x) * 0.12,
+        y: prev.y + (targetPos.y - prev.y) * 0.12,
+      }));
+      af = requestAnimationFrame(follow);
+    };
+    af = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(af);
+  }, [targetPos, isHoveringVideo, isModalOpen]);
+
+  // Main Animation Sequence Orchestrator
+  useEffect(() => {
+    if (!isTyping && displayText.length === fullText.length) {
+      // 1. Show Subtitle (Triggers the internal CSS delay for the underline)
+      const t1 = setTimeout(() => {
+        setShowSubtitle(true);
+        
+        // 2. Show CTA Button (Delayed until after underline swipe)
+        const t2 = setTimeout(() => {
+          setShowCTA(true);
+          
+          // 3. Show AI Input (Staggered after button)
+          const t3 = setTimeout(() => {
+            setShowInput(true);
+            
+            // 4. Fade in Background Particles
+            const t4 = setTimeout(() => {
+              setShowParticles(true);
+              heroInputRef.current?.focus({ preventScroll: true });
+            }, 800);
+            return () => clearTimeout(t4);
+          }, 1000); 
+          return () => clearTimeout(t3);
+        }, 2200); // Wait for underline to finish
+        return () => clearTimeout(t2);
+      }, 600); 
+      return () => clearTimeout(t1);
+    }
+  }, [isTyping, displayText, fullText]);
+
+  // Placeholder typing logic
+  useEffect(() => {
+    let cur = ""; let del = false; let timer: NodeJS.Timeout;
+    const type = () => {
+      const phrase = placeholderPhrases[phraseIdx];
+      let speed = 80;
+      if (!del) {
+        cur = phrase.slice(0, cur.length + 1);
+        if (cur === phrase) { speed = 3500; del = true; }
+      } else {
+        cur = phrase.slice(0, cur.length - 1); speed = 40;
+        if (cur === "") { del = false; setPhraseIdx(p => (p + 1) % placeholderPhrases.length); speed = 1000; }
+      }
+      setPlaceholder(cur); timer = setTimeout(type, speed);
+    };
+    timer = setTimeout(type, 500);
+    return () => clearTimeout(timer);
+  }, [phraseIdx, language]);
+
+  // Title Typewriter Logic
+  useEffect(() => {
+    let i = 0; let mounted = true;
+    setDisplayText(""); setIsTyping(false);
+    setShowSubtitle(false); setShowCTA(false);
+    setShowInput(false); setShowParticles(false);
+    
+    const type = () => {
+      if (!mounted) return;
+      if (i <= fullText.length) { 
+        setIsTyping(true); 
+        setDisplayText(fullText.slice(0, i++)); 
+        setTimeout(type, Math.random() * 25 + 45); 
+      } else {
+        setIsTyping(false); 
+      }
+    };
+    const t0 = setTimeout(type, 2000); 
+    return () => { mounted = false; clearTimeout(t0); };
+  }, [fullText]);
+
+  // Scroll Parallax
+  useEffect(() => {
+    const onScroll = () => {
+      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const titleText     = t.servicesTitle as string;
-  const subtitleText  = t.servicesSubtitle as string;
-  const titleDuration = titleText.length * 22;
+  // Particle Canvas Logic
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const tier = getDeviceTier();
+    const cfg = TIER_CONFIG[tier];
+    const FRAME_INTERVAL = 1000 / cfg.fps;
+    const COLOR_BANDS = [{ r: 138, g: 143, b: 234 }, { r: 100, g: 120, b: 220 }, { r: 66, g: 133, b: 244 }, { r: 120, g: 80, b: 200 }, { r: 180, g: 60, b: 160 }, { r: 210, g: 50, b: 80 }, { r: 234, g: 67, b: 53 }, { r: 240, g: 120, b: 30 }, { r: 251, g: 188, b: 5 }];
+    const SPRING = 0.032; const FRICTION = 0.80; const WIND_SCALE = 0.18; const WIND_RADIUS = 380;
+    type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
+    let particles: Particle[] = [];
+    const mouseState = { x: -9999, y: -9999, vx: 0, vy: 0, prevX: -9999, prevY: -9999 };
+    let last = 0; let rafId: number;
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
+      const distFraction = dist / (maxDist * 0.85);
+      const yFraction = oy / canvas.height;
+      return COLOR_BANDS[Math.floor(Math.min(distFraction * 0.5 + yFraction * 0.5, 0.999) * COLOR_BANDS.length)];
+    };
+    const init = () => {
+      particles = []; const cx = canvas.width / 2; const cy = canvas.height / 2; const maxDist = Math.sqrt(cx * cx + cy * cy);
+      for (let i = 0; i < cfg.pills; i++) {
+        const t_val = Math.pow(Math.random(), 0.55); const dist = t_val * maxDist * 0.85; const angle = Math.random() * Math.PI * 2;
+        const ox = cx + Math.cos(angle) * dist; const oy = cy + Math.sin(angle) * dist; const col = getColor(ox, oy, dist, maxDist);
+        const distFraction = dist / (maxDist * 0.85); const size = 1.5 + (1 - distFraction) * 3.5;
+        particles.push({ x: ox, y: oy, originX: ox, originY: oy, vx: 0, vy: 0, angle: angle + Math.PI / 2 + (Math.random() - 0.5) * 0.6, width: size * (2.5 + Math.random() * 2), height: size * 0.6, r: col.r, g: col.g, b: col.b, opacity: 0.55 + Math.random() * 0.35 });
+      }
+      for (let i = 0; i < cfg.dots; i++) {
+        const ox = Math.random() * canvas.width; const oy = Math.random() * canvas.height;
+        const col = getColor(ox, oy, 0, maxDist);
+        particles.push({ x: ox, y: oy, originX: ox, originY: oy, vx: 0, vy: 0, angle: Math.random() * Math.PI, width: 1.5 + Math.random() * 2, height: 0.8, r: col.r, g: col.g, b: col.b, opacity: 0.2 + Math.random() * 0.25 });
+      }
+    };
+    const animate = (ts: number) => {
+      rafId = requestAnimationFrame(animate); if (ts - last < FRAME_INTERVAL) return; last = ts;
+      ctx.clearRect(0, 0, canvas.width, canvas.height); mouseState.vx *= 0.85; mouseState.vy *= 0.85;
+      for (let p of particles) {
+        const dx = p.x - mouseState.x; const dy = p.y - mouseState.y; const distToCursor = Math.sqrt(dx * dx + dy * dy);
+        if (distToCursor < WIND_RADIUS && mouseState.x !== -9999) { const falloff = 1 - distToCursor / WIND_RADIUS; p.vx += mouseState.vx * WIND_SCALE * falloff; p.vy += mouseState.vy * WIND_SCALE * falloff; }
+        p.vx += (p.originX - p.x) * SPRING; p.vy += (p.originY - p.y) * SPRING; p.vx *= FRICTION; p.vy *= FRICTION; p.x += p.vx; p.y += p.vy; p.angle += Math.sqrt(p.vx * p.vx + p.vy * p.vy) * 0.012;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath();
+        const w = p.width; const h = p.height; const rv = h / 2;
+        ctx.moveTo(-w / 2 + rv, -h / 2); ctx.lineTo(w / 2 - rv, -h / 2); ctx.arcTo(w / 2, -h / 2, w / 2, h / 2, rv); ctx.lineTo(w / 2 - rv, h / 2); ctx.arcTo(w / 2, h / 2, -w / 2, h / 2, rv); ctx.lineTo(-w / 2 + rv, h / 2); ctx.arcTo(-w / 2, h / 2, -w / 2, -h / 2, rv); ctx.lineTo(-w / 2 + rv, -h / 2); ctx.arcTo(-w / 2, -h / 2, w / 2, -h / 2, rv);
+        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.opacity})`; ctx.fill(); ctx.restore();
+      }
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (mouseState.prevX === -9999) { mouseState.x = e.clientX; mouseState.y = e.clientY; mouseState.prevX = e.clientX; mouseState.prevY = e.clientY; return; }
+      const rawVx = e.clientX - mouseState.prevX; const rawVy = e.clientY - mouseState.prevY;
+      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4; mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
+      mouseState.prevX = mouseState.x; mouseState.prevY = mouseState.y; mouseState.x = e.clientX; mouseState.y = e.clientY;
+    };
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    resize(); init(); rafId = requestAnimationFrame(animate);
+    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMove); };
+  }, []);
 
-  const { displayed: titleDisplayed,    done: titleDone    } = useTypewriter(titleText,    22, 0,                   hasAnimated);
-  const { displayed: subtitleDisplayed, done: subtitleDone } = useTypewriter(subtitleText, 14, titleDuration + 100, hasAnimated);
-
-  const handleAskAI = (context: string) => {
-    setSelectedNode(null);
-    onAskAIClick(context);
+  const handleAISubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || messageCount >= 25) return;
+    onAskAIClick(query);
+    setMessageCount(prev => prev + 1);
+    setIsSent(true); setQuery("");
+    setTimeout(() => setIsSent(false), 3000);
   };
-
-  // ─── 24 NODES  (6 per filter group) ──────────────────────────────────────
-  const serviceNodes: ServiceNode[] = [
-
-    // ── EXAMPLE AGENTS (6) ─────────────────────────────────────────────────
-    { id: 1,  icon: Rocket,        title: t.node2Title,   description: t.node2Desc,   category: t.catGrowth,     filterGroup: 'agents', context: 'lead-generation', impact: t.impactLive },
-    { id: 2,  icon: Zap,           title: t.node4Title,   description: t.node4Desc,   category: t.catSupport,    filterGroup: 'agents', context: 'examples' },
-    { id: 3,  icon: Bot,           title: t.nodeA1Title,  description: t.nodeA1Desc,  category: t.catAgents,     filterGroup: 'agents', context: 'examples' },
-    { id: 4,  icon: MessageCircle, title: t.nodeA2Title,  description: t.nodeA2Desc,  category: t.catAgents,     filterGroup: 'agents', context: 'examples' },
-    { id: 5,  icon: Users,         title: t.nodeA3Title,  description: t.nodeA3Desc,  category: t.catOps,        filterGroup: 'agents', context: 'save-time' },
-    { id: 6,  icon: RefreshCw,     title: t.nodeA5Title,  description: t.nodeA5Desc,  category: t.catOps,        filterGroup: 'agents', context: 'save-time' },
-
-    // ── COMMON QUESTIONS (6) ───────────────────────────────────────────────
-    { id: 7,  icon: Clock,         title: t.node1Title,   description: t.node1Desc,   category: t.catEfficiency, filterGroup: 'faq',    context: 'save-time',       impact: t.impactTime },
-    { id: 8,  icon: Lightbulb,     title: t.node12Title,  description: t.node12Desc,  category: t.catConsulting, filterGroup: 'faq',    context: 'examples' },
-    { id: 9,  icon: CheckCircle,   title: t.nodeQ1Title,  description: t.nodeQ1Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'save-time' },
-    { id: 10, icon: Shield,        title: t.nodeQ2Title,  description: t.nodeQ2Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'custom-solutions' },
-    { id: 11, icon: Cpu,           title: t.nodeQ3Title,  description: t.nodeQ3Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'custom-solutions' },
-    { id: 12, icon: Link,          title: t.nodeQ4Title,  description: t.nodeQ4Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'custom-solutions' },
-
-    // ── ROI & VALUE (6) ────────────────────────────────────────────────────
-    { id: 13, icon: BarChart,      title: t.node6Title,   description: t.node6Desc,   category: t.catData,       filterGroup: 'roi',    context: 'examples' },
-    { id: 14, icon: DollarSign,    title: t.nodeR1Title,  description: t.nodeR1Desc,  category: t.catRoi,        filterGroup: 'roi',    context: 'save-time',       impact: t.impactTime },
-    { id: 15, icon: Activity,      title: t.nodeR2Title,  description: t.nodeR2Desc,  category: t.catRoi,        filterGroup: 'roi',    context: 'examples' },
-    { id: 16, icon: Target,        title: t.nodeR3Title,  description: t.nodeR3Desc,  category: t.catRoi,        filterGroup: 'roi',    context: 'lead-generation', impact: t.impactLive },
-    { id: 17, icon: TrendingUp,    title: t.nodeR5Title,  description: t.nodeR5Desc,  category: t.catGrowth,     filterGroup: 'roi',    context: 'lead-generation' },
-    { id: 18, icon: CheckCircle,   title: t.nodeR6Title,  description: t.nodeR6Desc,  category: t.catEfficiency, filterGroup: 'roi',    context: 'save-time' },
-
-    // ── BONUS cards visible only in "All" marquee ──────────────────────────
-    { id: 19, icon: Wrench,        title: t.node3Title,   description: t.node3Desc,   category: t.catTech,       filterGroup: 'agents', context: 'custom-solutions' },
-    { id: 20, icon: GitMerge,      title: t.nodeA4Title,  description: t.nodeA4Desc,  category: t.catTech,       filterGroup: 'agents', context: 'custom-solutions' },
-    { id: 21, icon: Database,      title: t.nodeA6Title,  description: t.nodeA6Desc,  category: t.catInfra,      filterGroup: 'agents', context: 'custom-solutions' },
-    { id: 22, icon: TrendingUp,    title: t.nodeQ5Title,  description: t.nodeQ5Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'examples' },
-    { id: 23, icon: Lightbulb,     title: t.nodeQ6Title,  description: t.nodeQ6Desc,  category: t.catFaq,        filterGroup: 'faq',    context: 'examples' },
-    { id: 24, icon: BarChart,      title: t.nodeR4Title,  description: t.nodeR4Desc,  category: t.catData,       filterGroup: 'roi',    context: 'examples' },
-  ];
-
-  const filters: { key: FilterKey; label: string }[] = [
-    { key: 'all',    label: t.filterAll    },
-    { key: 'agents', label: t.filterAgents },
-    { key: 'faq',    label: t.filterFaq    },
-    { key: 'roi',    label: t.filterRoi    },
-  ];
-
-  const filtered = activeFilter === 'all'
-    ? serviceNodes                                               // all 24 in marquee
-    : serviceNodes.filter(n => n.filterGroup === activeFilter); // 6 per group → grid
-
-  const showMarquee = activeFilter === 'all' || filtered.length >= 7;
-  const infiniteNodes = [...filtered, ...filtered];
-
-  const titleCursor    = hasAnimated && !titleDone;
-  const subtitleCursor = hasAnimated && subtitleDisplayed.length > 0 && !subtitleDone;
-
-  const categoryColors: Record<string, string> = {
-    [t.catEfficiency]: 'bg-yellow-300',
-    [t.catGrowth]:     'bg-emerald-300',
-    [t.catTech]:       'bg-blue-300',
-    [t.catSupport]:    'bg-purple-300',
-    [t.catInfra]:      'bg-cyan-300',
-    [t.catData]:       'bg-orange-300',
-    [t.catOps]:        'bg-pink-300',
-    [t.catQuality]:    'bg-red-300',
-    [t.catConsulting]: 'bg-indigo-300',
-    [t.catAgents]:     'bg-violet-300',
-    [t.catFaq]:        'bg-sky-300',
-    [t.catRoi]:        'bg-lime-300',
-  };
-
-  const Card = ({ node, fullWidth = false }: { node: ServiceNode; fullWidth?: boolean }) => (
-    <div
-      onClick={() => setSelectedNode(node)}
-      className={`
-        bg-white border border-black rounded-lg p-4 cursor-pointer
-        transition-all duration-200 group
-        shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
-        hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]
-        hover:translate-x-[3px] hover:translate-y-[3px]
-        ${fullWidth ? 'h-full' : 'flex-shrink-0 w-[260px] md:w-[280px] whitespace-normal'}
-      `}
-    >
-      <div className="mb-2">
-        <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 border border-black rounded ${categoryColors[node.category] ?? 'bg-gray-200'}`}>
-          {node.category}
-        </span>
-      </div>
-
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-black text-sm uppercase tracking-tight leading-none pr-2">
-          {node.title}
-        </h3>
-        <div className="p-1.5 bg-black text-white rounded flex-shrink-0">
-          <node.icon className="w-3.5 h-3.5" />
-        </div>
-      </div>
-
-      <p className="text-[11px] text-black/60 font-bold leading-tight line-clamp-2 mb-3">
-        {node.description}
-      </p>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center text-[9px] font-black uppercase tracking-widest text-black/30 group-hover:text-black transition-colors">
-          Details <TrendingUp className="ml-1 w-2.5 h-2.5" />
-        </div>
-        {node.impact && (
-          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 bg-green-400 border border-black rounded shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-            {node.impact}
-          </span>
-        )}
-      </div>
-    </div>
-  );
 
   return (
-    <section ref={sectionRef} className="relative py-12 bg-transparent overflow-hidden">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes marqueeReverse {
-          0%   { transform: translateX(-50%); }
-          100% { transform: translateX(0);    }
+    <section className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
+      <style>{`
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+        
+        @keyframes title-fade-slide {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
-        .animate-marquee-reverse {
-          animation: marqueeReverse 45s linear infinite;
-        }
-        .pause-marquee:hover .animate-marquee-reverse {
-          animation-play-state: paused;
-        }
-        .mask-fade {
-          mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
-          -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        .tw-cursor::after {
-          content: '|';
-          animation: blink 0.55s step-end infinite;
-          font-weight: 900;
-        }
-        .tw-cursor-sub::after {
-          content: '|';
-          animation: blink 0.55s step-end infinite;
-          font-weight: 700;
-          opacity: 0.4;
-        }
-      `}} />
 
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
-        <div className="inline-block mb-2">
-          <h2 className={`text-3xl md:text-5xl font-black text-black tracking-tighter uppercase min-h-[1.2em] ${titleCursor ? 'tw-cursor' : ''}`}>
-            {hasAnimated ? titleDisplayed : <span className="invisible">{titleText}</span>}
-          </h2>
-          <div className="mt-1 h-1 w-16 bg-black rounded-full" />
+        @keyframes underline-swipe-lr {
+          0% { left: 0%; width: 0%; opacity: 0; }
+          40% { left: 0%; width: 70%; opacity: 1; }
+          60% { left: 0%; width: 100%; opacity: 1; }
+          100% { left: 100%; width: 0%; opacity: 0; }
+        }
+
+        .cursor-standby { animation: blink 1s step-end infinite; }
+        .typewriter-cursor {
+          display: inline-block; width: 4px; height: 1.1em; margin-left: 4px;
+          vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
+        }
+        .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
+        
+        .underline-dynamic {
+          position: absolute; bottom: -6px; height: 2px;
+          background: linear-gradient(90deg, transparent, #18181b, transparent);
+          /* Added 0.5s delay to trigger after text stops moving */
+          animation: underline-swipe-lr 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s forwards;
+        }
+
+        .subtitle-shadow {
+          text-shadow: 0px 2px 4px rgba(0,0,0,0.15), 0px 0px 1px rgba(0,0,0,0.05);
+        }
+        
+        .title-entrance {
+          animation: title-fade-slide 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+      `}</style>
+
+      <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
+
+      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
+        <div className="relative mb-8 w-full max-w-7xl mx-auto flex justify-center title-entrance">
+          <div className="relative inline-block w-full">
+            <h1 className="text-4xl md:text-8xl font-bold invisible select-none text-center" style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}>{fullText}</h1>
+            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold text-center" style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}>
+              <span>{displayText}</span>
+              <span className={`typewriter-cursor transition-opacity duration-1000 ${displayText.length === 0 ? 'cursor-standby' : isTyping ? 'opacity-100' : 'opacity-0'}`} />
+            </h1>
+          </div>
         </div>
-        <div className="relative text-sm md:text-base font-bold max-w-2xl">
-          <p className="invisible" aria-hidden="true">{subtitleText}</p>
-          <p className={`absolute inset-0 text-black/60 ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>
-            {hasAnimated ? subtitleDisplayed : ''}
+
+        <div className="relative inline-block mb-8">
+          <p className={`text-base md:text-2xl text-zinc-900 max-w-2xl font-light italic transition-all duration-[1500ms] subtitle-shadow ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+            {t.heroSubtitle}
           </p>
+          {showSubtitle && <div className="underline-dynamic" />}
         </div>
-      </div>
 
-      {/* Filter Tabs */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-3.5 h-3.5 text-black/40 flex-shrink-0" />
-          {filters.map(f => {
-            const count = f.key === 'all'
-              ? serviceNodes.length
-              : serviceNodes.filter(n => n.filterGroup === f.key).length;
-            return (
-              <button
-                key={f.key}
-                onClick={() => setActiveFilter(f.key)}
-                className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded border transition-all duration-150
-                  ${activeFilter === f.key
-                    ? 'bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.25)]'
-                    : 'bg-white text-black border-black hover:bg-black/5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]'
-                  }`}
-              >
-                {f.label}
-                <span className="ml-1.5 opacity-40">({count})</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
+          <button onClick={onBookingClick} className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+            <span className="whitespace-nowrap">{t.startJourney}</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
 
-      {/* Marquee — "All" view or if filtered set still large */}
-      {showMarquee && (
-        <div className="relative pause-marquee mask-fade">
-          <div className="flex overflow-hidden py-4">
-            <div className="flex gap-4 animate-marquee-reverse whitespace-nowrap">
-              {infiniteNodes.map((node, index) => (
-                <Card key={`${node.id}-${index}`} node={node} />
-              ))}
+          <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
+            <div className="flex flex-col items-center gap-1">
+              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">{isSent ? t.openingChat : t.askAiAgent}</h3>
+              {!isSent && <ChevronDown className="w-7 h-7 text-black stroke-[3] animate-bounce-down" />}
             </div>
+
+            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${isSent ? 'border-green-600 bg-green-50' : ''}`}>
+              <input ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isSent ? "" : placeholder} disabled={isSent} className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium" style={{ fontFamily: 'Georgia, serif' }} />
+              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}><Send className="w-5 h-5" /></button>
+            </form>
+          </div>
+        </div>
+
+        <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+          <div ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove} onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)} className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}>
+            {!isTouch && (
+              <div className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`} style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}>
+                <Play className="w-4 h-4 fill-black" /><span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
+              </div>
+            )}
+            {!isModalOpen && <iframe src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`} className="absolute inset-[-2%] w-[104%] h-[104%] opacity-60 grayscale pointer-events-none object-cover scale-110" style={{ border: 'none' }} />}
+          </div>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 backdrop-blur-md p-4">
+          <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-4 z-[130] bg-white border-2 border-black rounded-full hover:scale-110 transition-all shadow-xl"><X className="w-8 h-8 text-black" /></button>
+          <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.3)] bg-black">
+            <iframe src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media; fullscreen" style={{ border: 'none' }} />
           </div>
         </div>
       )}
-
-      {/* Static Grid — filtered view with ≤6 cards */}
-      {!showMarquee && (
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AnimatePresence>
-              {filtered.map(node => (
-                <motion.div
-                  key={node.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card node={node} fullWidth />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal */}
-      <AnimatePresence>
-        {selectedNode && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedNode(null)}
-              className="absolute inset-0 bg-black/10 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 10, transition: { duration: 0.2 } }}
-              className="relative w-full max-w-lg bg-white border-[3px] border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] rounded-2xl p-6 md:p-10 max-h-[90vh] overflow-y-auto"
-            >
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full transition-colors z-10"
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-black text-white rounded-xl flex-shrink-0">
-                  <selectedNode.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tighter mb-1 inline-block border border-black ${categoryColors[selectedNode.category] ?? 'bg-gray-200'}`}>
-                    {selectedNode.category}
-                  </span>
-                  <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight">
-                    {selectedNode.title}
-                  </h3>
-                </div>
-              </div>
-
-              <p className="text-sm md:text-base text-black/80 font-bold leading-relaxed mb-8">
-                {selectedNode.description}
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => handleAskAI(selectedNode.context)}
-                  className="flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-black uppercase text-xs hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  {t.exploreAI}
-                </button>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="px-5 py-3 border-2 border-black rounded-xl font-black uppercase text-xs hover:bg-black/5 transition-all text-center"
-                >
-                  {t.close}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
