@@ -149,18 +149,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll reveal + sticky-then-release for AI input ───────────────────
+  // ─── Scroll-driven AI input positioning ──────────────────────────────────
+  // The block is ALWAYS absolutely positioned inside the section.
+  // We compute its top so it looks fixed to the bottom of the viewport,
+  // then once the spacer is reached we let it sit in the spacer naturally.
+  // This avoids any fixed→absolute switch and the snap that comes with it.
   const [scrollY, setScrollY] = useState(0);
   const spacerRef = useRef<HTMLDivElement>(null);
-  // Instead of tracking anchorTop, we track the document height at release
-  // so we can use bottom= to match fixed bottom=0 exactly — no jump possible.
-  const [releaseScrollY, setReleaseScrollY] = useState<number | null>(null);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Release threshold: 270px desktop, 180px mobile (viewport-relative feel)
-  const RELEASE_THRESHOLD = typeof window !== 'undefined' && window.innerWidth < 768 ? 180 : 270;
-  // Box slides in between these scroll values
-  const SLIDE_START = typeof window !== 'undefined' && window.innerWidth < 768 ? 90 : 150;
-  const SLIDE_END = RELEASE_THRESHOLD;
+  // How many px of scroll before the box fully slides in
+  const SLIDE_START = isMobile ? 80 : 130;
+  const SLIDE_RANGE = isMobile ? 100 : 140;
 
   useEffect(() => {
     const onScroll = () => {
@@ -169,30 +169,25 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       const p = Math.min(Math.max((sy - 50) / 300, 0), 1);
       setScrollOpacity(p);
       setScrollScale(0.85 + p * 0.15);
-
-      // Lock in the scrollY value exactly when we cross the release threshold
-      if (sy >= RELEASE_THRESHOLD && releaseScrollY === null) {
-        setReleaseScrollY(sy);
-      }
-      // Allow re-locking if user scrolls back up and down again
-      if (sy < RELEASE_THRESHOLD - 30 && releaseScrollY !== null) {
-        setReleaseScrollY(null);
-      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [releaseScrollY, RELEASE_THRESHOLD]);
+  }, []);
 
-  const inputReveal = Math.min(Math.max((scrollY - SLIDE_START) / (SLIDE_END - SLIDE_START), 0), 1);
-  const isReleased = scrollY >= RELEASE_THRESHOLD && releaseScrollY !== null;
+  // 0 = box fully hidden below fold, 1 = box fully visible
+  const inputReveal = Math.min(Math.max((scrollY - SLIDE_START) / SLIDE_RANGE, 0), 1);
 
-  // When absolute: position from bottom of section so it matches fixed bottom=0.
-  // section height changes as page grows, so we compute from top using spacerRef.
-  const getAbsoluteTop = () => {
-    if (!spacerRef.current) return 488;
-    const section = spacerRef.current.closest('section');
-    if (!section) return 488;
-    return spacerRef.current.offsetTop;
+  // Compute the top value so the block sits at the bottom of the viewport,
+  // then clamps once it would go past the spacer's natural position.
+  const getBlockTop = (): number => {
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const blockH = 160; // approx height of label + input
+    // "looks fixed at bottom" = scrollY + vh - blockH
+    const floatingTop = scrollY + vh - blockH;
+    // Natural resting place = spacer's offsetTop inside section
+    const naturalTop = spacerRef.current ? spacerRef.current.offsetTop : 99999;
+    // Once floating position would go past natural, lock to natural
+    return Math.min(floatingTop, naturalTop);
   };
 
   // ─── Particle Engine ──────────────────────────────────────────────────────
@@ -325,14 +320,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
 
         {/*
-          Spacer: holds layout space for the AI block once released from fixed.
-          Height must exceed the full block height (label ~52px + input ~76px + padding ~32px = 160px).
-          Adding extra to ensure video never overlaps on any screen size.
+          Spacer: reserves space so the video sits below the AI block's resting position.
+          Must be taller than the block (label ~52 + input ~76 + padding ~32 = 160).
         */}
-        <div ref={spacerRef} className="w-full" style={{ height: 200 }} />
+        <div ref={spacerRef} className="w-full" style={{ height: 180 }} />
 
-        {/* Video — below the spacer with generous gap */}
-        <div className="w-full max-w-6xl mt-16 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        {/* Video — extra top margin so there's breathing room below the input block */}
+        <div className="w-full max-w-6xl mt-24 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
@@ -365,23 +359,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       {/*
         ─── AI Input block ────────────────────────────────────────────────────
-        When NOT released (scroll 0–270px): position fixed at bottom of screen.
-          - Label + arrow always visible above the bottom edge
-          - Input box translateY(100% → 0%) as you scroll 150→270px
-        When released (scroll > 270px): position absolute, sitting in the spacer
-          gap above the video, scrolls away with the page like normal content.
-
-        The `top` value when absolute = pt-28(112) + title(~200) + subtitle(~88)
-          + cta(~72) + spacing(~16) = ~488px from top of section.
+        Always absolutely positioned inside the section — no fixed/absolute switch.
+        getBlockTop() returns scrollY + vh - blockH (looks glued to bottom of screen)
+        until that value would overshoot the spacer, at which point it clamps
+        and the block sits in-place while the page scrolls past it.
+        Zero position switching = zero snap/jump.
       */}
       <div
         className={`z-40 w-full flex flex-col items-center px-6 transition-opacity duration-1000 ${
           showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={isReleased
-          ? { position: 'absolute', top: getAbsoluteTop(), left: 0, right: 0 }
-          : { position: 'fixed', bottom: 0, left: 0, right: 0 }
-        }
+        style={{ position: 'absolute', top: getBlockTop(), left: 0, right: 0 }}
       >
         {/* Label + black bouncing arrow — always visible */}
         <div className="flex flex-col items-center gap-1 pb-3">
@@ -391,12 +379,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
         </div>
 
-        {/* Input box: slides up from below fold, smooth all the way */}
+        {/* Input box: slides up as you scroll, smooth with no mode switching */}
         <div
           className="w-full max-w-md pb-6"
           style={{
             transform: `translateY(${(1 - inputReveal) * 100}%)`,
-            transition: 'transform 0.08s linear',
+            transition: 'transform 0.06s linear',
           }}
         >
           <form
