@@ -419,8 +419,8 @@ customBuiltDesc: "Ich spezialisiere mich darauf, manuelle Geschäftsprozesse in 
       "Suivi des gains de productivité en temps réel.",
     ],
 
-    customBuilt: "Jayden Mikus – Architecte IA",
-    customBuiltDesc: "Spécialisé dans la création de systèmes IA scalables qui transforment les processus manuels en moteurs de revenus via n8n et les LLM.",
+    customBuilt: "Jayden Mikus – Architecte en Automation IA",
+customBuiltDesc: "Je me spécialise dans la transformation des opérations manuelles en moteurs de revenus autonomes. En concevant des systèmes backend évolutifs avec n8n et des LLM avancés, j'aide les entreprises à éliminer les goulots d'étranglement et à gagner plus de 20 heures par semaine. Mon objectif est de bâtir des solutions IA prêtes pour la production qui ne se contentent pas de 'fonctionner', mais qui propulsent votre croissance avec un ROI mesurable.",
 
     rapidDeployment: "Concentrez-vous sur la croissance pendant que l'IA gère vos opérations quotidiennes.",
 
