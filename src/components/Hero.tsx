@@ -78,10 +78,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     if (!isHoveringVideo || isModalOpen) return;
     let af: number;
     const follow = () => {
-      setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.12,
-        y: prev.y + (targetPos.y - prev.y) * 0.12,
-      }));
+      setCurrentPos(prev => {
+        // snap immediately on first frame after entering
+        if (prev.x < -100) return { x: targetPos.x, y: targetPos.y };
+        return {
+          x: prev.x + (targetPos.x - prev.x) * 0.12,
+          y: prev.y + (targetPos.y - prev.y) * 0.12,
+        };
+      });
       af = requestAnimationFrame(follow);
     };
     af = requestAnimationFrame(follow);
@@ -145,11 +149,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
+  const [inputReveal, setInputReveal] = useState(0);
+
   // ─── Scroll reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
-      setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
+      setScrollOpacity(p);
+      setScrollScale(0.85 + p * 0.15);
+      // input box slides up over first ~120px of scroll (~3cm)
+      const reveal = Math.min(Math.max(window.scrollY / 120, 0), 1);
+      setInputReveal(reveal);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -290,7 +300,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsHoveringVideo(true)}
+            onMouseEnter={() => {
+              setIsHoveringVideo(true);
+              // snap immediately so the button appears under cursor right away
+              setCurrentPos({ x: -9999, y: -9999 });
+            }}
             onMouseLeave={() => {
               setIsHoveringVideo(false);
               setCurrentPos({ x: -9999, y: -9999 });
@@ -299,7 +313,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
             {/* Custom cursor play button */}
-            {!isTouch && isHoveringVideo && currentPos.x > 0 && (
+            {!isTouch && isHoveringVideo && currentPos.x > -100 && (
               <div
                 className="pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl"
                 style={{
@@ -327,26 +341,29 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       </div>
 
-      {/* ─── AI Input — fixed to bottom, input always just off-screen ──────── */}
-      {/*   Only the label + arrow peek above the fold, hinting to scroll down  */}
+      {/* ─── AI Input — fixed to bottom, slides up on scroll ──────────────── */}
+      {/* Label + arrow always peek above fold; box slides in after ~3cm scroll */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center transition-opacity duration-1000 ${
           showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* Label + black bouncing arrow — visible above fold */}
-        <div className="flex flex-col items-center gap-1 pb-3">
+        {/* Label + black bouncing arrow — always visible above fold */}
+        <div className="flex flex-col items-center gap-1 pb-3 bg-transparent">
           <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
             {isSent ? t.openingChat : t.askAiAgent}
           </h3>
           {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
         </div>
 
-        {/* Input box pushed completely below the visible fold with translate-y-full */}
-        <div className="w-full max-w-md px-6 translate-y-full pb-6">
+        {/* Input box: translateY goes from 100% (hidden) to 0% (fully visible) based on scroll */}
+        <div
+          className="w-full max-w-md px-6 pb-6"
+          style={{ transform: `translateY(${(1 - inputReveal) * 100}%)`, transition: 'transform 0.1s linear' }}
+        >
           <form
             onSubmit={handleAISubmit}
-            className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${
+            className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 shadow-2xl focus-within:shadow-blue-100 transition-all duration-300 ${
               isSent ? 'border-green-600 bg-green-50' : ''
             }`}
           >
