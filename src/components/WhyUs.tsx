@@ -1,6 +1,6 @@
 import { Users, Zap, ChevronDown } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface WhyUsProps {
   language: Language;
@@ -8,19 +8,105 @@ interface WhyUsProps {
 
 export default function WhyUs({ language }: WhyUsProps) {
   const t = translations[language];
-  // Track expanded state for mobile
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [visibleItems, setVisibleItems] = useState<boolean[]>(new Array(5).fill(false));
+  const [founderVisible, setFounderVisible] = useState(false);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const founderRef = useRef<HTMLDivElement | null>(null);
 
   const toggleReason = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    itemRefs.current.forEach((ref, index) => {
+      if (!ref) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              setVisibleItems((prev) => {
+                const updated = [...prev];
+                updated[index] = true;
+                return updated;
+              });
+            }, index * 100);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.15 }
+      );
+      observer.observe(ref);
+      observers.push(observer);
+    });
+
+    if (founderRef.current) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setFounderVisible(true);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.15 }
+      );
+      observer.observe(founderRef.current);
+      observers.push(observer);
+    }
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
+
   return (
     <section className="relative py-12 md:py-16 bg-gradient-to-b from-transparent to-white text-black overflow-hidden">
+      <style>{`
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-48px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(64px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .animate-slide-left {
+          animation: slideInLeft 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .animate-slide-right {
+          animation: slideInRight 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .pre-animate {
+          opacity: 0;
+          transform: translateX(-48px);
+        }
+
+        .pre-animate-right {
+          opacity: 0;
+          transform: translateX(64px);
+        }
+      `}</style>
+
       <div className="relative max-w-7xl mx-auto px-6 z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          
-          {/* Left: Reasons (Accordion on mobile, static on desktop) */}
+
+          {/* Left: Reasons */}
           <div className="space-y-4">
             <h2 className="text-3xl md:text-4xl font-black mb-6 tracking-tight">
               {t.whyUsTitle}
@@ -29,10 +115,12 @@ export default function WhyUs({ language }: WhyUsProps) {
             <div className="space-y-3">
               {t.reasons.slice(0, 5).map((reason, index) => {
                 const isExpanded = expandedIndex === index;
-                
+                const isVisible = visibleItems[index];
+
                 return (
                   <div
                     key={index}
+                    ref={(el) => { itemRefs.current[index] = el; }}
                     onClick={() => toggleReason(index)}
                     className={`
                       backdrop-blur-md
@@ -43,6 +131,7 @@ export default function WhyUs({ language }: WhyUsProps) {
                       shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
                       cursor-pointer md:cursor-default
                       transition-all duration-300
+                      ${isVisible ? 'animate-slide-left' : 'pre-animate'}
                       ${isExpanded ? 'bg-white/40 translate-y-0.5 translate-x-0.5 shadow-none' : ''}
                     `}
                   >
@@ -55,13 +144,11 @@ export default function WhyUs({ language }: WhyUsProps) {
                           <p className="text-base md:text-lg font-bold leading-tight">
                             {reason}
                           </p>
-                          {/* Chevron only visible on mobile to indicate interactivity */}
-                          <ChevronDown 
-                            className={`w-5 h-5 transition-transform duration-300 md:hidden ${isExpanded ? 'rotate-180' : ''}`} 
+                          <ChevronDown
+                            className={`w-5 h-5 transition-transform duration-300 md:hidden ${isExpanded ? 'rotate-180' : ''}`}
                           />
                         </div>
-                        
-                        {/* Expandable Description */}
+
                         <div className={`
                           overflow-hidden transition-all duration-300
                           ${isExpanded ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0 md:max-h-40 md:opacity-100 md:mt-2'}
@@ -78,16 +165,20 @@ export default function WhyUs({ language }: WhyUsProps) {
             </div>
           </div>
 
-          {/* Right: Compressed Founder Block */}
-          <div className="
-            backdrop-blur-xl 
-            bg-white/30 
-            border border-black 
-            rounded-[2rem] 
-            p-6 md:p-8 
-            shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
-            lg:sticky lg:top-24
-          ">
+          {/* Right: Founder Block */}
+          <div
+            ref={founderRef}
+            className={`
+              backdrop-blur-xl 
+              bg-white/30 
+              border border-black 
+              rounded-[2rem] 
+              p-6 md:p-8 
+              shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
+              lg:sticky lg:top-24
+              ${founderVisible ? 'animate-slide-right' : 'pre-animate-right'}
+            `}
+          >
             <div className="flex items-center gap-5 mb-6">
               <div className="w-20 h-20 rounded-full overflow-hidden border border-black shadow-sm flex-shrink-0">
                 <img
