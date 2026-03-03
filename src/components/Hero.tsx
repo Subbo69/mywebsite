@@ -56,7 +56,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  // Mouse tracking state for the custom cursor
+  // ─── Cursor Follower State ────────────────────────────────────────────────
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -67,7 +67,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const isTouch = typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-  // ─── Mouse Tracking Logic for Video Cursor ─────────────────────────────────
+  // Handle Mouse Movement over Video
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
@@ -77,6 +77,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     });
   };
 
+  // Smooth Interpolation Loop for the Play Button
   useEffect(() => {
     if (!isHoveringVideo || isModalOpen || isTouch) return;
     
@@ -92,7 +93,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isModalOpen, isTouch]);
 
-  // ─── Choreography Sync ──────────────────────────────────────────────────
+  // ─── Choreography sync ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
@@ -115,7 +116,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // ─── Placeholder Typewriter ───────────────────────────────────────────────
+  // ─── Placeholder typewriter ───────────────────────────────────────────────
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
@@ -134,7 +135,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // ─── Title Typewriter ─────────────────────────────────────────────────────
+  // ─── Title typewriter ─────────────────────────────────────────────────────
   useEffect(() => {
     let i = 0; let mounted = true;
     setDisplayText(""); setIsTyping(true);
@@ -149,10 +150,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll Reveal ────────────────────────────────────────────────────────
+  // ─── Scroll reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
-      const p = Math.min(Math.max((window.scrollY - 50) / 400, 0), 1);
+      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
       setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -170,12 +171,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const FRAME_INTERVAL = 1000 / cfg.fps;
     const COLOR_BANDS = [{ r: 138, g: 143, b: 234 }, { r: 100, g: 120, b: 220 }, { r: 66, g: 133, b: 244 }, { r: 120, g: 80, b: 200 }, { r: 180, g: 60, b: 160 }, { r: 210, g: 50, b: 80 }, { r: 234, g: 67, b: 53 }, { r: 240, g: 120, b: 30 }, { r: 251, g: 188, b: 5 }];
     const SPRING = 0.032; const FRICTION = 0.80; const WIND_SCALE = 0.18; const WIND_RADIUS = 380;
-    
     type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
     let particles: Particle[] = [];
     const mouseState = { x: -9999, y: -9999, vx: 0, vy: 0, prevX: -9999, prevY: -9999 };
-    let last = 0; let rafId: number; let paused = false;
-
+    let last = 0; let rafId: number;
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
       const distFraction = dist / (maxDist * 0.85);
@@ -197,7 +196,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }
     };
     const animate = (ts: number) => {
-      rafId = requestAnimationFrame(animate); if (paused || ts - last < FRAME_INTERVAL) return; last = ts;
+      rafId = requestAnimationFrame(animate); if (ts - last < FRAME_INTERVAL) return; last = ts;
       ctx.clearRect(0, 0, canvas.width, canvas.height); mouseState.vx *= 0.85; mouseState.vy *= 0.85;
       for (let p of particles) {
         const dx = p.x - mouseState.x; const dy = p.y - mouseState.y; const distToCursor = Math.sqrt(dx * dx + dy * dy);
@@ -209,23 +208,22 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.opacity})`; ctx.fill(); ctx.restore();
       }
     };
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMoveCanvas = (e: MouseEvent) => {
       if (mouseState.prevX === -9999) { mouseState.x = e.clientX; mouseState.y = e.clientY; mouseState.prevX = e.clientX; mouseState.prevY = e.clientY; return; }
       const rawVx = e.clientX - mouseState.prevX; const rawVy = e.clientY - mouseState.prevY;
       mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4; mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
       mouseState.prevX = mouseState.x; mouseState.prevY = mouseState.y; mouseState.x = e.clientX; mouseState.y = e.clientY;
     };
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('mousemove', onMouseMoveCanvas, { passive: true });
     resize(); init(); rafId = requestAnimationFrame(animate);
-    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMove); };
+    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMoveCanvas); };
   }, []);
 
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     if (!query.trim()) return;
-    if (messageCount >= 25) { setErrorMessage("Message limit reached (25/25)."); return; }
-    if (query.length > 2000) { setErrorMessage("Max 2000 characters."); return; }
+    if (messageCount >= 25) { setErrorMessage("Limit reached."); return; }
     onAskAIClick(query);
     setMessageCount(prev => prev + 1);
     setIsSent(true); setQuery("");
@@ -233,7 +231,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
+    <section
+      className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
+      style={{ fontFamily: 'Georgia, serif' }}
+    >
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
@@ -286,16 +287,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder={isSent ? "" : placeholder} disabled={isSent}
                 className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
+                style={{ fontFamily: 'Georgia, serif' }}
               />
               <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}>
                 <Send className="w-5 h-5" />
               </button>
             </form>
-            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2">{errorMessage}</p>}
           </div>
         </div>
 
-        {/* Video Section with Floating "Play Intro" Cursor */}
+        {/* Video Section with Smoothed Cursor Follower */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef} 
@@ -303,18 +304,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHoveringVideo(true)} 
             onMouseLeave={() => setIsHoveringVideo(false)}
-            className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 transition-transform duration-500 hover:scale-[1.01] ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
+            className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {/* THE FLOATING BUTTON */}
-            {!isTouch && !isModalOpen && (
+            {/* Smoothed Floating Play Button */}
+            {!isTouch && (
               <div 
-                className={`pointer-events-none absolute z-[60] flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
+                className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
                 style={{ 
                   left: `${currentPos.x}px`, 
                   top: `${currentPos.y}px`, 
                   transform: 'translate(-50%, -50%)', 
                   fontFamily: '"Montserrat", sans-serif',
-                  willChange: 'transform, left, top'
+                  willChange: 'left, top'
                 }}
               >
                 <Play className="w-4 h-4 fill-black" />
@@ -323,7 +324,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             )}
 
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
-            
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`}
@@ -339,8 +339,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all group">
-              <X className="w-6 h-6 text-white group-hover:scale-110" />
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
+              <X className="w-6 h-6 text-white" />
             </button>
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
