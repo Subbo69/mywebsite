@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Rocket, Wrench, TrendingUp, Lightbulb, 
   Clock, Zap, Shield, Cpu, 
@@ -23,9 +23,60 @@ interface ServiceNode {
   impact?: string;
 }
 
+function useTypewriter(text: string, speed = 28, startDelay = 0, enabled = false) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    setDisplayed('');
+    setDone(false);
+    let i = 0;
+    const outerTimer = setTimeout(() => {
+      const interval = setInterval(() => {
+        i++;
+        setDisplayed(text.slice(0, i));
+        if (i >= text.length) {
+          clearInterval(interval);
+          setDone(true);
+        }
+      }, speed);
+      return () => clearInterval(interval);
+    }, startDelay);
+    return () => clearTimeout(outerTimer);
+  }, [enabled]);
+
+  return { displayed, done };
+}
+
 export default function Services({ onAskAIClick, language }: ServicesProps) {
   const t = translations[language];
   const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasAnimated(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const titleText = t.servicesTitle as string;
+  const subtitleText = t.servicesSubtitle as string;
+  const titleDuration = titleText.length * 22;
+
+  const { displayed: titleDisplayed, done: titleDone } = useTypewriter(titleText, 22, 0, hasAnimated);
+  const { displayed: subtitleDisplayed, done: subtitleDone } = useTypewriter(subtitleText, 14, titleDuration + 100, hasAnimated);
 
   const handleAskAI = (context: string) => {
     setSelectedNode(null);
@@ -48,9 +99,11 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   ];
 
   const infiniteNodes = [...serviceNodes, ...serviceNodes];
+  const titleCursor = hasAnimated && !titleDone;
+  const subtitleCursor = hasAnimated && subtitleDisplayed.length > 0 && !subtitleDone;
 
   return (
-    <section className="relative py-12 bg-transparent overflow-hidden">
+    <section ref={sectionRef} className="relative py-12 bg-transparent overflow-hidden">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes marqueeReverse {
           0% { transform: translateX(-50%); }
@@ -62,7 +115,6 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         .pause-marquee:hover .animate-marquee-reverse {
           animation-play-state: paused;
         }
-        /* This creates the "Fade into nothing" effect on the edges */
         .mask-fade {
           mask-image: linear-gradient(
             to right,
@@ -79,21 +131,38 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
             transparent
           );
         }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        .tw-cursor::after {
+          content: '|';
+          animation: blink 0.55s step-end infinite;
+          font-weight: 900;
+        }
+        .tw-cursor-sub::after {
+          content: '|';
+          animation: blink 0.55s step-end infinite;
+          font-weight: 700;
+          opacity: 0.4;
+        }
       `}} />
 
       <div className="max-w-7xl mx-auto px-6 mb-8">
         <div className="inline-block mb-2">
-          <h2 className="text-3xl md:text-5xl font-black text-black tracking-tighter uppercase">
-            {t.servicesTitle}
+          <h2 className={`text-3xl md:text-5xl font-black text-black tracking-tighter uppercase min-h-[1.2em] ${titleCursor ? 'tw-cursor' : ''}`}>
+            {hasAnimated ? titleDisplayed : <span className="invisible">{titleText}</span>}
           </h2>
           <div className="mt-1 h-1 w-16 bg-black rounded-full" />
         </div>
-        <p className="text-sm md:text-base text-black/60 font-bold max-w-2xl">
-          {t.servicesSubtitle}
+        <p className={`text-sm md:text-base text-black/60 font-bold max-w-2xl min-h-[1.5em] ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>
+          {hasAnimated
+            ? (subtitleDisplayed || <span className="invisible">{subtitleText}</span>)
+            : <span className="invisible">{subtitleText}</span>
+          }
         </p>
       </div>
 
-      {/* Added mask-fade here */}
       <div className="relative pause-marquee mask-fade">
         <div className="flex overflow-hidden py-4">
           <div className="flex gap-4 animate-marquee-reverse whitespace-nowrap">
