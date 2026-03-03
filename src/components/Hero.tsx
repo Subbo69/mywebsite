@@ -226,13 +226,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
-        @keyframes blink-once { 0%, 50%, 100% { opacity: 1; } 25%, 75% { opacity: 0; } }
+        @keyframes blink-fade { 
+          0%, 50% { opacity: 1; } 
+          25%, 75% { opacity: 0; }
+          100% { opacity: 0; }
+        }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
         .typewriter-cursor {
           display: inline-block; width: 4px; height: 1em; margin-left: 2px;
           vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
-          animation: blink-once 1s ease-in-out 1 forwards;
-          transition: opacity 0.8s ease-out;
+          animation: blink-fade 0.8s ease-in-out forwards;
         }
         .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
       `}</style>
@@ -240,18 +243,21 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Anti-Shift Stationary Title */}
-        <div className="relative mb-8 w-full max-w-5xl mx-auto flex justify-center">
-          <div className="relative inline-block text-center">
-            {/* 1. Ghost layer: Defines final layout/wrapping and stays invisible */}
-            <h1 className="text-4xl md:text-8xl font-bold tracking-tight opacity-0 select-none" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+        {/* Anti-Shift Title: Wider max-width and adjusted tracking to expand x-axis */}
+        <div className="relative mb-8 w-full max-w-7xl mx-auto flex justify-center">
+          <div className="relative inline-block w-full">
+            <h1 
+              className="text-4xl md:text-8xl font-bold invisible select-none text-left" 
+              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '-0.02em' }}
+            >
               {fullText}
             </h1>
-            {/* 2. Visible layer: Placed absolute-top so it perfectly overlaps the ghost layer */}
-            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+            <h1 
+              className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold text-left" 
+              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '-0.02em' }}
+            >
               <span>{displayText}</span>
-              {/* Fade out cursor when typing is done */}
-              <span className={`typewriter-cursor ${!isTyping && displayText.length === fullText.length ? 'opacity-0' : 'opacity-100'}`} />
+              <span className={`typewriter-cursor ${!isTyping ? 'opacity-0 transition-opacity duration-500' : 'opacity-100'}`} />
             </h1>
           </div>
         </div>
