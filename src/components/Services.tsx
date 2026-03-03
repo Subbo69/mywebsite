@@ -155,12 +155,18 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
           </h2>
           <div className="mt-1 h-1 w-16 bg-black rounded-full" />
         </div>
-        <p className={`text-sm md:text-base text-black/60 font-bold max-w-2xl min-h-[1.5em] ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>
-          {hasAnimated
-            ? (subtitleDisplayed || <span className="invisible">{subtitleText}</span>)
-            : <span className="invisible">{subtitleText}</span>
-          }
-        </p>
+
+        {/* Subtitle: ghost text reserves full height, animated text sits on top */}
+        <div className="relative text-sm md:text-base font-bold max-w-2xl">
+          {/* Ghost — always rendered, always full height, invisible */}
+          <p className="invisible" aria-hidden="true">
+            {subtitleText}
+          </p>
+          {/* Animated text absolutely overlaid */}
+          <p className={`absolute inset-0 text-black/60 ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>
+            {hasAnimated ? subtitleDisplayed : ''}
+          </p>
+        </div>
       </div>
 
       <div className="relative pause-marquee mask-fade">
