@@ -265,7 +265,7 @@ customBuiltDesc: "I specialize in transforming manual business operations into a
     ],
 
     customBuilt: "Jayden Mikus – KI-Automationsarchitekt",
-    customBuiltDesc: "Ich entwickle skalierbare KI-Backendsysteme mit LLMs und n8n, die manuelle Prozesse eliminieren und in produktive Umsatzsysteme verwandeln.",
+customBuiltDesc: "Ich spezialisiere mich darauf, manuelle Geschäftsprozesse in autonome Umsatzmaschinen zu verwandeln. Durch die Entwicklung skalierbarer Backend-Systeme mit n8n und modernen LLMs helfe ich Unternehmen, Engpässe zu eliminieren und über 20 Stunden pro Woche einzusparen. Mein Fokus liegt auf intelligenten KI-Lösungen, die nicht nur funktionieren, sondern Ihr Wachstum fördern und einen messbaren ROI liefern.",
 
     rapidDeployment: "Konzentriere dich auf Wachstum, während intelligente Systeme deine Prozesse übernehmen.",
 
