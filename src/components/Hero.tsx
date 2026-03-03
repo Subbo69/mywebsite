@@ -152,7 +152,15 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   // ─── Scroll reveal + sticky-then-release for AI input ───────────────────
   const [scrollY, setScrollY] = useState(0);
   const spacerRef = useRef<HTMLDivElement>(null);
-  const [anchorTop, setAnchorTop] = useState<number | null>(null);
+  // Instead of tracking anchorTop, we track the document height at release
+  // so we can use bottom= to match fixed bottom=0 exactly — no jump possible.
+  const [releaseScrollY, setReleaseScrollY] = useState<number | null>(null);
+
+  // Release threshold: 270px desktop, 180px mobile (viewport-relative feel)
+  const RELEASE_THRESHOLD = typeof window !== 'undefined' && window.innerWidth < 768 ? 180 : 270;
+  // Box slides in between these scroll values
+  const SLIDE_START = typeof window !== 'undefined' && window.innerWidth < 768 ? 90 : 150;
+  const SLIDE_END = RELEASE_THRESHOLD;
 
   useEffect(() => {
     const onScroll = () => {
@@ -162,19 +170,30 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       setScrollOpacity(p);
       setScrollScale(0.85 + p * 0.15);
 
-      // Capture the spacer's position just before releasing, so absolute top is exact
-      if (sy > 240 && anchorTop === null && spacerRef.current) {
-        const sectionTop = spacerRef.current.closest('section')?.getBoundingClientRect().top ?? 0;
-        const spacerRect = spacerRef.current.getBoundingClientRect();
-        setAnchorTop(spacerRect.top - sectionTop + sy);
+      // Lock in the scrollY value exactly when we cross the release threshold
+      if (sy >= RELEASE_THRESHOLD && releaseScrollY === null) {
+        setReleaseScrollY(sy);
+      }
+      // Allow re-locking if user scrolls back up and down again
+      if (sy < RELEASE_THRESHOLD - 30 && releaseScrollY !== null) {
+        setReleaseScrollY(null);
       }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [anchorTop]);
+  }, [releaseScrollY, RELEASE_THRESHOLD]);
 
-  const inputReveal = Math.min(Math.max((scrollY - 150) / 120, 0), 1);
-  const isReleased = scrollY > 270;
+  const inputReveal = Math.min(Math.max((scrollY - SLIDE_START) / (SLIDE_END - SLIDE_START), 0), 1);
+  const isReleased = scrollY >= RELEASE_THRESHOLD && releaseScrollY !== null;
+
+  // When absolute: position from bottom of section so it matches fixed bottom=0.
+  // section height changes as page grows, so we compute from top using spacerRef.
+  const getAbsoluteTop = () => {
+    if (!spacerRef.current) return 488;
+    const section = spacerRef.current.closest('section');
+    if (!section) return 488;
+    return spacerRef.current.offsetTop;
+  };
 
   // ─── Particle Engine ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -307,12 +326,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
         {/*
           Spacer: holds layout space for the AI block once released from fixed.
-          We measure its offsetTop to get the exact absolute position — no guessing.
+          Height must exceed the full block height (label ~52px + input ~76px + padding ~32px = 160px).
+          Adding extra to ensure video never overlaps on any screen size.
         */}
-        <div ref={spacerRef} className="w-full" style={{ height: 160 }} />
+        <div ref={spacerRef} className="w-full" style={{ height: 200 }} />
 
-        {/* Video — below the spacer, well separated */}
-        <div className="w-full max-w-6xl mt-40 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        {/* Video — below the spacer with generous gap */}
+        <div className="w-full max-w-6xl mt-16 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
@@ -359,7 +379,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={isReleased
-          ? { position: 'absolute', top: anchorTop ?? 488, left: 0, right: 0 }
+          ? { position: 'absolute', top: getAbsoluteTop(), left: 0, right: 0 }
           : { position: 'fixed', bottom: 0, left: 0, right: 0 }
         }
       >
@@ -371,12 +391,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
         </div>
 
-        {/* Input box: hidden below fold until scroll 150–270px, then locked open */}
+        {/* Input box: slides up from below fold, smooth all the way */}
         <div
           className="w-full max-w-md pb-6"
           style={{
-            transform: isReleased ? 'translateY(0)' : `translateY(${(1 - inputReveal) * 100}%)`,
-            transition: isReleased ? 'none' : 'transform 0.08s linear',
+            transform: `translateY(${(1 - inputReveal) * 100}%)`,
+            transition: 'transform 0.08s linear',
           }}
         >
           <form
