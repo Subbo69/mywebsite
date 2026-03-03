@@ -232,6 +232,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           display: inline-block; width: 4px; height: 1em; margin-left: 2px;
           vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
           animation: blink-once 1s ease-in-out 1 forwards;
+          transition: opacity 0.8s ease-out;
         }
         .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
       `}</style>
@@ -239,15 +240,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Anti-Shift Title: Left-aligned overlay to keep text stationary */}
+        {/* Anti-Shift Stationary Title */}
         <div className="relative mb-8 w-full max-w-5xl mx-auto flex justify-center">
-          <div className="relative inline-block">
-            <h1 className="text-4xl md:text-8xl font-bold tracking-tight invisible select-none text-left" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+          <div className="relative inline-block text-center">
+            {/* 1. Ghost layer: Defines final layout/wrapping and stays invisible */}
+            <h1 className="text-4xl md:text-8xl font-bold tracking-tight opacity-0 select-none" style={{ fontFamily: '"Montserrat", sans-serif' }}>
               {fullText}
             </h1>
-            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold tracking-tight text-left" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+            {/* 2. Visible layer: Placed absolute-top so it perfectly overlaps the ghost layer */}
+            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
               <span>{displayText}</span>
-              <span className={`typewriter-cursor ${!isTyping && displayText.length > 0 ? 'opacity-0' : 'opacity-100'}`} />
+              {/* Fade out cursor when typing is done */}
+              <span className={`typewriter-cursor ${!isTyping && displayText.length === fullText.length ? 'opacity-0' : 'opacity-100'}`} />
             </h1>
           </div>
         </div>
