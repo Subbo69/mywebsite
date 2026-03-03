@@ -8,7 +8,6 @@ interface HeroProps {
   language: Language;
 }
 
-// ─── Device Tier Detection ────────────────────────────────────────────────────
 function getDeviceTier(): 'low' | 'medium' | 'high' {
   if (typeof window === 'undefined') return 'medium';
   const cores = navigator.hardwareConcurrency ?? 2;
@@ -66,7 +65,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const isTouch = typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-  // ─── Mouse tracking ───────────────────────────────────────────────────────
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
@@ -87,7 +85,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // ─── Choreography sync ────────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
@@ -110,7 +107,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // ─── Placeholder typewriter ───────────────────────────────────────────────
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
@@ -129,7 +125,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // ─── Title typewriter (Glitch-Free) ───────────────────────────────────────
   useEffect(() => {
     let i = 0; let mounted = true;
     setDisplayText(""); setIsTyping(true);
@@ -143,11 +138,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }
       else setIsTyping(false);
     };
-    const t0 = setTimeout(type, 280);
+    // Wait for the initial blink (approx 1s) before typing
+    const t0 = setTimeout(type, 1000);
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
@@ -157,7 +152,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // ─── Particle Engine ──────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -221,7 +215,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     setErrorMessage("");
     if (!query.trim()) return;
     if (messageCount >= 25) { setErrorMessage("Message limit reached (25/25)."); return; }
-    if (query.length > 2000) { setErrorMessage("Max 2000 characters."); return; }
     onAskAIClick(query);
     setMessageCount(prev => prev + 1);
     setIsSent(true); setQuery("");
@@ -234,12 +227,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes blink-once { 0%, 50%, 100% { opacity: 1; } 25%, 75% { opacity: 0; } }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
         .typewriter-cursor {
-          display: inline-block; width: 0.15em; height: 1em; margin-left: 2px;
+          display: inline-block; width: 2px; height: 1em; margin-left: 4px;
           vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
-          animation: blink 0.8s step-end infinite;
+          animation: blink-once 1s ease-in-out 1 forwards;
         }
         .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
       `}</style>
@@ -247,15 +240,20 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Anti-Reflow Typewriter Title */}
-        <div className="relative mb-8 w-full max-w-5xl">
-          <h1 className="text-4xl md:text-8xl font-bold tracking-tight opacity-0 pointer-events-none" style={{ fontFamily: '"Montserrat", sans-serif' }}>
-            {fullText}
-          </h1>
-          <h1 className="absolute inset-0 text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
-            <span>{displayText}</span>
-            <span className="typewriter-cursor" />
-          </h1>
+        {/* Anti-Shift Title */}
+        <div className="relative mb-8 flex justify-center w-full">
+          <div className="relative inline-block text-center">
+            {/* The Invisible Base Text keeps the container wide so letters don't push each other */}
+            <h1 className="text-4xl md:text-8xl font-bold tracking-tight invisible select-none" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+              {fullText}
+            </h1>
+            {/* The Visible Typewriter Overlay */}
+            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold tracking-tight text-center" style={{ fontFamily: '"Montserrat", sans-serif' }}>
+              <span>{displayText}</span>
+              {/* Cursor blinks once at start, is solid while typing, disappears at end */}
+              <span className={`typewriter-cursor ${!isTyping && displayText.length > 0 ? 'opacity-0' : 'opacity-100'}`} />
+            </h1>
+          </div>
         </div>
 
         <p className={`text-base md:text-2xl text-zinc-500 mb-8 max-w-2xl font-light italic transition-all duration-[1500ms] ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
@@ -292,11 +290,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 <Send className="w-5 h-5" />
               </button>
             </form>
-            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2">{errorMessage}</p>}
           </div>
         </div>
 
-        {/* Video Section */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove}
@@ -310,7 +306,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
               </div>
             )}
-            <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`}
@@ -322,7 +317,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
-      {/* Video Modal with External X */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 backdrop-blur-md p-4">
           <button 
