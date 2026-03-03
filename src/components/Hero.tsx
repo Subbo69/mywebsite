@@ -150,24 +150,30 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   }, [fullText]);
 
   // ─── Scroll reveal + sticky-then-release for AI input ───────────────────
-  // Phase 1 (scroll 0–150px):   block is fixed at bottom, only label+arrow visible
-  // Phase 2 (scroll 150–270px): input box slides up into view (still fixed)
-  // Phase 3 (scroll > 270px):   block releases from fixed and scrolls away with page
   const [scrollY, setScrollY] = useState(0);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const [anchorTop, setAnchorTop] = useState<number | null>(null);
+
   useEffect(() => {
     const onScroll = () => {
-      setScrollY(window.scrollY);
-      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      const sy = window.scrollY;
+      setScrollY(sy);
+      const p = Math.min(Math.max((sy - 50) / 300, 0), 1);
       setScrollOpacity(p);
       setScrollScale(0.85 + p * 0.15);
+
+      // Capture the spacer's position just before releasing, so absolute top is exact
+      if (sy > 240 && anchorTop === null && spacerRef.current) {
+        const sectionTop = spacerRef.current.closest('section')?.getBoundingClientRect().top ?? 0;
+        const spacerRect = spacerRef.current.getBoundingClientRect();
+        setAnchorTop(spacerRect.top - sectionTop + sy);
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [anchorTop]);
 
-  // How far the input box has slid up (0 = hidden below fold, 1 = fully visible)
   const inputReveal = Math.min(Math.max((scrollY - 150) / 120, 0), 1);
-  // Whether the block has been released from fixed position
   const isReleased = scrollY > 270;
 
   // ─── Particle Engine ──────────────────────────────────────────────────────
@@ -300,14 +306,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
 
         {/*
-          Spacer that holds the layout space for the AI block once it releases
-          from fixed. Height matches the full label + input box height (~160px).
-          This prevents the video from jumping up when the block un-fixes.
+          Spacer: holds layout space for the AI block once released from fixed.
+          We measure its offsetTop to get the exact absolute position — no guessing.
         */}
-        <div className="w-full" style={{ height: 160 }} />
+        <div ref={spacerRef} className="w-full" style={{ height: 160 }} />
 
         {/* Video — below the spacer, well separated */}
-        <div className="w-full max-w-6xl mt-20 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        <div className="w-full max-w-6xl mt-40 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
@@ -354,7 +359,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={isReleased
-          ? { position: 'absolute', top: 488, left: 0, right: 0 }
+          ? { position: 'absolute', top: anchorTop ?? 488, left: 0, right: 0 }
           : { position: 'fixed', bottom: 0, left: 0, right: 0 }
         }
       >
