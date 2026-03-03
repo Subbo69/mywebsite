@@ -44,7 +44,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   
-  // Limits
   const [messageCount, setMessageCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -57,6 +56,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
+  // Mouse tracking state for the custom cursor
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -67,36 +67,38 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const isTouch = typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-  // ─── Mouse tracking ───────────────────────────────────────────────────────
+  // ─── Mouse Tracking Logic for Video Cursor ─────────────────────────────────
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
-    setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setTargetPos({ 
+      x: e.clientX - rect.left, 
+      y: e.clientY - rect.top 
+    });
   };
 
   useEffect(() => {
-    if (!isHoveringVideo || isModalOpen) return;
+    if (!isHoveringVideo || isModalOpen || isTouch) return;
+    
     let af: number;
     const follow = () => {
       setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.12,
-        y: prev.y + (targetPos.y - prev.y) * 0.12,
+        x: prev.x + (targetPos.x - prev.x) * 0.15, // Smoothness factor
+        y: prev.y + (targetPos.y - prev.y) * 0.15,
       }));
       af = requestAnimationFrame(follow);
     };
     af = requestAnimationFrame(follow);
     return () => cancelAnimationFrame(af);
-  }, [targetPos, isHoveringVideo, isModalOpen]);
+  }, [targetPos, isHoveringVideo, isModalOpen, isTouch]);
 
-  // ─── Choreography sync (Improved Timing) ──────────────────────────────────
+  // ─── Choreography Sync ──────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
         setShowSubtitle(true);
-        // Wait longer (1.2s) for user to read the subtitle before CTA
         const t2 = setTimeout(() => {
           setShowCTA(true);
-          // Wait 0.6s before showing the input box
           const t3 = setTimeout(() => {
             setShowInput(true);
             const t4 = setTimeout(() => {
@@ -113,7 +115,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     }
   }, [isTyping, displayText, fullText]);
 
-  // ─── Placeholder typewriter ───────────────────────────────────────────────
+  // ─── Placeholder Typewriter ───────────────────────────────────────────────
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
@@ -132,7 +134,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // ─── Title typewriter ─────────────────────────────────────────────────────
+  // ─── Title Typewriter ─────────────────────────────────────────────────────
   useEffect(() => {
     let i = 0; let mounted = true;
     setDisplayText(""); setIsTyping(true);
@@ -147,10 +149,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll reveal ────────────────────────────────────────────────────────
+  // ─── Scroll Reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
-      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      const p = Math.min(Math.max((window.scrollY - 50) / 400, 0), 1);
       setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -168,10 +170,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const FRAME_INTERVAL = 1000 / cfg.fps;
     const COLOR_BANDS = [{ r: 138, g: 143, b: 234 }, { r: 100, g: 120, b: 220 }, { r: 66, g: 133, b: 244 }, { r: 120, g: 80, b: 200 }, { r: 180, g: 60, b: 160 }, { r: 210, g: 50, b: 80 }, { r: 234, g: 67, b: 53 }, { r: 240, g: 120, b: 30 }, { r: 251, g: 188, b: 5 }];
     const SPRING = 0.032; const FRICTION = 0.80; const WIND_SCALE = 0.18; const WIND_RADIUS = 380;
+    
     type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
     let particles: Particle[] = [];
     const mouseState = { x: -9999, y: -9999, vx: 0, vy: 0, prevX: -9999, prevY: -9999 };
-    let last = 0; let rafId: number; let rzTimer: ReturnType<typeof setTimeout>; let paused = false;
+    let last = 0; let rafId: number; let paused = false;
+
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
       const distFraction = dist / (maxDist * 0.85);
@@ -219,31 +223,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
-
     if (!query.trim()) return;
-
-    if (messageCount >= 25) {
-      setErrorMessage("Message limit reached (25/25). Please contact us for more.");
-      return;
-    }
-
-    if (query.length > 2000) {
-      setErrorMessage("Character limit exceeded (Max 2000).");
-      return;
-    }
-
+    if (messageCount >= 25) { setErrorMessage("Message limit reached (25/25)."); return; }
+    if (query.length > 2000) { setErrorMessage("Max 2000 characters."); return; }
     onAskAIClick(query);
     setMessageCount(prev => prev + 1);
-    setIsSent(true); 
-    setQuery("");
+    setIsSent(true); setQuery("");
     setTimeout(() => setIsSent(false), 3000);
   };
 
   return (
-    <section
-      className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
-      style={{ fontFamily: 'Georgia, serif' }}
-    >
+    <section className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
@@ -266,12 +256,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </h1>
         </div>
 
-        {/* Subtitle - More time/grace given to spawning */}
+        {/* Subtitle */}
         <p className={`text-base md:text-2xl text-zinc-500 mb-8 max-w-2xl font-light italic transition-all duration-[1500ms] ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           {t.heroSubtitle}
         </p>
 
-        {/* CTA + Input (Elevated Layout) */}
+        {/* CTA + Input */}
         <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
           <button
             onClick={onBookingClick}
@@ -284,7 +274,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </button>
 
           <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
-            {/* Header: 10% Bigger, Bouncing Arrow, Extra Tracking */}
             <div className="flex flex-col items-center gap-1">
               <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
                 {isSent ? t.openingChat : t.askAiAgent}
@@ -297,7 +286,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder={isSent ? "" : placeholder} disabled={isSent}
                 className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
-                style={{ fontFamily: 'Georgia, serif' }}
               />
               <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}>
                 <Send className="w-5 h-5" />
@@ -307,21 +295,35 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        {/* Video Section (Visible on scroll) */}
+        {/* Video Section with Floating "Play Intro" Cursor */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
-            ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)}
-            className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
+            ref={videoContainerRef} 
+            onClick={() => setIsModalOpen(true)} 
+            onMouseMove={handleMouseMove}
+            onMouseEnter={() => setIsHoveringVideo(true)} 
+            onMouseLeave={() => setIsHoveringVideo(false)}
+            className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 transition-transform duration-500 hover:scale-[1.01] ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {!isTouch && (
-              <div className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-                style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}>
+            {/* THE FLOATING BUTTON */}
+            {!isTouch && !isModalOpen && (
+              <div 
+                className={`pointer-events-none absolute z-[60] flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
+                style={{ 
+                  left: `${currentPos.x}px`, 
+                  top: `${currentPos.y}px`, 
+                  transform: 'translate(-50%, -50%)', 
+                  fontFamily: '"Montserrat", sans-serif',
+                  willChange: 'transform, left, top'
+                }}
+              >
                 <Play className="w-4 h-4 fill-black" />
                 <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
               </div>
             )}
+
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
+            
             {!isModalOpen && (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`}
@@ -337,8 +339,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
-              <X className="w-6 h-6 text-white" />
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all group">
+              <X className="w-6 h-6 text-white group-hover:scale-110" />
             </button>
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
