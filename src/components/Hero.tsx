@@ -44,7 +44,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   
-  // Limits
   const [messageCount, setMessageCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -57,6 +56,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
+  // Floating Button State
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
@@ -71,7 +71,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
-    // Track position relative to the video container
     setTargetPos({ 
       x: e.clientX - rect.left, 
       y: e.clientY - rect.top 
@@ -79,21 +78,21 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   useEffect(() => {
-    if (!isHoveringVideo || isModalOpen || isTouch) return;
+    if (isModalOpen || isTouch) return;
     
     let af: number;
     const follow = () => {
       setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.15, // Smoothness factor
+        x: prev.x + (targetPos.x - prev.x) * 0.15,
         y: prev.y + (targetPos.y - prev.y) * 0.15,
       }));
       af = requestAnimationFrame(follow);
     };
     af = requestAnimationFrame(follow);
     return () => cancelAnimationFrame(af);
-  }, [targetPos, isHoveringVideo, isModalOpen, isTouch]);
+  }, [targetPos, isModalOpen, isTouch]);
 
-  // ─── Choreography sync (Improved Timing) ──────────────────────────────────
+  // ─── Choreography sync ────────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
@@ -174,7 +173,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
     let particles: Particle[] = [];
     const mouseState = { x: -9999, y: -9999, vx: 0, vy: 0, prevX: -9999, prevY: -9999 };
-    let last = 0; let rafId: number; let rzTimer: ReturnType<typeof setTimeout>; let paused = false;
+    let last = 0; let rafId: number;
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
       const distFraction = dist / (maxDist * 0.85);
@@ -196,7 +195,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       }
     };
     const animate = (ts: number) => {
-      rafId = requestAnimationFrame(animate); if (paused || ts - last < FRAME_INTERVAL) return; last = ts;
+      rafId = requestAnimationFrame(animate); if (ts - last < FRAME_INTERVAL) return; last = ts;
       ctx.clearRect(0, 0, canvas.width, canvas.height); mouseState.vx *= 0.85; mouseState.vy *= 0.85;
       for (let p of particles) {
         const dx = p.x - mouseState.x; const dy = p.y - mouseState.y; const distToCursor = Math.sqrt(dx * dx + dy * dy);
@@ -216,7 +215,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     };
     window.addEventListener('mousemove', onMouseMoveGlobal, { passive: true });
     resize(); init(); rafId = requestAnimationFrame(animate);
-    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMoveGlobal); };
+    return () => { cancelAnimationFrame(af); window.removeEventListener('mousemove', onMouseMoveGlobal); };
   }, []);
 
   const handleAISubmit = (e: React.FormEvent) => {
@@ -225,10 +224,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     if (!query.trim()) return;
     if (messageCount >= 25) {
       setErrorMessage("Message limit reached (25/25). Please contact us for more.");
-      return;
-    }
-    if (query.length > 2000) {
-      setErrorMessage("Character limit exceeded (Max 2000).");
       return;
     }
     onAskAIClick(query);
@@ -257,7 +252,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Title */}
         <div className="min-h-[120px] md:min-h-[180px] flex items-center justify-center w-full mb-6">
           <h1 className="text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
             <span>{displayText}</span>
@@ -265,12 +259,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </h1>
         </div>
 
-        {/* Subtitle */}
         <p className={`text-base md:text-2xl text-zinc-500 mb-8 max-w-2xl font-light italic transition-all duration-[1500ms] ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           {t.heroSubtitle}
         </p>
 
-        {/* CTA + Input */}
         <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
           <button
             onClick={onBookingClick}
@@ -305,7 +297,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-        {/* Video Section with Cursor Follower */}
+        {/* Video Section */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef} 
@@ -315,10 +307,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseLeave={() => setIsHoveringVideo(false)}
             className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {/* The Custom Following Button */}
-            {!isTouch && isHoveringVideo && (
+            {/* FIX: Cursor follower with high z-index and explicit visibility classes */}
+            {!isTouch && (
               <div 
-                className="pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300"
+                className={`pointer-events-none absolute z-[100] flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
                 style={{ 
                   left: `${currentPos.x}px`, 
                   top: `${currentPos.y}px`, 
@@ -346,9 +338,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       {/* Video Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-6xl aspect-video z-[210] rounded-3xl overflow-hidden shadow-2xl bg-black">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[230] bg-black/20 hover:bg-black/40 rounded-full transition-all">
               <X className="w-6 h-6 text-white" />
             </button>
             <iframe
