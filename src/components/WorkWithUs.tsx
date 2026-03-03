@@ -30,7 +30,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
           const newTyped = [...typedText];
           newTyped[activeStep] = currentFullText.slice(0, currentTyped.length + 1);
           setTypedText(newTyped);
-        }, 70);
+        }, 10);
         return () => clearTimeout(timeout);
       } else {
         const nextStepTimeout = setTimeout(() => {
