@@ -43,7 +43,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
-  
+
+  // Limits
   const [messageCount, setMessageCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -56,9 +57,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   ];
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  // ─── Cursor Follower State ────────────────────────────────────────────────
-  const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+  const [targetPos, setTargetPos] = useState({ x: -9999, y: -9999 });
+  const [currentPos, setCurrentPos] = useState({ x: -9999, y: -9999 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
 
   const fullText = t.heroTitle;
@@ -67,33 +67,28 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const isTouch = typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-  // Handle Mouse Movement over Video
+  // ─── Mouse tracking ───────────────────────────────────────────────────────
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
-    setTargetPos({ 
-      x: e.clientX - rect.left, 
-      y: e.clientY - rect.top 
-    });
+    setTargetPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  // Smooth Interpolation Loop for the Play Button
   useEffect(() => {
-    if (!isHoveringVideo || isModalOpen || isTouch) return;
-    
+    if (!isHoveringVideo || isModalOpen) return;
     let af: number;
     const follow = () => {
       setCurrentPos(prev => ({
-        x: prev.x + (targetPos.x - prev.x) * 0.15, // Smoothness factor
-        y: prev.y + (targetPos.y - prev.y) * 0.15,
+        x: prev.x + (targetPos.x - prev.x) * 0.12,
+        y: prev.y + (targetPos.y - prev.y) * 0.12,
       }));
       af = requestAnimationFrame(follow);
     };
     af = requestAnimationFrame(follow);
     return () => cancelAnimationFrame(af);
-  }, [targetPos, isHoveringVideo, isModalOpen, isTouch]);
+  }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // ─── Choreography sync ─────────────────────────────────────────────────────
+  // ─── Choreography sync ────────────────────────────────────────────────────
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
@@ -208,25 +203,37 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.opacity})`; ctx.fill(); ctx.restore();
       }
     };
-    const onMouseMoveCanvas = (e: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (mouseState.prevX === -9999) { mouseState.x = e.clientX; mouseState.y = e.clientY; mouseState.prevX = e.clientX; mouseState.prevY = e.clientY; return; }
       const rawVx = e.clientX - mouseState.prevX; const rawVy = e.clientY - mouseState.prevY;
       mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4; mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
       mouseState.prevX = mouseState.x; mouseState.prevY = mouseState.y; mouseState.x = e.clientX; mouseState.y = e.clientY;
     };
-    window.addEventListener('mousemove', onMouseMoveCanvas, { passive: true });
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
     resize(); init(); rafId = requestAnimationFrame(animate);
-    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMoveCanvas); };
+    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMove); };
   }, []);
 
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+
     if (!query.trim()) return;
-    if (messageCount >= 25) { setErrorMessage("Limit reached."); return; }
+
+    if (messageCount >= 25) {
+      setErrorMessage("Message limit reached (25/25). Please contact us for more.");
+      return;
+    }
+
+    if (query.length > 2000) {
+      setErrorMessage("Character limit exceeded (Max 2000).");
+      return;
+    }
+
     onAskAIClick(query);
     setMessageCount(prev => prev + 1);
-    setIsSent(true); setQuery("");
+    setIsSent(true);
+    setQuery("");
     setTimeout(() => setIsSent(false), 3000);
   };
 
@@ -293,29 +300,35 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 <Send className="w-5 h-5" />
               </button>
             </form>
+            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2">{errorMessage}</p>}
           </div>
         </div>
 
-        {/* Video Section with Smoothed Cursor Follower */}
+        {/* Video Section */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
-            ref={videoContainerRef} 
-            onClick={() => setIsModalOpen(true)} 
+            ref={videoContainerRef}
+            onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsHoveringVideo(true)} 
-            onMouseLeave={() => setIsHoveringVideo(false)}
+            onMouseEnter={() => {
+              setIsHoveringVideo(true);
+            }}
+            onMouseLeave={() => {
+              setIsHoveringVideo(false);
+              setCurrentPos({ x: -9999, y: -9999 });
+              setTargetPos({ x: -9999, y: -9999 });
+            }}
             className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {/* Smoothed Floating Play Button */}
-            {!isTouch && (
-              <div 
-                className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-                style={{ 
-                  left: `${currentPos.x}px`, 
-                  top: `${currentPos.y}px`, 
-                  transform: 'translate(-50%, -50%)', 
+            {/* Custom cursor play button — only on non-touch, only while hovering */}
+            {!isTouch && isHoveringVideo && currentPos.x > 0 && (
+              <div
+                className="pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl"
+                style={{
+                  left: `${currentPos.x}px`,
+                  top: `${currentPos.y}px`,
+                  transform: 'translate(-50%, -50%)',
                   fontFamily: '"Montserrat", sans-serif',
-                  willChange: 'left, top'
                 }}
               >
                 <Play className="w-4 h-4 fill-black" />
