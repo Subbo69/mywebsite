@@ -149,17 +149,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  const [inputReveal, setInputReveal] = useState(0);
-
   // ─── Scroll reveal ────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
       setScrollOpacity(p);
       setScrollScale(0.85 + p * 0.15);
-      // input box slides up over first ~120px of scroll (~3cm)
-      const reveal = Math.min(Math.max(window.scrollY / 120, 0), 1);
-      setInputReveal(reveal);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -249,7 +244,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
   return (
     <section
-      className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
+      className="relative flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12"
       style={{ fontFamily: 'Georgia, serif' }}
     >
       <style>{`
@@ -266,7 +261,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       {/* ─── Main content ─────────────────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
+      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl">
 
         {/* Title */}
         <div className="min-h-[120px] md:min-h-[180px] flex items-center justify-center w-full mb-6">
@@ -282,7 +277,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </p>
 
         {/* Book CTA */}
-        <div className="flex flex-col items-center w-full max-w-md mt-4">
+        <div className="flex flex-col items-center w-full max-w-md mt-4 mb-4">
           <button
             onClick={onBookingClick}
             className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${
@@ -294,7 +289,65 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </button>
         </div>
 
-        {/* Video Section */}
+        {/*
+          ─── AI Input block ───────────────────────────────────────────────
+          This lives in normal document flow.
+          The spacer pushes it so only the label+arrow peek above the fold
+          on load. Scroll ~3cm and the input box comes fully into view.
+          Keep scrolling and it scrolls away naturally — no fixed position.
+        */}
+        <div
+          className={`w-full max-w-md flex flex-col items-center transition-opacity duration-1000 ${
+            showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{
+            // Push the block so only the label+arrow (~56px) show above the fold.
+            // 100vh = viewport height, subtract top padding (112px) + title + subtitle + CTA (~360px)
+            // and the label height itself (~56px), so the box is just below fold.
+            marginTop: 'calc(100vh - 112px - 360px - 56px)',
+          }}
+        >
+          {/* Label + arrow */}
+          <div className="flex flex-col items-center gap-1 pb-3">
+            <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
+              {isSent ? t.openingChat : t.askAiAgent}
+            </h3>
+            {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
+          </div>
+
+          {/* Input box — directly below label, scrolls into view naturally */}
+          <div className="w-full px-0 pb-6">
+            <form
+              onSubmit={handleAISubmit}
+              className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 shadow-2xl focus-within:shadow-blue-100 transition-all duration-300 ${
+                isSent ? 'border-green-600 bg-green-50' : ''
+              }`}
+            >
+              <input
+                ref={heroInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={isSent ? "" : placeholder}
+                disabled={isSent}
+                className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
+                style={{ fontFamily: 'Georgia, serif' }}
+              />
+              <button
+                type="submit"
+                disabled={!query.trim() || isSent}
+                className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
+                  query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
+                }`}
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </form>
+            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errorMessage}</p>}
+          </div>
+        </div>
+
+        {/* Video Section — sits well below the input block */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef}
@@ -302,7 +355,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             onMouseMove={handleMouseMove}
             onMouseEnter={() => {
               setIsHoveringVideo(true);
-              // snap immediately so the button appears under cursor right away
               setCurrentPos({ x: -9999, y: -9999 });
             }}
             onMouseLeave={() => {
@@ -339,56 +391,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
         </div>
 
-      </div>
-
-      {/* ─── AI Input — fixed to bottom, slides up on scroll ──────────────── */}
-      {/* Label + arrow always peek above fold; box slides in after ~3cm scroll */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center transition-opacity duration-1000 ${
-          showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Label + black bouncing arrow — always visible above fold */}
-        <div className="flex flex-col items-center gap-1 pb-3 bg-transparent">
-          <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
-            {isSent ? t.openingChat : t.askAiAgent}
-          </h3>
-          {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
-        </div>
-
-        {/* Input box: translateY goes from 100% (hidden) to 0% (fully visible) based on scroll */}
-        <div
-          className="w-full max-w-md px-6 pb-6"
-          style={{ transform: `translateY(${(1 - inputReveal) * 100}%)`, transition: 'transform 0.1s linear' }}
-        >
-          <form
-            onSubmit={handleAISubmit}
-            className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 shadow-2xl focus-within:shadow-blue-100 transition-all duration-300 ${
-              isSent ? 'border-green-600 bg-green-50' : ''
-            }`}
-          >
-            <input
-              ref={heroInputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={isSent ? "" : placeholder}
-              disabled={isSent}
-              className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
-              style={{ fontFamily: 'Georgia, serif' }}
-            />
-            <button
-              type="submit"
-              disabled={!query.trim() || isSent}
-              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
-                query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
-              }`}
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          </form>
-          {errorMessage && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errorMessage}</p>}
-        </div>
       </div>
 
       {/* ─── Video Modal ──────────────────────────────────────────────────── */}
