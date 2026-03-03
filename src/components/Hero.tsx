@@ -229,13 +229,13 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         @keyframes blink-fade { 
           0%, 50% { opacity: 1; } 
           25%, 75% { opacity: 0; }
-          100% { opacity: 0; }
+          100% { opacity: 1; }
         }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
         .typewriter-cursor {
           display: inline-block; width: 4px; height: 1em; margin-left: 2px;
           vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
-          animation: blink-fade 0.8s ease-in-out forwards;
+          animation: blink-fade 0.8s ease-in-out infinite;
         }
         .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
       `}</style>
@@ -243,21 +243,21 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        {/* Anti-Shift Title: Wider max-width and adjusted tracking to expand x-axis */}
+        {/* Anti-Shift Title: Centered and stretched horizontally */}
         <div className="relative mb-8 w-full max-w-7xl mx-auto flex justify-center">
           <div className="relative inline-block w-full">
             <h1 
-              className="text-4xl md:text-8xl font-bold invisible select-none text-left" 
-              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '-0.02em' }}
+              className="text-4xl md:text-8xl font-bold invisible select-none text-center" 
+              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.05em' }}
             >
               {fullText}
             </h1>
             <h1 
-              className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold text-left" 
-              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '-0.02em' }}
+              className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold text-center" 
+              style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.05em' }}
             >
               <span>{displayText}</span>
-              <span className={`typewriter-cursor ${!isTyping ? 'opacity-0 transition-opacity duration-500' : 'opacity-100'}`} />
+              <span className={`typewriter-cursor ${!isTyping ? 'opacity-0 transition-opacity duration-700' : 'opacity-100'}`} />
             </h1>
           </div>
         </div>
