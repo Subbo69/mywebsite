@@ -116,13 +116,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     if (!isTyping && displayText.length === fullText.length) {
       const t1 = setTimeout(() => {
         setShowSubtitle(true);
-        // Show "ASK OUR AI AGENT" label at bottom immediately after subtitle
-        const t1b = setTimeout(() => setStickyPhase('bottom'), 600);
         const t2 = setTimeout(() => {
+          // CTA button spawns first
           setShowCTA(true);
+          // Then "ASK OUR AI AGENT" label appears at bottom
+          const t2b = setTimeout(() => setStickyPhase('bottom'), 800);
           const t3 = setTimeout(() => {
             setShowInput(true);
-            // When input is shown in DOM, move sticky phase to 'sticky'
+            // Input revealed in DOM; sticky phase moves to 'sticky' so scroll mechanic kicks in
             const t3b = setTimeout(() => setStickyPhase('sticky'), 200);
             const t4 = setTimeout(() => {
               setShowParticles(true);
@@ -130,9 +131,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             }, 600);
             return () => { clearTimeout(t3b); clearTimeout(t4); };
           }, 600);
-          return () => clearTimeout(t3);
+          return () => { clearTimeout(t2b); clearTimeout(t3); };
         }, 1200);
-        return () => { clearTimeout(t1b); clearTimeout(t2); };
+        return () => clearTimeout(t2);
       }, 400);
       return () => clearTimeout(t1);
     }
