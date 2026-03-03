@@ -104,7 +104,7 @@ export const translations = {
     ],
 
     customBuilt: "Jayden Mikus – AI Automation Architect",
-    customBuiltDesc: "I'm Jayden Mikus, an AI automation specialist focused on building scalable backend systems using LLMs and n8n. I design intelligent automation architectures that eliminate manual workflows and transform them into revenue-generating systems. My expertise lies in connecting APIs, structuring automation logic, optimizing prompts, and deploying production-ready AI solutions that create measurable business impact.",
+customBuiltDesc: "I specialize in transforming manual business operations into autonomous revenue engines. By architecting scalable backend systems with n8n and advanced LLMs, I help companies eliminate bottlenecks and reclaim 20+ hours per week. My focus is on building intelligent, production-ready AI solutions that don't just 'work'—they scale your growth and deliver measurable ROI.",
 
     rapidDeployment: "Focus on scaling your company while intelligent systems handle the operational workload.",
 
