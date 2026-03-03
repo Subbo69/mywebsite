@@ -74,7 +74,7 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
       <link href="https://fonts.cdnfonts.com/css/anurati" rel="stylesheet" />
 
       <div
-        className={`relative w-full max-w-6xl max-h-[90vh] bg-gradient-to-br from-gray-900 to-black rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 ease-out ${
+        className={`relative w-full max-w-4xl max-h-[85vh] bg-gradient-to-br from-gray-900 to-black rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 ease-out ${
           isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         }`}
       >
@@ -87,74 +87,67 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
           <X className="w-6 h-6" />
         </button>
 
-        <div className="flex flex-col md:flex-row h-full max-h-[90vh] overflow-hidden">
-          
+        <div className="flex flex-col md:flex-row h-full max-h-[85vh] overflow-hidden">
+
           {/* LEFT PANEL: Summary & Branding */}
-          <div className="w-full md:w-2/5 bg-gradient-to-br from-gray-800 to-gray-900 p-6 md:p-10 flex flex-col overflow-hidden border-r border-white/5">
-            
-            {/* Logo Section */}
-            <div className="flex items-center gap-3 mb-6 md:mb-10 pl-2 md:pl-4 flex-shrink-0">
-              <span
-                className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] font-bold select-none text-2xl md:text-4xl"
-                style={{ fontFamily: 'Anurati, sans-serif', letterSpacing: '0.06em' }}
-              >
-                HALOVISION AI
-              </span>
-            </div>
+          <div className="hidden md:flex w-1/3 bg-gradient-to-br from-gray-800 to-gray-900 p-6 flex flex-col overflow-hidden border-r border-white/5">
 
             {/* Content Section */}
-            <div className="flex-shrink-0">
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-5">
+            <div className="flex-shrink-0 pt-4">
+              <h2 className="text-lg font-bold text-white mb-2">
                 {t.growthMappingCall}
               </h2>
-              <p className="text-gray-300 mb-6 md:mb-8 text-sm md:text-base leading-relaxed">
+              <p className="text-gray-300 mb-4 text-xs leading-snug">
                 {t.growthMappingDesc}
               </p>
 
-              <div className="space-y-3 md:space-y-4 text-gray-300 mb-8 md:mb-10 text-sm md:text-base">
-                <p className="flex items-center gap-2">
-                  <span className="text-purple-400 font-bold">1.</span> {t.analysisStep}
+              <div className="space-y-1.5 text-gray-300 mb-6 text-xs">
+                <p className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">1.</span>
+                  <span className="leading-snug">{t.analysisStep}</span>
                 </p>
-                <p className="flex items-center gap-2">
-                  <span className="text-purple-400 font-bold">2.</span> {t.auditStep}
+                <p className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">2.</span>
+                  <span className="leading-snug">{t.auditStep}</span>
                 </p>
-                <p className="flex items-center gap-2">
-                  <span className="text-purple-400 font-bold">3.</span> {t.nextSteps}
+                <p className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">3.</span>
+                  <span className="leading-snug">{t.nextSteps}</span>
                 </p>
               </div>
             </div>
 
             {/* Selection Details (Only visible in Calendar step) */}
             {step === 'calendar' && selectedDate && (
-              <div className="mt-auto space-y-3 md:space-y-4 pt-6 md:pt-8 border-t border-white/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
+              <div className="mt-auto space-y-1.5 pt-4 border-t border-white/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
                 <SummaryRow
-                  icon={<CalIcon className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
+                  icon={<CalIcon className="w-3 h-3 text-purple-400" />}
                   label={selectedDate.toLocaleDateString(t.locale, {
-                    weekday: 'long',
+                    weekday: 'short',
                     year: 'numeric',
-                    month: 'long',
+                    month: 'short',
                     day: 'numeric',
                   })}
                 />
                 <SummaryRow
-                  icon={<Clock className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
+                  icon={<Clock className="w-3 h-3 text-purple-400" />}
                   label={selectedTime}
                 />
                 <SummaryRow
-                  icon={<Timer className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />}
+                  icon={<Timer className="w-3 h-3 text-purple-400" />}
                   label={t.duration}
                 />
               </div>
             )}
 
             {/* Footer Note */}
-            <p className="text-gray-500 text-xs md:text-sm mt-auto pt-6 hidden md:block flex-shrink-0 italic">
+            <p className="text-gray-500 text-[10px] mt-auto pt-4 flex-shrink-0 italic">
               {t.agencyNote}
             </p>
           </div>
 
           {/* RIGHT PANEL: Dynamic Content (Calendar/Form/Confirmation) */}
-          <div className="w-full md:w-3/5 bg-gray-900/50 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="w-full md:w-2/3 bg-gray-900/50 overflow-y-auto flex-1 custom-scrollbar">
             {step === 'calendar' ? (
               <Calendar onSelectDateTime={handleDateTimeSelect} language={language} />
             ) : step === 'form' ? (
@@ -186,9 +179,9 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
 
 function SummaryRow({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-4 text-gray-200">
+    <div className="flex items-center gap-2 text-gray-200">
       <div className="flex-shrink-0">{icon}</div>
-      <span className="text-xs md:text-sm font-medium tracking-wide">{label}</span>
+      <span className="text-[10px] font-medium tracking-wide leading-tight">{label}</span>
     </div>
   );
 }
