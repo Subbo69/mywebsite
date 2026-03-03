@@ -32,7 +32,7 @@ export default function WhyUs({ language }: WhyUsProps) {
                 updated[index] = true;
                 return updated;
               });
-            }, index * 100);
+            }, index * 120);
             observer.disconnect();
           }
         },
@@ -63,43 +63,49 @@ export default function WhyUs({ language }: WhyUsProps) {
     <section className="relative py-12 md:py-16 bg-gradient-to-b from-transparent to-white text-black overflow-hidden">
       <style>{`
         @keyframes slideInLeft {
-          from {
+          0% {
             opacity: 0;
-            transform: translateX(-48px);
+            transform: translateX(-52px);
           }
-          to {
+          30% {
+            opacity: 0.6;
+          }
+          100% {
             opacity: 1;
             transform: translateX(0);
           }
         }
 
         @keyframes slideInRight {
-          from {
+          0% {
             opacity: 0;
-            transform: translateX(64px);
+            transform: translateX(72px);
           }
-          to {
+          30% {
+            opacity: 0.6;
+          }
+          100% {
             opacity: 1;
             transform: translateX(0);
           }
         }
 
         .animate-slide-left {
-          animation: slideInLeft 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: slideInLeft 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .animate-slide-right {
-          animation: slideInRight 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: slideInRight 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .pre-animate {
           opacity: 0;
-          transform: translateX(-48px);
+          transform: translateX(-52px);
         }
 
         .pre-animate-right {
           opacity: 0;
-          transform: translateX(64px);
+          transform: translateX(72px);
         }
       `}</style>
 
