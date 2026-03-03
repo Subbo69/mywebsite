@@ -255,7 +255,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
 
+      {/* ─── Main content ─────────────────────────────────────────────────── */}
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
+
         {/* Title */}
         <div className="min-h-[120px] md:min-h-[180px] flex items-center justify-center w-full mb-6">
           <h1 className="text-4xl md:text-8xl font-bold tracking-tight" style={{ fontFamily: '"Montserrat", sans-serif' }}>
@@ -269,8 +271,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {t.heroSubtitle}
         </p>
 
-        {/* CTA + Input */}
-        <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
+        {/* Book CTA */}
+        <div className="flex flex-col items-center w-full max-w-md mt-4">
           <button
             onClick={onBookingClick}
             className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${
@@ -280,28 +282,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             <span className="whitespace-nowrap">{t.startJourney}</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
-
-          <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
-            <div className="flex flex-col items-center gap-1">
-              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
-                {isSent ? t.openingChat : t.askAiAgent}
-              </h3>
-              {!isSent && <ChevronDown className="w-5 h-5 text-blue-500 animate-bounce-down" />}
-            </div>
-
-            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${isSent ? 'border-green-600 bg-green-50' : ''}`}>
-              <input
-                ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder={isSent ? "" : placeholder} disabled={isSent}
-                className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
-                style={{ fontFamily: 'Georgia, serif' }}
-              />
-              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}>
-                <Send className="w-5 h-5" />
-              </button>
-            </form>
-            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2">{errorMessage}</p>}
-          </div>
         </div>
 
         {/* Video Section */}
@@ -310,9 +290,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => {
-              setIsHoveringVideo(true);
-            }}
+            onMouseEnter={() => setIsHoveringVideo(true)}
             onMouseLeave={() => {
               setIsHoveringVideo(false);
               setCurrentPos({ x: -9999, y: -9999 });
@@ -320,7 +298,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             }}
             className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {/* Custom cursor play button — only on non-touch, only while hovering */}
+            {/* Custom cursor play button */}
             {!isTouch && isHoveringVideo && currentPos.x > 0 && (
               <div
                 className="pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl"
@@ -346,18 +324,71 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             )}
           </div>
         </div>
+
       </div>
 
-      {/* Video Modal */}
+      {/* ─── AI Input — fixed to bottom, input always just off-screen ──────── */}
+      {/*   Only the label + arrow peek above the fold, hinting to scroll down  */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center transition-opacity duration-1000 ${
+          showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Label + black bouncing arrow — visible above fold */}
+        <div className="flex flex-col items-center gap-1 pb-3">
+          <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
+            {isSent ? t.openingChat : t.askAiAgent}
+          </h3>
+          {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
+        </div>
+
+        {/* Input box pushed completely below the visible fold with translate-y-full */}
+        <div className="w-full max-w-md px-6 translate-y-full pb-6">
+          <form
+            onSubmit={handleAISubmit}
+            className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${
+              isSent ? 'border-green-600 bg-green-50' : ''
+            }`}
+          >
+            <input
+              ref={heroInputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={isSent ? "" : placeholder}
+              disabled={isSent}
+              className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
+              style={{ fontFamily: 'Georgia, serif' }}
+            />
+            <button
+              type="submit"
+              disabled={!query.trim() || isSent}
+              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
+                query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
+              }`}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </form>
+          {errorMessage && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errorMessage}</p>}
+        </div>
+      </div>
+
+      {/* ─── Video Modal ──────────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all"
+            >
               <X className="w-6 h-6 text-white" />
             </button>
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`}
-              className="w-full h-full" allow="autoplay; encrypted-media; fullscreen" style={{ border: 'none' }}
+              className="w-full h-full"
+              allow="autoplay; encrypted-media; fullscreen"
+              style={{ border: 'none' }}
             />
           </div>
         </div>
