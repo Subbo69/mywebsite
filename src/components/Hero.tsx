@@ -149,9 +149,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => { mounted = false; clearTimeout(t0); };
   }, [fullText]);
 
-  // ─── Scroll reveal ────────────────────────────────────────────────────────
+  // ─── Scroll reveal + sticky-then-release for AI input ───────────────────
+  // Phase 1 (scroll 0–150px):   block is fixed at bottom, only label+arrow visible
+  // Phase 2 (scroll 150–270px): input box slides up into view (still fixed)
+  // Phase 3 (scroll > 270px):   block releases from fixed and scrolls away with page
+  const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
     const onScroll = () => {
+      setScrollY(window.scrollY);
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
       setScrollOpacity(p);
       setScrollScale(0.85 + p * 0.15);
@@ -159,6 +164,11 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // How far the input box has slid up (0 = hidden below fold, 1 = fully visible)
+  const inputReveal = Math.min(Math.max((scrollY - 150) / 120, 0), 1);
+  // Whether the block has been released from fixed position
+  const isReleased = scrollY > 270;
 
   // ─── Particle Engine ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -277,7 +287,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </p>
 
         {/* Book CTA */}
-        <div className="flex flex-col items-center w-full max-w-md mt-4 mb-4">
+        <div className="flex flex-col items-center w-full max-w-md mt-4">
           <button
             onClick={onBookingClick}
             className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${
@@ -290,96 +300,31 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
 
         {/*
-          ─── AI Input block ───────────────────────────────────────────────
-          This lives in normal document flow.
-          The spacer pushes it so only the label+arrow peek above the fold
-          on load. Scroll ~3cm and the input box comes fully into view.
-          Keep scrolling and it scrolls away naturally — no fixed position.
+          Spacer that holds the layout space for the AI block once it releases
+          from fixed. Height matches the full label + input box height (~160px).
+          This prevents the video from jumping up when the block un-fixes.
         */}
-        <div
-          className={`w-full max-w-md flex flex-col items-center transition-opacity duration-1000 ${
-            showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-          style={{
-            // Push the block so only the label+arrow (~56px) show above the fold.
-            // 100vh = viewport height, subtract top padding (112px) + title + subtitle + CTA (~360px)
-            // and the label height itself (~56px), so the box is just below fold.
-            marginTop: 'calc(100vh - 112px - 360px - 56px)',
-          }}
-        >
-          {/* Label + arrow */}
-          <div className="flex flex-col items-center gap-1 pb-3">
-            <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
-              {isSent ? t.openingChat : t.askAiAgent}
-            </h3>
-            {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
-          </div>
+        <div className="w-full" style={{ height: 160 }} />
 
-          {/* Input box — directly below label, scrolls into view naturally */}
-          <div className="w-full px-0 pb-6">
-            <form
-              onSubmit={handleAISubmit}
-              className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 shadow-2xl focus-within:shadow-blue-100 transition-all duration-300 ${
-                isSent ? 'border-green-600 bg-green-50' : ''
-              }`}
-            >
-              <input
-                ref={heroInputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={isSent ? "" : placeholder}
-                disabled={isSent}
-                className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
-                style={{ fontFamily: 'Georgia, serif' }}
-              />
-              <button
-                type="submit"
-                disabled={!query.trim() || isSent}
-                className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
-                  query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
-                }`}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </form>
-            {errorMessage && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errorMessage}</p>}
-          </div>
-        </div>
-
-        {/* Video Section — sits well below the input block */}
-        <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
+        {/* Video — below the spacer, well separated */}
+        <div className="w-full max-w-6xl mt-20 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
           <div
             ref={videoContainerRef}
             onClick={() => setIsModalOpen(true)}
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => {
-              setIsHoveringVideo(true);
-              setCurrentPos({ x: -9999, y: -9999 });
-            }}
-            onMouseLeave={() => {
-              setIsHoveringVideo(false);
-              setCurrentPos({ x: -9999, y: -9999 });
-              setTargetPos({ x: -9999, y: -9999 });
-            }}
+            onMouseEnter={() => { setIsHoveringVideo(true); setCurrentPos({ x: -9999, y: -9999 }); }}
+            onMouseLeave={() => { setIsHoveringVideo(false); setCurrentPos({ x: -9999, y: -9999 }); setTargetPos({ x: -9999, y: -9999 }); }}
             className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
           >
-            {/* Custom cursor play button */}
             {!isTouch && isHoveringVideo && currentPos.x > -100 && (
               <div
                 className="pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl"
-                style={{
-                  left: `${currentPos.x}px`,
-                  top: `${currentPos.y}px`,
-                  transform: 'translate(-50%, -50%)',
-                  fontFamily: '"Montserrat", sans-serif',
-                }}
+                style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}
               >
                 <Play className="w-4 h-4 fill-black" />
                 <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
               </div>
             )}
-
             <div className="absolute inset-0 z-20 bg-black/10 transition-colors group-hover:bg-black/20" />
             {!isModalOpen && (
               <iframe
@@ -393,14 +338,77 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
       </div>
 
+      {/*
+        ─── AI Input block ────────────────────────────────────────────────────
+        When NOT released (scroll 0–270px): position fixed at bottom of screen.
+          - Label + arrow always visible above the bottom edge
+          - Input box translateY(100% → 0%) as you scroll 150→270px
+        When released (scroll > 270px): position absolute, sitting in the spacer
+          gap above the video, scrolls away with the page like normal content.
+
+        The `top` value when absolute = pt-28(112) + title(~200) + subtitle(~88)
+          + cta(~72) + spacing(~16) = ~488px from top of section.
+      */}
+      <div
+        className={`z-40 w-full flex flex-col items-center px-6 transition-opacity duration-1000 ${
+          showInput ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        style={isReleased
+          ? { position: 'absolute', top: 488, left: 0, right: 0 }
+          : { position: 'fixed', bottom: 0, left: 0, right: 0 }
+        }
+      >
+        {/* Label + black bouncing arrow — always visible */}
+        <div className="flex flex-col items-center gap-1 pb-3">
+          <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">
+            {isSent ? t.openingChat : t.askAiAgent}
+          </h3>
+          {!isSent && <ChevronDown className="w-5 h-5 text-black animate-bounce-down" />}
+        </div>
+
+        {/* Input box: hidden below fold until scroll 150–270px, then locked open */}
+        <div
+          className="w-full max-w-md pb-6"
+          style={{
+            transform: isReleased ? 'translateY(0)' : `translateY(${(1 - inputReveal) * 100}%)`,
+            transition: isReleased ? 'none' : 'transform 0.08s linear',
+          }}
+        >
+          <form
+            onSubmit={handleAISubmit}
+            className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 shadow-2xl focus-within:shadow-blue-100 transition-all duration-300 ${
+              isSent ? 'border-green-600 bg-green-50' : ''
+            }`}
+          >
+            <input
+              ref={heroInputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={isSent ? "" : placeholder}
+              disabled={isSent}
+              className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium"
+              style={{ fontFamily: 'Georgia, serif' }}
+            />
+            <button
+              type="submit"
+              disabled={!query.trim() || isSent}
+              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
+                query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'
+              }`}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </form>
+          {errorMessage && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errorMessage}</p>}
+        </div>
+      </div>
+
       {/* ─── Video Modal ──────────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-2xl bg-black">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all"
-            >
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-3 z-[130] bg-black/20 hover:bg-black/40 rounded-full transition-all">
               <X className="w-6 h-6 text-white" />
             </button>
             <iframe
