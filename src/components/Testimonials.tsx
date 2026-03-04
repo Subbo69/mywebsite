@@ -3,6 +3,22 @@ import { Linkedin, Mail, MessageSquare, X } from 'lucide-react';
 
 export default function Testimonials() {
   const [selectedReview, setSelectedReview] = useState<number | null>(null);
+  const [hasRevealed, setHasRevealed] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const reviews = [
     {
@@ -37,6 +53,8 @@ export default function Testimonials() {
 
   const infiniteReviews = [...reviews, ...reviews];
 
+  const cardClass = "flex-shrink-0 w-[245px] md:w-[300px] bg-white border border-black rounded-lg p-4 transition-all duration-200 text-left cursor-pointer group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] whitespace-normal";
+
   const getIcon = (iconType: string) => {
     switch (iconType) {
       case 'linkedin': return <Linkedin className="w-2.5 h-2.5" />;
@@ -45,54 +63,71 @@ export default function Testimonials() {
     }
   };
 
+  const css = `
+    .section-reveal {
+      opacity: 0;
+      transform: translateY(32px) scale(0.98);
+      transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .section-reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .title-reveal {
+      opacity: 0;
+      transform: translateX(-12px);
+      transition: opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s;
+    }
+    .is-visible .title-reveal {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .marquee-reveal {
+      opacity: 0;
+      transition: opacity 0.8s ease 0.55s;
+    }
+    .is-visible .marquee-reveal {
+      opacity: 1;
+    }
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: black }
+    }
+    .typewriter-title {
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid black;
+      display: inline-block;
+      width: 0;
+    }
+    .is-visible .typewriter-title {
+      animation: typing 1.2s steps(20, end) 0.3s forwards, blink-caret 0.75s step-end 3;
+      animation-delay: 0.3s, 0.3s;
+      animation-fill-mode: forwards;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      animation: marquee 14.7s linear infinite;
+    }
+    .pause-marquee:hover .animate-marquee {
+      animation-play-state: paused;
+    }
+  `;
+
   return (
-    <section className="relative py-8 md:py-12 bg-transparent overflow-hidden">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes typing {
-          from { width: 0 }
-          to { width: 100% }
-        }
-        @keyframes blink-caret {
-          from, to { border-color: transparent }
-          50% { border-color: black }
-        }
-        .typewriter-title {
-          overflow: hidden;
-          white-space: nowrap;
-          border-right: 2px solid black; 
-          display: inline-block;
-          animation: 
-            typing 1.5s steps(20, end),
-            blink-caret 0.75s step-end 3;
-          animation-fill-mode: forwards;
-        }
+    <section ref={sectionRef} className="relative py-8 md:py-12 bg-transparent overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: css }} />
 
-        @keyframes fadeInMarquee {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .reveal-marquee {
-          opacity: 0;
-          animation: fadeInMarquee 0.8s ease-out forwards;
-          animation-delay: 1.9s;
-        }
-
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          /* Speed increased: 21s reduced by 30% = 14.7s */
-          animation: marquee 14.7s linear infinite;
-        }
-        .pause-marquee:hover .animate-marquee {
-          animation-play-state: paused;
-        }
-      `}} />
-
-      <div className="relative max-w-7xl mx-auto px-6 z-10">
+      <div className={`section-reveal relative max-w-7xl mx-auto px-6 z-10 ${hasRevealed ? 'is-visible' : ''}`}>
         <div className="mb-4">
-          <div className="inline-block">
+          <div className="inline-block title-reveal">
             <h3 className="typewriter-title text-lg md:text-xl font-black text-black tracking-tight uppercase">
               What People Say
             </h3>
@@ -100,52 +135,29 @@ export default function Testimonials() {
           <div className="mt-0.5 h-1 w-10 bg-black rounded-full" />
         </div>
 
-        <div className="relative pause-marquee reveal-marquee">
-          {/* Edge Fades */}
+        <div className="relative pause-marquee marquee-reveal">
           <div className="absolute left-[-2px] top-[-20px] bottom-[-20px] w-24 md:w-32 z-20 pointer-events-none bg-gradient-to-r from-white via-white/80 to-transparent" />
           <div className="absolute right-[-2px] top-[-20px] bottom-[-20px] w-24 md:w-40 z-20 pointer-events-none bg-gradient-to-l from-white via-white/80 to-transparent" />
 
-          {/* Scrolling Container */}
           <div className="flex overflow-hidden py-6">
             <div className="flex gap-6 animate-marquee whitespace-nowrap">
               {infiniteReviews.map((review, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedReview(index % reviews.length)}
-                  className="
-                    flex-shrink-0 w-[245px] md:w-[300px] 
-                    bg-white
-                    border border-black 
-                    rounded-lg p-4
-                    transition-all duration-200 text-left cursor-pointer group
-                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
-                    hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]
-                    hover:translate-x-[3px] hover:translate-y-[3px]
-                    whitespace-normal
-                  "
-                >
+                <div key={index} onClick={() => setSelectedReview(index % reviews.length)} className={cardClass}>
                   <p className="text-black/90 text-[14px] leading-[20px] mb-3 font-bold italic h-[60px] overflow-hidden">
                     "{review.review}"
                   </p>
-
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-black border border-black flex-shrink-0" />
-                    
-                    <a 
-                      href={review.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 hover:opacity-60 transition-opacity"
-                    >
-                      <span className="text-black font-black text-[9px] block truncate uppercase leading-none underline decoration-black/20 decoration-1 underline-offset-2">
-                        {review.name}
-                      </span>
-                      <p className="text-black/50 text-[6.5px] font-bold uppercase tracking-wider leading-none mt-0.5">
-                        {review.role}
-                      </p>
-                    </a>
-
+                    <div className="flex-1 min-w-0">
+                      <a href={review.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="hover:opacity-60 transition-opacity">
+                        <span className="text-black font-black text-[9px] block truncate uppercase leading-none underline decoration-black/20 decoration-1 underline-offset-2">
+                          {review.name}
+                        </span>
+                        <span className="text-black/50 text-[6.5px] font-bold uppercase tracking-wider leading-none mt-0.5 block">
+                          {review.role}
+                        </span>
+                      </a>
+                    </div>
                     <div className="text-black/20 group-hover:text-black transition-colors">
                       {getIcon(review.icon)}
                     </div>
@@ -157,34 +169,19 @@ export default function Testimonials() {
         </div>
       </div>
 
-      {/* Detail Modal */}
       {selectedReview !== null && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
-          onClick={() => setSelectedReview(null)}
-        >
-          <div 
-            className="bg-white border border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl p-6 max-w-sm w-full relative" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setSelectedReview(null)} 
-              className="absolute top-2 right-2 p-1 hover:bg-black/5 rounded-full transition-colors"
-            >
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedReview(null)}>
+          <div className="bg-white border border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl p-6 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setSelectedReview(null)} className="absolute top-2 right-2 p-1 hover:bg-black/5 rounded-full transition-colors">
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full border border-black bg-black" />
               <div>
-                <a 
-                  href={reviews[selectedReview].link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:underline block"
-                >
-                  <h4 className="font-black text-xs uppercase">{reviews[selectedReview].name}</h4>
+                <a href={reviews[selectedReview].link} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  <span className="font-black text-xs uppercase block">{reviews[selectedReview].name}</span>
+                  <span className="text-[9px] font-bold text-black/50 uppercase block">{reviews[selectedReview].role}</span>
                 </a>
-                <p className="text-[9px] font-bold text-black/50 uppercase">{reviews[selectedReview].role}</p>
               </div>
             </div>
             <p className="text-base font-bold italic leading-snug">"{reviews[selectedReview].review}"</p>
