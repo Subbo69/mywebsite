@@ -80,19 +80,15 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   // Main Animation Sequence Orchestrator
   useEffect(() => {
     if (!isTyping && displayText.length === fullText.length) {
-      // 1. Show Subtitle (Triggers the internal CSS delay for the underline)
       const t1 = setTimeout(() => {
         setShowSubtitle(true);
         
-        // 2. Show CTA Button (Delayed until after underline swipe)
         const t2 = setTimeout(() => {
           setShowCTA(true);
           
-          // 3. Show AI Input (Staggered after button)
           const t3 = setTimeout(() => {
             setShowInput(true);
             
-            // 4. Fade in Background Particles
             const t4 = setTimeout(() => {
               setShowParticles(true);
               heroInputRef.current?.focus({ preventScroll: true });
@@ -100,7 +96,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
             return () => clearTimeout(t4);
           }, 1000); 
           return () => clearTimeout(t3);
-        }, 2200); // Wait for underline to finish
+        }, 2200);
         return () => clearTimeout(t2);
       }, 600); 
       return () => clearTimeout(t1);
@@ -166,7 +162,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const tier = getDeviceTier();
     const cfg = TIER_CONFIG[tier];
     const FRAME_INTERVAL = 1000 / cfg.fps;
-    const COLOR_BANDS = [{ r: 138, g: 143, b: 234 }, { r: 100, g: 120, b: 220 }, { r: 66, g: 133, b: 244 }, { r: 120, g: 80, b: 200 }, { r: 180, g: 60, b: 160 }, { r: 210, g: 50, b: 80 }, { r: 234, g: 67, b: 53 }, { r: 240, g: 120, b: 30 }, { r: 251, g: 188, b: 5 }];
+    const COLOR_BANDS = [
+      { r: 66,  g: 133, b: 244 }, // Google Blue
+      { r: 25,  g: 103, b: 210 }, // Google Blue Dark
+      { r: 234, g: 67,  b: 53  }, // Google Red
+      { r: 197, g: 34,  b: 31  }, // Google Red Dark
+      { r: 251, g: 188, b: 5   }, // Google Yellow
+      { r: 249, g: 160, b: 0   }, // Google Yellow Dark
+      { r: 52,  g: 168, b: 83  }, // Google Green
+      { r: 30,  g: 142, b: 62  }, // Google Green Dark
+      { r: 66,  g: 133, b: 244 }, // Google Blue (repeated to balance)
+    ];
     const SPRING = 0.032; const FRICTION = 0.80; const WIND_SCALE = 0.18; const WIND_RADIUS = 380;
     type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
     let particles: Particle[] = [];
@@ -253,7 +259,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         .underline-dynamic {
           position: absolute; bottom: -6px; height: 2px;
           background: linear-gradient(90deg, transparent, #18181b, transparent);
-          /* Added 0.5s delay to trigger after text stops moving */
           animation: underline-swipe-lr 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s forwards;
         }
 
