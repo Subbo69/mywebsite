@@ -1,225 +1,137 @@
-import { Users, Zap, ChevronDown } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 
-interface WhyUsProps {
+interface WorkWithUsProps {
+  onBookingClick: () => void;
   language: Language;
 }
 
-export default function WhyUs({ language }: WhyUsProps) {
+export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps) {
   const t = translations[language];
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [visibleItems, setVisibleItems] = useState<boolean[]>(new Array(5).fill(false));
-  const [founderVisible, setFounderVisible] = useState(false);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const founderRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  
+  const [activeStep, setActiveStep] = useState(0);
+  const [typedText, setTypedText] = useState(['', '', '', '']);
+  const [showButton, setShowButton] = useState(false);
 
-  const toggleReason = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
+  const planSteps = useMemo(() => [
+    t.planStep1, t.planStep2, t.planStep3, t.planStep4
+  ], [t]);
 
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
+    if (isVisible && activeStep < planSteps.length) {
+      const currentFullText = planSteps[activeStep];
+      const currentTyped = typedText[activeStep];
 
-    itemRefs.current.forEach((ref, index) => {
-      if (!ref) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setTimeout(() => {
-              setVisibleItems((prev) => {
-                const updated = [...prev];
-                updated[index] = true;
-                return updated;
-              });
-            }, index * 120);
-            observer.disconnect();
-          }
-        },
-        { threshold: 0.15 }
-      );
-      observer.observe(ref);
-      observers.push(observer);
-    });
-
-    if (founderRef.current) {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setFounderVisible(true);
-            observer.disconnect();
-          }
-        },
-        { threshold: 0.15 }
-      );
-      observer.observe(founderRef.current);
-      observers.push(observer);
+      if (currentTyped.length < currentFullText.length) {
+        const timeout = setTimeout(() => {
+          const newTyped = [...typedText];
+          newTyped[activeStep] = currentFullText.slice(0, currentTyped.length + 1);
+          setTypedText(newTyped);
+        }, 40);
+        return () => clearTimeout(timeout);
+      } else {
+        const nextStepTimeout = setTimeout(() => {
+          setActiveStep(prev => prev + 1);
+        }, 150);
+        return () => clearTimeout(nextStepTimeout);
+      }
+    } else if (activeStep === planSteps.length) {
+      setShowButton(true);
     }
+  }, [isVisible, activeStep, typedText, planSteps]);
 
-    return () => observers.forEach((o) => o.disconnect());
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.5 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <section className="relative py-12 md:py-16 bg-gradient-to-b from-transparent to-white text-black overflow-hidden">
-      <style>{`
-        @keyframes slideInLeft {
-          0% {
-            opacity: 0;
-            transform: translateX(-52px);
-          }
-          30% {
-            opacity: 0.6;
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(0);
-          }
+    <section
+      ref={sectionRef}
+      className="relative py-12 md:py-20 text-white w-full border-t border-white/5"
+      style={{ backgroundColor: '#000000', zIndex: 1, isolation: 'isolate' }}
+    >
+      {/* Solid black backdrop to block any underlying animations */}
+      <div className="absolute inset-0" style={{ backgroundColor: '#000000', zIndex: -1 }} />
+
+      {/* Custom Arrow Animation Style */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes subtleBounce {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(4px); }
         }
-
-        @keyframes slideInRight {
-          0% {
-            opacity: 0;
-            transform: translateX(72px);
-          }
-          30% {
-            opacity: 0.6;
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(0);
-          }
+        .animate-arrow-bounce {
+          animation: subtleBounce 1.5s ease-in-out infinite;
         }
+      `}} />
 
-        .animate-slide-left {
-          animation: slideInLeft 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+      {/* Main Container - max-width increased for PC (md:max-w-3xl) */}
+      <div className="max-w-2xl md:max-w-3xl mx-auto px-6">
+        
+        {/* Header - Scaled text and margins for PC */}
+        <div className="mb-6 md:mb-10">
+          <h2 className="text-2xl md:text-4xl font-bold tracking-tight mb-1 md:mb-3">
+            {t.workWithUs}
+          </h2>
+          <p className="text-xs md:text-sm text-gray-500">
+            {t.workWithUsDesc}
+          </p>
+        </div>
 
-        .animate-slide-right {
-          animation: slideInRight 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .pre-animate {
-          opacity: 0;
-          transform: translateX(-52px);
-        }
-
-        .pre-animate-right {
-          opacity: 0;
-          transform: translateX(72px);
-        }
-      `}</style>
-
-      <div className="relative max-w-7xl mx-auto px-6 z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-
-          {/* Left: Reasons */}
-          <div className="space-y-4">
-            <h2 className="text-3xl md:text-4xl font-black mb-6 tracking-tight">
-              {t.whyUsTitle}
-            </h2>
-
-            <div className="space-y-3">
-              {t.reasons.slice(0, 5).map((reason, index) => {
-                const isExpanded = expandedIndex === index;
-                const isVisible = visibleItems[index];
-
-                return (
-                  <div
-                    key={index}
-                    ref={(el) => { itemRefs.current[index] = el; }}
-                    onClick={() => toggleReason(index)}
-                    className={`
-                      backdrop-blur-md
-                      bg-white/20
-                      border border-black
-                      rounded-xl
-                      px-5 py-3
-                      shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
-                      cursor-pointer md:cursor-default
-                      transition-all duration-300
-                      ${isVisible ? 'animate-slide-left' : 'pre-animate'}
-                      ${isExpanded ? 'bg-white/40 translate-y-0.5 translate-x-0.5 shadow-none' : ''}
-                    `}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-base md:text-lg font-bold leading-tight">
-                            {reason}
-                          </p>
-                          <ChevronDown
-                            className={`w-5 h-5 transition-transform duration-300 md:hidden ${isExpanded ? 'rotate-180' : ''}`}
-                          />
-                        </div>
-
-                        <div className={`
-                          overflow-hidden transition-all duration-300
-                          ${isExpanded ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0 md:max-h-40 md:opacity-100 md:mt-2'}
-                        `}>
-                          <p className="text-black/70 text-sm leading-relaxed">
-                            {t.reasonsDesc[index]}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Console Box - Increased padding and inner line spacing for PC */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-5 md:p-8 mb-8 md:mb-12">
+          <div className="space-y-2.5 md:space-y-4">
+            {planSteps.map((_, index) => (
+              <div 
+                key={index} 
+                className={`flex items-center gap-3 md:gap-5 transition-opacity duration-300 ${
+                  activeStep >= index ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                {/* Icon scaled up on PC */}
+                <CheckCircle2 className={`w-3.5 h-3.5 md:w-5 md:h-5 shrink-0 transition-colors duration-300 ${
+                  typedText[index].length === planSteps[index].length 
+                    ? 'text-green-500' 
+                    : 'text-white/10'
+                }`} />
+                
+                {/* Text scaled up on PC (md:text-[17px]) */}
+                <p className="font-mono text-[13px] md:text-[17px] text-gray-300 leading-none">
+                  {typedText[index]}
+                  {activeStep === index && typedText[index].length < planSteps[index].length && (
+                    <span className="inline-block w-1.5 h-3 md:w-2 md:h-4 ml-1 bg-white animate-pulse" />
+                  )}
+                </p>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* Right: Founder Block */}
-          <div
-            ref={founderRef}
-            className={`
-              backdrop-blur-xl 
-              bg-white/30 
-              border border-black 
-              rounded-[2rem] 
-              p-6 md:p-8 
-              shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
-              lg:sticky lg:top-24
-              ${founderVisible ? 'animate-slide-right' : 'pre-animate-right'}
-            `}
+        {/* CTA Button - Increased padding and text size for PC */}
+        <div className={`flex justify-center transition-all duration-1000 transform ${
+          showButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}>
+          <button
+            onClick={onBookingClick}
+            className="group relative flex items-center gap-3 rounded-full bg-white px-8 py-3 md:px-10 md:py-4 text-sm md:text-base font-black text-black hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
           >
-            <div className="flex items-center gap-5 mb-6">
-              <div className="w-20 h-20 rounded-full overflow-hidden border border-black shadow-sm flex-shrink-0">
-                <img
-                  src="https://i.postimg.cc/sDfZC0mH/Screenshot-20260102-094201-(1)-(1)-(1)-(1).png"
-                  alt="Founder"
-                  className="w-full h-full object-cover"
-                  style={{
-                    transform: 'scale(1.2)',
-                    objectPosition: 'center 41%',
-                  }}
-                />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Users className="w-5 h-5 text-black" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-black/50">Human-Centric AI</span>
-                </div>
-                <h3 className="text-2xl md:text-3xl font-black text-black leading-none">
-                  {t.customBuilt}
-                </h3>
-              </div>
-            </div>
+            <span className="uppercase tracking-wider">{t.bookCall}</span>
+            <ArrowRight className="w-4 h-4 md:w-5 md:h-5 animate-arrow-bounce" />
+          </button>
+        </div>
 
-            <div className="space-y-4">
-              <p className="text-black/80 text-sm md:text-base leading-relaxed font-medium">
-                {t.customBuiltDesc}
-              </p>
-
-              <div className="pt-4 border-t border-black/10 flex items-center gap-3 text-black font-black uppercase tracking-wider text-xs">
-                <Zap className="w-5 h-5 fill-black" />
-                <span>{t.rapidDeployment}</span>
-              </div>
-            </div>
-          </div>
-
+        {/* Minimal Copyright - Slightly adjusted size for better PC balance */}
+        <div className="mt-12 md:mt-20 text-center opacity-60">
+          <p className="text-[9px] md:text-[11px] tracking-[0.4em] uppercase">
+            © {new Date().getFullYear()} Halovision AI
+          </p>
         </div>
       </div>
     </section>
