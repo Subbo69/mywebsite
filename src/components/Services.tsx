@@ -177,10 +177,14 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         {node.title}
       </h3>
 
-      {/* Description — full black, readable */}
-      <p className="text-[13px] text-black font-medium leading-relaxed line-clamp-3 mb-5 flex-1">
-        {node.description}
-      </p>
+      {/* Description — 3 lines max with fade on desktop */}
+      <div className="relative mb-5 flex-1">
+        <p className="text-[13px] text-black font-medium leading-relaxed max-h-[4.5em] overflow-hidden">
+          {node.description}
+        </p>
+        {/* Fade overlay — desktop only */}
+        <div className="hidden md:block absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+      </div>
 
       {/* Bottom row: category left · impact + details right */}
       <div className="flex items-center justify-between gap-2 mt-auto">
