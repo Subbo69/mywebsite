@@ -53,7 +53,14 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-12 md:py-20 bg-black text-white w-full border-t border-white/5">
+    <section
+      ref={sectionRef}
+      className="relative py-12 md:py-20 text-white w-full border-t border-white/5"
+      style={{ backgroundColor: '#000000', zIndex: 1, isolation: 'isolate' }}
+    >
+      {/* Solid black backdrop to block any underlying animations */}
+      <div className="absolute inset-0" style={{ backgroundColor: '#000000', zIndex: -1 }} />
+
       {/* Custom Arrow Animation Style */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes subtleBounce {
