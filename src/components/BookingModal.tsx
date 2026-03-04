@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar as CalIcon, Clock, Timer, ArrowLeft, Check } from 'lucide-react';
+import { X, Calendar as CalIcon, Clock, Timer, ArrowLeft, Check, Globe, ShieldCheck, Mail } from 'lucide-react';
 import Calendar from './Calendar';
 import BookingForm from './BookingForm';
 import { translations, Language } from '../utils/translations';
@@ -18,18 +18,16 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
   const [step, setStep] = useState<Step>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
-  const [selectedTimezone, setSelectedTimezone] = useState<string>('UTC+1');
+  const [selectedTimezone, setSelectedTimezone] = useState<string>(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [submittedFormData, setSubmittedFormData] = useState<any>(null);
 
-  // Animation visibility state
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setVisible(true);
     } else {
-      // Wait for exit animation before unmounting
-      const timeout = setTimeout(() => setVisible(false), 300);
+      const timeout = setTimeout(() => setVisible(false), 500);
       return () => clearTimeout(timeout);
     }
   }, [isOpen]);
@@ -44,15 +42,12 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
   };
 
   const handleBack = () => {
-    if (step === 'confirmation') {
-      setStep('form');
-    } else if (step === 'form') {
-      setStep('calendar');
-    }
+    if (step === 'confirmation') setStep('form');
+    else if (step === 'form') setStep('calendar');
   };
 
   const handleFormSubmit = (formData: any) => {
-    setSubmittedFormData(formData);
+    setSubmittedFormData({ ...formData });
     setStep('confirmation');
   };
 
@@ -66,99 +61,71 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity duration-300 ease-out ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-black/90 backdrop-blur-2xl transition-all duration-500 ease-in-out ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      {/* Custom Font - Anurati */}
-      <link href="https://fonts.cdnfonts.com/css/anurati" rel="stylesheet" />
-
       <div
-        className={`relative w-full max-w-4xl max-h-[85vh] bg-gradient-to-br from-gray-900 to-black rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 ease-out ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        className={`relative w-full max-w-[1200px] h-full md:h-[85vh] bg-[#0a0a0c] rounded-[32px] shadow-[0_0_100px_rgba(168,85,247,0.15)] overflow-hidden transform transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) border border-white/10 flex flex-col md:flex-row ${
+          isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-8'
         }`}
       >
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 z-10 text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-full transition-colors"
-          aria-label="Close modal"
+          className="absolute top-6 right-6 md:top-8 md:right-8 z-50 text-white/30 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all duration-300 active:scale-90"
         >
           <X className="w-6 h-6" />
         </button>
 
-        <div className="flex flex-col md:flex-row h-full max-h-[85vh] overflow-hidden">
-
-          {/* LEFT PANEL: Summary & Branding */}
-          <div className="hidden md:flex w-1/3 bg-gradient-to-br from-gray-800 to-gray-900 p-6 flex flex-col overflow-hidden border-r border-white/5">
-
-            {/* Content Section */}
-            <div className="flex-shrink-0 pt-4">
-              <h2 className="text-lg font-bold text-white mb-2">
-                {t.growthMappingCall}
-              </h2>
-              <p className="text-gray-300 mb-4 text-xs leading-snug">
-                {t.growthMappingDesc}
-              </p>
-
-              <div className="space-y-1.5 text-gray-300 mb-6 text-xs">
-                <p className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">1.</span>
-                  <span className="leading-snug">{t.analysisStep}</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">2.</span>
-                  <span className="leading-snug">{t.auditStep}</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold flex-shrink-0 pt-0.5">3.</span>
-                  <span className="leading-snug">{t.nextSteps}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Selection Details (Only visible in Calendar step) */}
-            {step === 'calendar' && selectedDate && (
-              <div className="mt-auto space-y-1.5 pt-4 border-t border-white/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
-                <SummaryRow
-                  icon={<CalIcon className="w-3 h-3 text-purple-400" />}
-                  label={selectedDate.toLocaleDateString(t.locale, {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                />
-                <SummaryRow
-                  icon={<Clock className="w-3 h-3 text-purple-400" />}
-                  label={selectedTime}
-                />
-                <SummaryRow
-                  icon={<Timer className="w-3 h-3 text-purple-400" />}
-                  label={t.duration}
-                />
-              </div>
-            )}
-
-            {/* Footer Note */}
-            <p className="text-gray-500 text-[10px] mt-auto pt-4 flex-shrink-0 italic">
-              {t.agencyNote}
+        {/* LEFT SIDEBAR - PREMIUM DARK LOOK */}
+        <div className="hidden lg:flex w-[380px] bg-[#0d0d0f] p-12 flex-col border-r border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+          
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold text-white mb-6 leading-tight tracking-tight">
+              {t.growthMappingCall}
+            </h2>
+            <div className="w-16 h-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full mb-8 shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
+            <p className="text-gray-400 text-base leading-relaxed font-medium">
+              {t.growthMappingDesc}
             </p>
           </div>
 
-          {/* RIGHT PANEL: Dynamic Content (Calendar/Form/Confirmation) */}
-          <div className="w-full md:w-2/3 bg-gray-900/50 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="space-y-10 mb-10">
+            <StepIndicator step={1} text={t.analysisStep} active={step === 'calendar'} completed={step !== 'calendar'} />
+            <StepIndicator step={2} text={t.auditStep} active={step === 'form'} completed={step === 'confirmation'} />
+            <StepIndicator step={3} text={t.nextSteps} active={step === 'confirmation'} />
+          </div>
+
+          <div className="mt-auto bg-gradient-to-br from-white/[0.03] to-transparent border border-white/10 rounded-3xl p-8 space-y-5 backdrop-blur-md shadow-2xl">
+            <SummaryItem icon={<CalIcon className="w-5 h-5" />} label={selectedDate ? selectedDate.toLocaleDateString(t.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pick a Date'} />
+            <SummaryItem icon={<Clock className="w-5 h-5" />} label={selectedTime || 'Pick a Time'} />
+            <SummaryItem icon={<Globe className="w-5 h-5" />} label={selectedTimezone} />
+            <SummaryItem icon={<Timer className="w-5 h-5" />} label={t.duration} />
+          </div>
+        </div>
+
+        {/* RIGHT PANEL - CONTENT AREA */}
+        <div className="flex-1 overflow-y-auto bg-[#0a0a0c] relative custom-scrollbar">
+          <div className="max-w-3xl mx-auto px-8 py-14 md:px-16 md:py-20">
             {step === 'calendar' ? (
-              <Calendar onSelectDateTime={handleDateTimeSelect} language={language} />
+              <div className="animate-in fade-in slide-in-from-right-12 duration-700 cubic-bezier(0.16, 1, 0.3, 1)">
+                <h3 className="text-4xl font-bold text-white mb-10 tracking-tighter">Select Time</h3>
+                <Calendar onSelectDateTime={handleDateTimeSelect} language={language} />
+              </div>
             ) : step === 'form' ? (
-              <BookingForm
-                selectedDate={selectedDate!}
-                selectedTime={selectedTime}
-                selectedTimezone={selectedTimezone}
-                onBack={handleBack}
-                onFormSubmit={handleFormSubmit}
-                language={language}
-              />
+              <div className="animate-in fade-in slide-in-from-right-12 duration-700 cubic-bezier(0.16, 1, 0.3, 1)">
+                 <h3 className="text-4xl font-bold text-white mb-10 tracking-tighter">Your Details</h3>
+                <BookingForm
+                  selectedDate={selectedDate!}
+                  selectedTime={selectedTime}
+                  selectedTimezone={selectedTimezone}
+                  onBack={handleBack}
+                  onFormSubmit={handleFormSubmit}
+                  language={language}
+                />
+              </div>
             ) : (
               <ConfirmationPage
                 selectedDate={selectedDate!}
@@ -177,11 +144,25 @@ export default function BookingModal({ isOpen, onClose, language }: BookingModal
   );
 }
 
-function SummaryRow({ icon, label }: { icon: React.ReactNode; label: string }) {
+function StepIndicator({ step, text, active, completed }: { step: number; text: string; active?: boolean; completed?: boolean }) {
   return (
-    <div className="flex items-center gap-2 text-gray-200">
-      <div className="flex-shrink-0">{icon}</div>
-      <span className="text-[10px] font-medium tracking-wide leading-tight">{label}</span>
+    <div className={`flex items-center gap-6 transition-all duration-500 ${active ? 'opacity-100 translate-x-2' : 'opacity-30 translate-x-0'}`}>
+      <div className={`w-10 h-10 rounded-full border flex items-center justify-center text-sm font-bold transition-all duration-700 ${
+        completed ? 'bg-purple-600 border-purple-600 text-white' : 
+        active ? 'border-purple-500 text-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.4)]' : 'border-white/20 text-white/20'
+      }`}>
+        {completed ? <Check className="w-5 h-5 animate-in zoom-in" /> : step}
+      </div>
+      <span className={`text-base font-bold tracking-tight transition-colors duration-500 ${active ? 'text-white' : 'text-white/20'}`}>{text}</span>
+    </div>
+  );
+}
+
+function SummaryItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-5 text-gray-400 group cursor-default">
+      <div className="text-purple-500 transition-colors duration-300 group-hover:text-purple-400">{icon}</div>
+      <span className="text-[11px] font-black tracking-[0.15em] uppercase opacity-70 group-hover:opacity-100 transition-opacity">{label}</span>
     </div>
   );
 }
@@ -208,26 +189,24 @@ function ConfirmationPage({
   const t = translations[language];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState(formData?.email || '');
 
   const handleConfirm = async () => {
+    if (!confirmEmail) {
+      alert("Please provide an email address.");
+      return;
+    }
+    
     setIsSubmitting(true);
-
     try {
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-      const fullPhone = `${formData.countryCode}${formData.phone}`;
-
       const formBody = new URLSearchParams();
-      formBody.append('firstName', formData.firstName);
-      formBody.append('lastName', formData.lastName);
-      formBody.append('email', formData.email);
-      formBody.append('countryCode', formData.countryCode);
-      formBody.append('phone', formData.phone);
-      formBody.append('fullPhone', fullPhone);
-      formBody.append('revenueRange', formData.revenueRange);
-      formBody.append('website', formData.website);
-      formBody.append('businessDescription', formData.businessDescription);
-      formBody.append('reason', formData.reason);
-      formBody.append('date', formattedDate);
+      // Append original form data
+      Object.keys(formData).forEach(key => formBody.append(key, formData[key]));
+      
+      // Override with verified email and add appointment details
+      formBody.set('email', confirmEmail); 
+      formBody.append('fullPhone', `${formData.countryCode}${formData.phone}`);
+      formBody.append('date', selectedDate.toISOString().split('T')[0]);
       formBody.append('time', selectedTime);
       formBody.append('timezone', selectedTimezone);
 
@@ -239,11 +218,8 @@ function ConfirmationPage({
       });
 
       setIsSuccess(true);
-      setTimeout(() => {
-        onConfirm();
-      }, 2000);
+      setTimeout(() => onConfirm(), 3500);
     } catch (error) {
-      console.error('Booking error:', error);
       alert(t.bookingError);
     } finally {
       setIsSubmitting(false);
@@ -252,79 +228,103 @@ function ConfirmationPage({
 
   if (isSuccess) {
     return (
-      <div className="p-6 md:p-10 bg-black/50 rounded-xl shadow-xl max-w-3xl mx-auto min-h-[400px] flex flex-col items-center justify-center text-center">
-        <div className="mb-6 animate-in zoom-in duration-500">
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 md:w-10 md:h-10 text-green-400" />
+      <div className="flex flex-col items-center justify-center py-10 animate-in fade-in zoom-in-95 duration-1000">
+        <div className="relative mb-12">
+          <div className="absolute inset-0 bg-purple-600/30 blur-[40px] rounded-full animate-pulse" />
+          <div className="relative w-32 h-32 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/30">
+            <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_35px_rgba(168,85,247,0.7)]">
+              <Check className="w-10 h-10 text-white" />
+            </div>
           </div>
         </div>
-        <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Booking Confirmed!</h3>
-        <p className="text-gray-400 text-sm md:text-base">Your audit has been scheduled successfully.</p>
+        <h3 className="text-5xl font-bold text-white mb-6 tracking-tighter">Confirmed!</h3>
+        <p className="text-gray-400 text-xl font-medium mb-8 text-center">Your strategy session is officially locked in.</p>
+        
+        <div className="bg-[#0f172a]/40 border border-purple-500/30 p-6 rounded-2xl flex items-center gap-5 animate-in slide-in-from-bottom-4 delay-500 duration-700 fill-mode-both">
+           <div className="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center text-purple-400 shadow-inner">
+              <Mail className="w-6 h-6" />
+           </div>
+           <div>
+              <p className="text-white font-bold text-sm">Check your inbox</p>
+              <p className="text-gray-400 text-xs">A calendar invitation has been sent to {confirmEmail}.</p>
+           </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-10 bg-black/50 rounded-xl shadow-xl max-w-3xl mx-auto">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        {t.back}
+    <div className="animate-in fade-in slide-in-from-right-12 duration-700 ease-out">
+      <button onClick={onBack} className="flex items-center gap-3 text-gray-500 hover:text-white mb-10 transition-all duration-300 text-sm font-bold uppercase tracking-widest group">
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> {t.back}
       </button>
 
-      <div className="mb-8">
-        <h3 className="text-xl md:text-2xl font-bold text-white mb-6">Review Your Booking</h3>
+      <h3 className="text-4xl md:text-5xl font-bold text-white mb-12 tracking-tighter">Review Details</h3>
 
-        <div className="space-y-4 mb-8">
-          <ConfirmationRow label="Date" value={selectedDate.toLocaleDateString(t.locale, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })} />
-          <ConfirmationRow label="Time" value={selectedTime} />
-          <ConfirmationRow label="Timezone" value={selectedTimezone} />
-
-          <div className="border-t border-gray-700 pt-4 mt-4">
-            <ConfirmationRow label="Name" value={`${formData.firstName} ${formData.lastName}`} />
-            <ConfirmationRow label="Email" value={formData.email} />
-            <ConfirmationRow label="Phone" value={`${formData.countryCode}${formData.phone}`} />
-            <ConfirmationRow label="Revenue" value={formData.revenueRange} />
-            <ConfirmationRow label="Website" value={formData.website} />
-          </div>
-
-          <div className="border-t border-gray-700 pt-4 mt-4">
-            <p className="text-gray-400 text-sm mb-2">Workflows & Bottlenecks:</p>
-            <p className="text-gray-300 text-sm bg-gray-800/50 p-3 rounded-lg">{formData.businessDescription}</p>
-          </div>
-
-          {formData.reason && (
-            <div className="border-t border-gray-700 pt-4 mt-4">
-              <p className="text-gray-400 text-sm mb-2">Primary Goal:</p>
-              <p className="text-gray-300 text-sm bg-gray-800/50 p-3 rounded-lg">{formData.reason}</p>
-            </div>
-          )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="bg-[#0f172a]/40 border border-gray-800 p-8 rounded-2xl space-y-6 hover:border-purple-500/50 transition-all duration-500 group shadow-lg">
+          <h4 className="text-xs font-black text-purple-500 uppercase tracking-[0.25em]">Appointment</h4>
+          <DetailRow label="Date" value={selectedDate.toLocaleDateString(t.locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} />
+          <DetailRow label="Time" value={`${selectedTime} (${selectedTimezone})`} />
         </div>
+        <div className="bg-[#0f172a]/40 border border-gray-800 p-8 rounded-2xl space-y-6 hover:border-purple-500/50 transition-all duration-500 group shadow-lg">
+          <h4 className="text-xs font-black text-purple-500 uppercase tracking-[0.25em]">Representative</h4>
+          <DetailRow label="Name" value={`${formData?.firstName} ${formData?.lastName}`} />
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-500 font-bold mb-2 uppercase tracking-[0.15em]">Confirm Email Address</p>
+            <input 
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              className="w-full bg-[#0a0a0c] border border-gray-800 text-white p-3 rounded-xl focus:border-purple-500 outline-none transition-all text-sm font-medium"
+              placeholder="Enter your email"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6 mb-12">
+        <div className="bg-[#0f172a]/40 border border-gray-800 p-8 rounded-2xl hover:border-purple-500/50 transition-all duration-500">
+          <p className="text-xs uppercase font-black text-gray-500 mb-4 tracking-[0.2em]">Business Context</p>
+          <p className="text-gray-300 text-lg leading-relaxed font-medium">{formData?.businessDescription}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-5 mb-10 text-gray-400 bg-[#0f172a]/20 p-6 rounded-2xl border border-gray-800/50 backdrop-blur-sm">
+        <div className="p-3 bg-purple-500/10 rounded-xl">
+          <ShieldCheck className="w-6 h-6 text-purple-400" />
+        </div>
+        <p className="text-sm font-semibold italic opacity-80 leading-snug">
+          Secure booking. You will receive a confirmation email immediately after booking.
+        </p>
       </div>
 
       <button
         onClick={handleConfirm}
         disabled={isSubmitting}
-        className="w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+        className="group relative w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-6 rounded-2xl font-black text-xl shadow-[0_20px_50px_rgba(168,85,247,0.3)] transition-all duration-500 active:scale-[0.98] disabled:opacity-50 overflow-hidden"
       >
-        {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+        <div className="relative z-10 flex items-center justify-center gap-3">
+          {isSubmitting ? (
+            <>
+              <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+              <span>Securing your slot...</span>
+            </>
+          ) : (
+            'Finalize Booking'
+          )}
+        </div>
+        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </button>
     </div>
   );
 }
 
-function ConfirmationRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-start py-2">
-      <span className="text-gray-400 text-sm">{label}:</span>
-      <span className="text-white text-sm font-medium text-right max-w-xs">{value}</span>
+    <div className="group/row">
+      <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-[0.15em] group-hover/row:text-purple-400/60 transition-colors">{label}</p>
+      <p className="text-white text-xl font-bold tracking-tight">{value}</p>
     </div>
   );
 }
