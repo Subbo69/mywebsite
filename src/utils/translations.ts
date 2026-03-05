@@ -1,7 +1,8 @@
 export const translations = {
   en: {
-    heroTitle: "Turn Manual Workflows Into Autonomous Revenue Engines",
-    heroSubtitle: "Custom AI Automations for your Business.",
+    heroTitle1: "Your Practice.",
+heroTitle2: "Fully Automated.",
+    heroSubtitle: "Reclaim 20 Hours a Week with Custom AI Automations.",
     letsTalk: "Let's Talk",
     startJourney: "Book Your Free Automation Audit",
     askAI: "Test Our AI Agent",
@@ -219,7 +220,8 @@ export const translations = {
   },
 
   de: {
-    heroTitle: "Manuelle Abläufe in autonome Umsatz-Maschinen verwandeln",
+    heroTitle1: "Ihre Praxis.",
+heroTitle2: "Vollständig automatisiert.",
     heroSubtitle: "Individuelle KI-Automatisierung für Ihr Unternehmen.",
     letsTalk: "Kontakt",
     startJourney: "Kostenlosen KI-Audit buchen",
@@ -432,7 +434,8 @@ export const translations = {
   },
 
   fr: {
-    heroTitle: "Transformez vos processus manuels en moteurs de revenus autonomes",
+    heroTitle1: "Votre Cabinet.",
+heroTitle2: "Entièrement Automatisé.",
     heroSubtitle: "Automatisations IA personnalisées pour votre entreprise.",
     letsTalk: "Parlons-en",
     startJourney: "Réserver votre audit d'automatisation gratuit",
