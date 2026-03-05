@@ -1,6 +1,60 @@
 import { ArrowRight, Send, Play, X, ChevronDown } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { motion, useAnimate } from 'framer-motion';
+
+declare global {
+  interface Window { THREE: any }
+}
+
+// ── Subtitle: RandomLetterSwapForward ────────────────────────────────────────
+function SubtitleSwap({ text }: { text: string }) {
+  const [scope, animate] = useAnimate();
+  const [blocked, setBlocked] = useState(false);
+
+  // Stable shuffled order
+  const shuffled = useRef(
+    Array.from({ length: text.length }, (_, i) => i).sort(() => Math.random() - 0.5)
+  );
+
+  const handleHover = useCallback(() => {
+    if (blocked) return;
+    setBlocked(true);
+    for (let i = 0; i < text.length; i++) {
+      const idx = shuffled.current[i];
+      const delay = i * 0.018;
+      animate(`.sub-letter-${idx}`,   { y: '-100%' }, { type: 'spring', duration: 0.5, delay })
+        .then(() => animate(`.sub-letter-${idx}`,   { y: 0 }, { duration: 0 }));
+      animate(`.sub-letter2-${idx}`,  { top: '0%'  }, { type: 'spring', duration: 0.5, delay })
+        .then(() => animate(`.sub-letter2-${idx}`,  { top: '100%' }, { duration: 0 }))
+        .then(() => { if (i === text.length - 1) setBlocked(false); });
+    }
+  }, [animate, blocked, text.length]);
+
+  return (
+    <motion.span
+      ref={scope}
+      className="flex flex-wrap justify-center cursor-default"
+      onHoverStart={handleHover}
+    >
+      <span className="sr-only">{text}</span>
+      {text.split('').map((char, i) => (
+        <span key={i} className="whitespace-pre relative flex overflow-hidden">
+          <motion.span className={`relative sub-letter-${i}`} style={{ top: 0 }}>
+            {char === ' ' ? '\u00A0' : char}
+          </motion.span>
+          <motion.span
+            className={`absolute sub-letter2-${i}`}
+            aria-hidden
+            style={{ top: '100%' }}
+          >
+            {char === ' ' ? '\u00A0' : char}
+          </motion.span>
+        </span>
+      ))}
+    </motion.span>
+  );
+}
 
 interface HeroProps {
   onBookingClick: () => void;
@@ -8,41 +62,41 @@ interface HeroProps {
   language: Language;
 }
 
-function getDeviceTier(): 'low' | 'medium' | 'high' {
-  if (typeof window === 'undefined') return 'medium';
-  const cores = navigator.hardwareConcurrency ?? 2;
-  const width = window.innerWidth;
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (isTouch || cores <= 2 || width < 768) return 'low';
-  if (cores <= 4 || width < 1280) return 'medium';
-  return 'high';
-}
-
-const TIER_CONFIG = {
-  low: { pills: 220, dots: 60, fps: 30 },
-  medium: { pills: 320, dots: 100, fps: 45 },
-  high: { pills: 420, dots: 180, fps: 60 },
-};
-
 export default function Hero({ onBookingClick, onAskAIClick, language }: HeroProps) {
   const t = translations[language];
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const shaderContainerRef = useRef<HTMLDivElement>(null);
+
+  // Shader scene refs
+  const sceneRef = useRef<{
+    camera: any; scene: any; renderer: any; uniforms: any; animationId: number | null;
+  }>({ camera: null, scene: null, renderer: null, uniforms: null, animationId: null });
+
+  // Reactive shader state
+  const reactiveRef = useRef({
+    speedTarget: 1.0,
+    speedCurrent: 1.0,
+    brightnessTarget: 1.0,
+    brightnessCurrent: 1.0,
+    mouseX: 0.5,
+    mouseY: 0.5,
+    mouseXTarget: 0.5,
+    mouseYTarget: 0.5,
+  });
 
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
   const [scrollOpacity, setScrollOpacity] = useState(0);
   const [scrollScale, setScrollScale] = useState(0.85);
-  const [displayText, setDisplayText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [shaderReady, setShaderReady] = useState(false);
+  const [titleDone, setTitleDone] = useState(false);
 
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
   const [showInput, setShowInput] = useState(false);
-  const [showParticles, setShowParticles] = useState(false);
-  
+
   const [messageCount, setMessageCount] = useState(0);
   const [placeholder, setPlaceholder] = useState("");
   const placeholderPhrases = [t.howCanWeHelp, t.heroPlaceholder1, t.heroPlaceholder2, t.heroPlaceholder3];
@@ -52,11 +106,177 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
 
-  const fullText = t.heroTitle;
+  const titleLine1 = t.heroTitle1;
+  const titleLine2 = t.heroTitle2;
+  const [hoveredTitle1, setHoveredTitle1] = useState<number | null>(null);
+  const [hoveredTitle2, setHoveredTitle2] = useState<number | null>(null);
   const VIDEO_ID = "Py1ClI35v_k";
-
   const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
+  // ─── Shader Init ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/89/three.min.js";
+    script.onload = () => { if (shaderContainerRef.current && window.THREE) initShader(); };
+    document.head.appendChild(script);
+    return () => {
+      if (sceneRef.current.animationId) cancelAnimationFrame(sceneRef.current.animationId);
+      if (sceneRef.current.renderer) sceneRef.current.renderer.dispose();
+      try { document.head.removeChild(script); } catch {}
+    };
+  }, []);
+
+  const initShader = () => {
+    if (!shaderContainerRef.current || !window.THREE) return;
+    const THREE = window.THREE;
+    const container = shaderContainerRef.current;
+    container.innerHTML = "";
+
+    const camera = new THREE.Camera();
+    camera.position.z = 1;
+    const scene = new THREE.Scene();
+    const geometry = new THREE.PlaneBufferGeometry(2, 2);
+
+    const uniforms = {
+      time:       { type: "f",  value: 1.0 },
+      resolution: { type: "v2", value: new THREE.Vector2() },
+      speed:      { type: "f",  value: 1.0 },
+      brightness: { type: "f",  value: 1.0 },
+      mousePos:   { type: "v2", value: new THREE.Vector2(0.5, 0.5) },
+    };
+
+    const vertexShader = `void main() { gl_Position = vec4(position, 1.0); }`;
+
+    const fragmentShader = `
+      #define TWO_PI 6.2831853072
+      #define PI 3.14159265359
+
+      precision highp float;
+      uniform vec2 resolution;
+      uniform float time;
+      uniform float speed;
+      uniform float brightness;
+      uniform vec2 mousePos;
+
+      float random(in float x) { return fract(sin(x)*1e4); }
+      float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233)))*43758.5453123); }
+
+      void main(void) {
+        vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+
+        // Mouse warp — subtle positional shift toward cursor
+        vec2 mouse = (mousePos - 0.5) * 2.0;
+        uv += mouse * 0.08;
+
+        vec2 fMosaicScal = vec2(4.0, 2.0);
+        vec2 vScreenSize = vec2(256.0, 256.0);
+        uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
+        uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);
+
+        // time is already pre-scaled on CPU side — no GPU multiplication
+        float t = time + random(uv.x) * 0.4;
+        float lineWidth = 0.0006;
+
+        vec3 color = vec3(0.0);
+        for(int j = 0; j < 3; j++){
+          for(int i = 0; i < 5; i++){
+            color[j] += lineWidth * float(i*i) / abs(fract(t - 0.01*float(j) + float(i)*0.01)*1.0 - length(uv));
+          }
+        }
+
+        color *= brightness;
+
+        gl_FragColor = vec4(color[2], color[1], color[0], 1.0);
+      }
+    `;
+
+    const material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader });
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    sceneRef.current = { camera, scene, renderer, uniforms, animationId: null };
+
+    const onResize = () => {
+      const rect = container.getBoundingClientRect();
+      renderer.setSize(rect.width, rect.height);
+      uniforms.resolution.value.x = renderer.domElement.width;
+      uniforms.resolution.value.y = renderer.domElement.height;
+    };
+    onResize();
+    window.addEventListener("resize", onResize, false);
+
+    const animate = () => {
+      sceneRef.current.animationId = requestAnimationFrame(animate);
+      const r = reactiveRef.current;
+
+      // Smooth lerp all reactive values
+      r.speedCurrent      += (r.speedTarget - r.speedCurrent) * 0.025;
+      r.brightnessCurrent += (r.brightnessTarget - r.brightnessCurrent) * 0.04;
+      r.mouseX            += (r.mouseXTarget - r.mouseX) * 0.06;
+      r.mouseY            += (r.mouseYTarget - r.mouseY) * 0.06;
+
+      // Increment time on CPU — base is very slow, speed nudges it slightly
+      const baseInc = 0.0009;
+      const maxInc  = 0.0022; // hard cap prevents any strobing
+      const inc = baseInc + (r.speedCurrent - 1.0) * (maxInc - baseInc);
+      uniforms.time.value += Math.max(baseInc, Math.min(inc, maxInc));
+      uniforms.speed.value = r.speedCurrent;
+      uniforms.brightness.value  = r.brightnessCurrent;
+      uniforms.mousePos.value.x  = r.mouseX;
+      uniforms.mousePos.value.y  = r.mouseY;
+
+      renderer.render(scene, camera);
+    };
+    animate();
+    setShaderReady(true);
+  };
+
+  // ─── Reactive Events ────────────────────────────────────────────────────────
+  // Mouse move → warp + slight brightness
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const r = reactiveRef.current;
+      r.mouseXTarget = e.clientX / window.innerWidth;
+      r.mouseYTarget = 1.0 - e.clientY / window.innerHeight;
+      r.speedTarget = 1.4;
+      r.brightnessTarget = 1.15;
+      // Let it ease back
+      clearTimeout((onMove as any)._t);
+      (onMove as any)._t = setTimeout(() => {
+        r.speedTarget = 1.0;
+        r.brightnessTarget = 1.0;
+      }, 600);
+    };
+    window.addEventListener("mousemove", onMove, { passive: true });
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
+  // Scroll → speed up
+  useEffect(() => {
+    let scrollTimer: any;
+    const onScroll = () => {
+      const r = reactiveRef.current;
+      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      setScrollOpacity(p);
+      setScrollScale(0.85 + p * 0.15);
+
+      r.speedTarget = 1.0 + p * 1.2;         // max 2.2× — no strobing
+      r.brightnessTarget = 1.0 + p * 0.25;
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        r.speedTarget = 1.0;
+        r.brightnessTarget = 1.0;
+      }, 800);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // ─── Cursor follow for video ─────────────────────────────────────────────────
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoContainerRef.current) return;
     const rect = videoContainerRef.current.getBoundingClientRect();
@@ -77,33 +297,26 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isModalOpen]);
 
-  // Main Animation Sequence Orchestrator
+  // ─── Animation Sequence (triggered when GradualSpacing finishes) ──────────
   useEffect(() => {
-    if (!isTyping && displayText.length === fullText.length) {
-      const t1 = setTimeout(() => {
-        setShowSubtitle(true);
-        
-        const t2 = setTimeout(() => {
-          setShowCTA(true);
-          
-          const t3 = setTimeout(() => {
-            setShowInput(true);
-            
-            const t4 = setTimeout(() => {
-              setShowParticles(true);
-              heroInputRef.current?.focus({ preventScroll: true });
-            }, 800);
-            return () => clearTimeout(t4);
-          }, 1000); 
-          return () => clearTimeout(t3);
-        }, 2200);
-        return () => clearTimeout(t2);
-      }, 600); 
-      return () => clearTimeout(t1);
-    }
-  }, [isTyping, displayText, fullText]);
+    if (!titleDone) return;
+    const t1 = setTimeout(() => {
+      setShowSubtitle(true);
+      const t2 = setTimeout(() => {
+        setShowCTA(true);
+        const t3 = setTimeout(() => {
+          setShowInput(true);
+          const t4 = setTimeout(() => { heroInputRef.current?.focus({ preventScroll: true }); }, 800);
+          return () => clearTimeout(t4);
+        }, 1000);
+        return () => clearTimeout(t3);
+      }, 2200);
+      return () => clearTimeout(t2);
+    }, 400);
+    return () => clearTimeout(t1);
+  }, [titleDone]);
 
-  // Placeholder typing logic
+  // Placeholder typing
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
     const type = () => {
@@ -122,106 +335,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
-  // Title Typewriter Logic
-  useEffect(() => {
-    let i = 0; let mounted = true;
-    setDisplayText(""); setIsTyping(false);
-    setShowSubtitle(false); setShowCTA(false);
-    setShowInput(false); setShowParticles(false);
-    
-    const type = () => {
-      if (!mounted) return;
-      if (i <= fullText.length) { 
-        setIsTyping(true); 
-        setDisplayText(fullText.slice(0, i++)); 
-        setTimeout(type, Math.random() * 25 + 45); 
-      } else {
-        setIsTyping(false); 
-      }
-    };
-    const t0 = setTimeout(type, 2000); 
-    return () => { mounted = false; clearTimeout(t0); };
-  }, [fullText]);
-
-  // Scroll Parallax
-  useEffect(() => {
-    const onScroll = () => {
-      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
-      setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Particle Canvas Logic
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const tier = getDeviceTier();
-    const cfg = TIER_CONFIG[tier];
-    const FRAME_INTERVAL = 1000 / cfg.fps;
-    const COLOR_BANDS = [
-      { r: 66,  g: 133, b: 244 }, // Google Blue
-      { r: 25,  g: 103, b: 210 }, // Google Blue Dark
-      { r: 234, g: 67,  b: 53  }, // Google Red
-      { r: 197, g: 34,  b: 31  }, // Google Red Dark
-      { r: 251, g: 188, b: 5   }, // Google Yellow
-      { r: 249, g: 160, b: 0   }, // Google Yellow Dark
-      { r: 52,  g: 168, b: 83  }, // Google Green
-      { r: 30,  g: 142, b: 62  }, // Google Green Dark
-      { r: 66,  g: 133, b: 244 }, // Google Blue (repeated to balance)
-    ];
-    const SPRING = 0.032; const FRICTION = 0.80; const WIND_SCALE = 0.18; const WIND_RADIUS = 380;
-    type Particle = { x: number; y: number; originX: number; originY: number; vx: number; vy: number; angle: number; width: number; height: number; r: number; g: number; b: number; opacity: number; };
-    let particles: Particle[] = [];
-    const mouseState = { x: -9999, y: -9999, vx: 0, vy: 0, prevX: -9999, prevY: -9999 };
-    let last = 0; let rafId: number;
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    const getColor = (ox: number, oy: number, dist: number, maxDist: number) => {
-      const distFraction = dist / (maxDist * 0.85);
-      const yFraction = oy / canvas.height;
-      return COLOR_BANDS[Math.floor(Math.min(distFraction * 0.5 + yFraction * 0.5, 0.999) * COLOR_BANDS.length)];
-    };
-    const init = () => {
-      particles = []; const cx = canvas.width / 2; const cy = canvas.height / 2; const maxDist = Math.sqrt(cx * cx + cy * cy);
-      for (let i = 0; i < cfg.pills; i++) {
-        const t_val = Math.pow(Math.random(), 0.55); const dist = t_val * maxDist * 0.85; const angle = Math.random() * Math.PI * 2;
-        const ox = cx + Math.cos(angle) * dist; const oy = cy + Math.sin(angle) * dist; const col = getColor(ox, oy, dist, maxDist);
-        const distFraction = dist / (maxDist * 0.85); const size = 1.5 + (1 - distFraction) * 3.5;
-        particles.push({ x: ox, y: oy, originX: ox, originY: oy, vx: 0, vy: 0, angle: angle + Math.PI / 2 + (Math.random() - 0.5) * 0.6, width: size * (2.5 + Math.random() * 2), height: size * 0.6, r: col.r, g: col.g, b: col.b, opacity: 0.55 + Math.random() * 0.35 });
-      }
-      for (let i = 0; i < cfg.dots; i++) {
-        const ox = Math.random() * canvas.width; const oy = Math.random() * canvas.height;
-        const col = getColor(ox, oy, 0, maxDist);
-        particles.push({ x: ox, y: oy, originX: ox, originY: oy, vx: 0, vy: 0, angle: Math.random() * Math.PI, width: 1.5 + Math.random() * 2, height: 0.8, r: col.r, g: col.g, b: col.b, opacity: 0.2 + Math.random() * 0.25 });
-      }
-    };
-    const animate = (ts: number) => {
-      rafId = requestAnimationFrame(animate); if (ts - last < FRAME_INTERVAL) return; last = ts;
-      ctx.clearRect(0, 0, canvas.width, canvas.height); mouseState.vx *= 0.85; mouseState.vy *= 0.85;
-      for (let p of particles) {
-        const dx = p.x - mouseState.x; const dy = p.y - mouseState.y; const distToCursor = Math.sqrt(dx * dx + dy * dy);
-        if (distToCursor < WIND_RADIUS && mouseState.x !== -9999) { const falloff = 1 - distToCursor / WIND_RADIUS; p.vx += mouseState.vx * WIND_SCALE * falloff; p.vy += mouseState.vy * WIND_SCALE * falloff; }
-        p.vx += (p.originX - p.x) * SPRING; p.vy += (p.originY - p.y) * SPRING; p.vx *= FRICTION; p.vy *= FRICTION; p.x += p.vx; p.y += p.vy; p.angle += Math.sqrt(p.vx * p.vx + p.vy * p.vy) * 0.012;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath();
-        const w = p.width; const h = p.height; const rv = h / 2;
-        ctx.moveTo(-w / 2 + rv, -h / 2); ctx.lineTo(w / 2 - rv, -h / 2); ctx.arcTo(w / 2, -h / 2, w / 2, h / 2, rv); ctx.lineTo(w / 2 - rv, h / 2); ctx.arcTo(w / 2, h / 2, -w / 2, h / 2, rv); ctx.lineTo(-w / 2 + rv, h / 2); ctx.arcTo(-w / 2, h / 2, -w / 2, -h / 2, rv); ctx.lineTo(-w / 2 + rv, -h / 2); ctx.arcTo(-w / 2, -h / 2, w / 2, -h / 2, rv);
-        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.opacity})`; ctx.fill(); ctx.restore();
-      }
-    };
-    const onMouseMove = (e: MouseEvent) => {
-      if (mouseState.prevX === -9999) { mouseState.x = e.clientX; mouseState.y = e.clientY; mouseState.prevX = e.clientX; mouseState.prevY = e.clientY; return; }
-      const rawVx = e.clientX - mouseState.prevX; const rawVy = e.clientY - mouseState.prevY;
-      mouseState.vx = mouseState.vx * 0.6 + rawVx * 0.4; mouseState.vy = mouseState.vy * 0.6 + rawVy * 0.4;
-      mouseState.prevX = mouseState.x; mouseState.prevY = mouseState.y; mouseState.x = e.clientX; mouseState.y = e.clientY;
-    };
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
-    resize(); init(); rafId = requestAnimationFrame(animate);
-    return () => { cancelAnimationFrame(rafId); window.removeEventListener('mousemove', onMouseMove); };
-  }, []);
-
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || messageCount >= 25) return;
@@ -232,86 +345,153 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center bg-white text-black overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
+    <section className="relative min-h-screen flex flex-col items-center bg-black text-white overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
       <style>{`
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
-        
-        @keyframes title-fade-slide {
-          0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
         @keyframes underline-swipe-lr {
           0% { left: 0%; width: 0%; opacity: 0; }
           40% { left: 0%; width: 70%; opacity: 1; }
           60% { left: 0%; width: 100%; opacity: 1; }
           100% { left: 100%; width: 0%; opacity: 0; }
         }
-
-        .cursor-standby { animation: blink 1s step-end infinite; }
-        .typewriter-cursor {
-          display: inline-block; width: 4px; height: 1.1em; margin-left: 4px;
-          vertical-align: middle; background: linear-gradient(to bottom, #7c3aed, #2563eb);
-        }
         .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
-        
         .underline-dynamic {
           position: absolute; bottom: -6px; height: 2px;
-          background: linear-gradient(90deg, transparent, #18181b, transparent);
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
           animation: underline-swipe-lr 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s forwards;
-        }
-
-        .subtitle-shadow {
-          text-shadow: 0px 2px 4px rgba(0,0,0,0.15), 0px 0px 1px rgba(0,0,0,0.05);
-        }
-        
-        .title-entrance {
-          animation: title-fade-slide 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
       `}</style>
 
-      <canvas ref={canvasRef} className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-[2000ms] ${showParticles ? 'opacity-100' : 'opacity-0'}`} />
+      {/* ── Shader Background ── */}
+      <div
+        ref={shaderContainerRef}
+        className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-[2000ms] ${shaderReady ? 'opacity-100' : 'opacity-0'}`}
+        style={{ width: '100vw', height: '100vh' }}
+      />
+      {/* Overlay to darken shader slightly so text stays legible */}
+      <div className="fixed inset-0 z-[1] pointer-events-none bg-black/30" />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-        <div className="relative mb-8 w-full max-w-7xl mx-auto flex justify-center title-entrance">
-          <div className="relative inline-block w-full">
-            <h1 className="text-4xl md:text-8xl font-bold invisible select-none text-center" style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}>{fullText}</h1>
-            <h1 className="absolute top-0 left-0 w-full text-4xl md:text-8xl font-bold text-center" style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}>
-              <span>{displayText}</span>
-              <span className={`typewriter-cursor transition-opacity duration-1000 ${displayText.length === 0 ? 'cursor-standby' : isTyping ? 'opacity-100' : 'opacity-0'}`} />
-            </h1>
-          </div>
+        {/* ── Title: Inverted BubbleText — bold default, thins on hover ── */}
+        <div className="relative mb-8 w-full max-w-7xl mx-auto flex flex-col items-center gap-2">
+          {/* Line 1 */}
+          <h1
+            className="flex flex-wrap justify-center text-4xl md:text-8xl font-black text-white drop-shadow-2xl"
+            style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}
+            onMouseLeave={() => setHoveredTitle1(null)}
+          >
+            {titleLine1.split("").map((char, i) => {
+              const dist = hoveredTitle1 !== null ? Math.abs(hoveredTitle1 - i) : null;
+              const isHovering = hoveredTitle1 !== null;
+              let cls = "transition-all duration-300 ease-in-out cursor-default";
+              if (!isHovering) {
+                // default: full weight, full white
+                cls += " font-black text-white";
+              } else if (dist === 0) {
+                // directly hovered: shrinks to thin + dim
+                cls += " font-thin text-white/40 scale-90";
+              } else if (dist === 1) {
+                cls += " font-light text-white/60";
+              } else if (dist === 2) {
+                cls += " font-normal text-white/75";
+              } else {
+                cls += " font-semibold text-white/90";
+              }
+              return (
+                <motion.span
+                  key={`l1-${i}`}
+                  initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.6, delay: 0.2 + i * 0.038, ease: [0.22, 1, 0.36, 1] }}
+                  onMouseEnter={() => setHoveredTitle1(i)}
+                  className={cls}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </motion.span>
+              );
+            })}
+          </h1>
+          {/* Line 2 */}
+          <h1
+            className="flex flex-wrap justify-center text-4xl md:text-8xl font-black text-white drop-shadow-2xl"
+            style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em' }}
+            onMouseLeave={() => setHoveredTitle2(null)}
+          >
+            {titleLine2.split("").map((char, i) => {
+              const dist = hoveredTitle2 !== null ? Math.abs(hoveredTitle2 - i) : null;
+              const isHovering = hoveredTitle2 !== null;
+              let cls = "transition-all duration-300 ease-in-out cursor-default";
+              if (!isHovering) {
+                cls += " font-black text-white";
+              } else if (dist === 0) {
+                cls += " font-thin text-white/40 scale-90";
+              } else if (dist === 1) {
+                cls += " font-light text-white/60";
+              } else if (dist === 2) {
+                cls += " font-normal text-white/75";
+              } else {
+                cls += " font-semibold text-white/90";
+              }
+              return (
+                <motion.span
+                  key={`l2-${i}`}
+                  initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{
+                    duration: 0.6,
+                    delay: 0.2 + titleLine1.length * 0.038 + i * 0.038,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  onAnimationComplete={() => {
+                    if (i === titleLine2.length - 1) setTitleDone(true);
+                  }}
+                  onMouseEnter={() => setHoveredTitle2(i)}
+                  className={cls}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </motion.span>
+              );
+            })}
+          </h1>
         </div>
 
+        {/* ── Subtitle: RandomLetterSwapForward ── */}
         <div className="relative inline-block mb-8">
-          <p className={`text-base md:text-2xl text-zinc-900 max-w-2xl font-light italic transition-all duration-[1500ms] subtitle-shadow ${showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-            {t.heroSubtitle}
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={showSubtitle ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
+            style={{ fontFamily: 'Georgia, serif' }}
+          >
+            <SubtitleSwap text={t.heroSubtitle} />
+          </motion.div>
           {showSubtitle && <div className="underline-dynamic" />}
         </div>
 
+        {/* CTA + Input */}
         <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
-          <button onClick={onBookingClick} className={`group bg-black text-white px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-1000 ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+          <button onClick={onBookingClick} className={`group bg-white text-black px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 hover:bg-white/90 transition-all duration-1000 shadow-2xl ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
             <span className="whitespace-nowrap">{t.startJourney}</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
             <div className="flex flex-col items-center gap-1">
-              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-black">{isSent ? t.openingChat : t.askAiAgent}</h3>
-              {!isSent && <ChevronDown className="w-7 h-7 text-black stroke-[3] animate-bounce-down" />}
+              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-white/90">{isSent ? t.openingChat : t.askAiAgent}</h3>
+              {!isSent && <ChevronDown className="w-7 h-7 text-white/80 stroke-[3] animate-bounce-down" />}
             </div>
 
-            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white border-2 border-black rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:shadow-blue-100 ${isSent ? 'border-green-600 bg-green-50' : ''}`}>
-              <input ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isSent ? "" : placeholder} disabled={isSent} className="w-full bg-transparent px-5 py-4 text-base outline-none text-black font-medium" style={{ fontFamily: 'Georgia, serif' }} />
-              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-black text-white' : 'opacity-0'}`}><Send className="w-5 h-5" /></button>
+            <form onSubmit={handleAISubmit} className={`relative flex items-center bg-white/10 border-2 backdrop-blur-sm rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:bg-white/15 ${isSent ? 'border-green-400 bg-green-900/20' : 'border-white/30 focus-within:border-white/60'}`}>
+              <input ref={heroInputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isSent ? "" : placeholder} disabled={isSent} className="w-full bg-transparent px-5 py-4 text-base outline-none text-white font-medium placeholder-white/50" style={{ fontFamily: 'Georgia, serif' }} />
+              <button type="submit" disabled={!query.trim() || isSent} className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-white text-black' : 'opacity-0'}`}><Send className="w-5 h-5" /></button>
             </form>
           </div>
         </div>
 
+        {/* Video */}
         <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
-          <div ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove} onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)} className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-zinc-100 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}>
+          <div ref={videoContainerRef} onClick={() => setIsModalOpen(true)} onMouseMove={handleMouseMove} onMouseEnter={() => setIsHoveringVideo(true)} onMouseLeave={() => setIsHoveringVideo(false)} className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-white/10 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}>
             {!isTouch && (
               <div className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`} style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}>
                 <Play className="w-4 h-4 fill-black" /><span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
@@ -322,8 +502,9 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         </div>
       </div>
 
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-4 z-[130] bg-white border-2 border-black rounded-full hover:scale-110 transition-all shadow-xl"><X className="w-8 h-8 text-black" /></button>
           <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.3)] bg-black">
             <iframe src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media; fullscreen" style={{ border: 'none' }} />
