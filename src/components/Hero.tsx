@@ -3,10 +3,6 @@ import { translations, Language } from '../utils/translations';
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { motion, useAnimate, animate as motionAnimate } from 'framer-motion';
 
-declare global {
-  interface Window { THREE: any }
-}
-
 // ─── GlowingEffect (inlined) ──────────────────────────────────────────────────
 const GlowingEffect = memo(({
   blur = 0, inactiveZone = 0.7, proximity = 0, spread = 20,
@@ -97,41 +93,76 @@ const GlowingEffect = memo(({
 });
 GlowingEffect.displayName = "GlowingEffect";
 
-// ── Subtitle: RandomLetterSwapForward ─────────────────────────────────────────
-function SubtitleSwap({ text }: { text: string }) {
-  const [scope, animate] = useAnimate();
-  const [blocked, setBlocked] = useState(false);
-  const shuffled = useRef(
-    Array.from({ length: text.length }, (_, i) => i).sort(() => Math.random() - 0.5)
+// ── TextRewind: shadow-drop hover effect for titles ───────────────────────────
+function TextRewindSpan({
+  char,
+  shadowColors,
+}: {
+  char: string;
+  shadowColors?: { first?: string; second?: string; third?: string; fourth?: string; glow?: string };
+}) {
+  const sc = {
+    first:  shadowColors?.first  ?? "#07bccc",
+    second: shadowColors?.second ?? "#e601c0",
+    third:  shadowColors?.third  ?? "#e9019a",
+    fourth: shadowColors?.fourth ?? "#f40468",
+    glow:   shadowColors?.glow   ?? "#f40468",
+  };
+  const shadowStyle = {
+    textShadow: `4px 4px 0px ${sc.first}, 8px 8px 0px ${sc.second}, 12px 12px 0px ${sc.third}, 16px 16px 0px ${sc.fourth}, 28px 28px 8px ${sc.glow}`,
+  };
+  return (
+    <motion.span
+      style={{ display: 'inline-block' }}
+      whileHover={shadowStyle}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+    >
+      {char === ' ' ? '\u00A0' : char}
+    </motion.span>
   );
-  const handleHover = useCallback(() => {
-    if (blocked) return;
-    setBlocked(true);
-    for (let i = 0; i < text.length; i++) {
-      const idx = shuffled.current[i];
-      const delay = i * 0.018;
-      animate(`.sub-letter-${idx}`, { y: '-100%' }, { type: 'spring', duration: 0.5, delay })
-        .then(() => animate(`.sub-letter-${idx}`, { y: 0 }, { duration: 0 }));
-      animate(`.sub-letter2-${idx}`, { top: '0%' }, { type: 'spring', duration: 0.5, delay })
-        .then(() => animate(`.sub-letter2-${idx}`, { top: '100%' }, { duration: 0 }))
-        .then(() => { if (i === text.length - 1) setBlocked(false); });
-    }
-  }, [animate, blocked, text.length]);
+}
+
+// ── Subtitle: TextScramble entry + weight-on-hover ────────────────────────────
+const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+
+function SubtitleScramble({ text }: { text: string }) {
+  const [displayChars, setDisplayChars] = useState<string[]>(() => text.split('').map(() =>
+    SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
+  ));
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const chars = text.split('');
+    const total = chars.length;
+    const duration = 0.7;
+    const speed = 0.032;
+    const steps = Math.ceil(duration / speed);
+    let step = 0;
+    const interval = setInterval(() => {
+      const progress = step / steps;
+      setDisplayChars(chars.map((c, i) => {
+        if (c === ' ') return ' ';
+        if (progress * total > i) return c;
+        return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+      }));
+      step++;
+      if (step > steps) { clearInterval(interval); setDisplayChars(chars); setDone(true); }
+    }, speed * 1000);
+    return () => clearInterval(interval);
+  }, [text]);
 
   return (
-    <motion.span ref={scope} className="flex flex-wrap justify-center cursor-default" onHoverStart={handleHover}>
-      <span className="sr-only">{text}</span>
-      {text.split('').map((char, i) => (
-        <span key={i} className="whitespace-pre relative flex overflow-hidden">
-          <motion.span className={`relative sub-letter-${i}`} style={{ top: 0 }}>
-            {char === ' ' ? '\u00A0' : char}
-          </motion.span>
-          <motion.span className={`absolute sub-letter2-${i}`} aria-hidden style={{ top: '100%' }}>
-            {char === ' ' ? '\u00A0' : char}
-          </motion.span>
-        </span>
+    <span className="flex flex-wrap justify-center cursor-default">
+      {displayChars.map((char, i) => (
+        <motion.span
+          key={i}
+          style={{ display: 'inline-block', fontWeight: 300 }}
+          whileHover={{ fontWeight: 700, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </motion.span>
       ))}
-    </motion.span>
+    </span>
   );
 }
 
@@ -145,24 +176,26 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const t = translations[language];
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  const shaderContainerRef = useRef<HTMLDivElement>(null);
-
-  const sceneRef = useRef<{
-    camera: any; scene: any; renderer: any; uniforms: any; animationId: number | null;
-  }>({ camera: null, scene: null, renderer: null, uniforms: null, animationId: null });
-
-  const reactiveRef = useRef({
-    speedTarget: 1.0, speedCurrent: 1.0,
-    brightnessTarget: 1.0, brightnessCurrent: 1.0,
-    mouseX: 0.5, mouseY: 0.5, mouseXTarget: 0.5, mouseYTarget: 0.5,
-  });
+  const scrollVideoRootRef = useRef<HTMLDivElement>(null);
+  const scrollVideoContainerRef = useRef<HTMLDivElement>(null);
+  // Magnetic play button refs
+  const playBtnRef = useRef<HTMLButtonElement>(null);
+  const playBtnWrapRef = useRef<HTMLDivElement>(null);
+  const btnTargetOffset = useRef({ x: 0, y: 0 });
+  const btnCurrentOffset = useRef({ x: 0, y: 0 });
+  const btnRafRef = useRef<number>(0);
+  const isOverVideo = useRef(false);
+  const lcCanvasRef = useRef<HTMLCanvasElement>(null);
+  const lcRafRef = useRef<number>(0);
+  const lcGlRef = useRef<WebGL2RenderingContext | null>(null);
+  const lcProgRef = useRef<WebGLProgram | null>(null);
+  const lcUniformsRef = useRef<Record<string, WebGLUniformLocation | null>>({});
 
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
   const [scrollOpacity, setScrollOpacity] = useState(0);
   const [scrollScale, setScrollScale] = useState(0.85);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [shaderReady, setShaderReady] = useState(false);
+  const [isPlayingIntro, setIsPlayingIntro] = useState(false);
   const [titleDone, setTitleDone] = useState(false);
   const [showSubtitle, setShowSubtitle] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
@@ -176,118 +209,201 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
   const titleLine1 = t.heroTitle1;
   const titleLine2 = t.heroTitle2;
-  const [hoveredTitle1, setHoveredTitle1] = useState<number | null>(null);
-  const [hoveredTitle2, setHoveredTitle2] = useState<number | null>(null);
   const VIDEO_ID = "Py1ClI35v_k";
-  const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-  // ─── Shader ───────────────────────────────────────────────────────────────
+  // Iframe src: muted autoplay loop by default, unmuted replay on click
+  const iframeSrc = isPlayingIntro
+    ? `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=0&controls=1&playsinline=1&rel=0`
+    : `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&playsinline=1&rel=0`;
+
+  // ─── Magnetic button RAF loop ─────────────────────────────────────────────
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/89/three.min.js";
-    script.onload = () => { if (shaderContainerRef.current && window.THREE) initShader(); };
-    document.head.appendChild(script);
-    return () => {
-      if (sceneRef.current.animationId) cancelAnimationFrame(sceneRef.current.animationId);
-      if (sceneRef.current.renderer) sceneRef.current.renderer.dispose();
-      try { document.head.removeChild(script); } catch {}
+    const MAX_OFFSET = 28;
+    const LERP = 0.07;
+
+    const tick = () => {
+      btnRafRef.current = requestAnimationFrame(tick);
+      const cur = btnCurrentOffset.current;
+      const tgt = btnTargetOffset.current;
+      const nx = cur.x + (tgt.x - cur.x) * LERP;
+      const ny = cur.y + (tgt.y - cur.y) * LERP;
+      btnCurrentOffset.current = { x: nx, y: ny };
+      if (playBtnWrapRef.current) {
+        playBtnWrapRef.current.style.transform = `translate(${nx}px, ${ny}px)`;
+      }
     };
+    btnRafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(btnRafRef.current);
   }, []);
 
-  const initShader = () => {
-    if (!shaderContainerRef.current || !window.THREE) return;
-    const THREE = window.THREE;
-    const container = shaderContainerRef.current;
-    container.innerHTML = "";
-    const camera = new THREE.Camera(); camera.position.z = 1;
-    const scene = new THREE.Scene();
-    const uniforms = {
-      time:       { type: "f",  value: 1.0 },
-      resolution: { type: "v2", value: new THREE.Vector2() },
-      speed:      { type: "f",  value: 1.0 },
-      brightness: { type: "f",  value: 1.0 },
-      mousePos:   { type: "v2", value: new THREE.Vector2(0.5, 0.5) },
-    };
-    const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
-      fragmentShader: `
-        precision highp float;
-        uniform vec2 resolution; uniform float time; uniform float speed;
-        uniform float brightness; uniform vec2 mousePos;
-        float random(in float x) { return fract(sin(x)*1e4); }
-        float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233)))*43758.5453123); }
-        void main(void) {
-          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-          uv += (mousePos - 0.5) * 2.0 * 0.08;
-          vec2 fMosaicScal = vec2(4.0, 2.0); vec2 vScreenSize = vec2(256.0, 256.0);
-          uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
-          uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);
-          float t = time + random(uv.x) * 0.4;
-          vec3 color = vec3(0.0);
-          for(int j = 0; j < 3; j++)
-            for(int i = 0; i < 5; i++)
-              color[j] += 0.0006 * float(i*i) / abs(fract(t - 0.01*float(j) + float(i)*0.01) - length(uv));
-          gl_FragColor = vec4(color[2], color[1], color[0] * brightness, 1.0);
-        }
-      `,
-    });
-    scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), material));
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-    sceneRef.current = { camera, scene, renderer, uniforms, animationId: null };
-    const onResize = () => {
-      const rect = container.getBoundingClientRect();
-      renderer.setSize(rect.width, rect.height);
-      uniforms.resolution.value.x = renderer.domElement.width;
-      uniforms.resolution.value.y = renderer.domElement.height;
-    };
-    onResize();
-    window.addEventListener("resize", onResize, false);
-    const animateShader = () => {
-      sceneRef.current.animationId = requestAnimationFrame(animateShader);
-      const r = reactiveRef.current;
-      r.speedCurrent      += (r.speedTarget - r.speedCurrent) * 0.025;
-      r.brightnessCurrent += (r.brightnessTarget - r.brightnessCurrent) * 0.04;
-      r.mouseX            += (r.mouseXTarget - r.mouseX) * 0.06;
-      r.mouseY            += (r.mouseYTarget - r.mouseY) * 0.06;
-      const baseInc = 0.0009, maxInc = 0.0022;
-      uniforms.time.value      += Math.max(baseInc, Math.min(baseInc + (r.speedCurrent - 1.0) * (maxInc - baseInc), maxInc));
-      uniforms.speed.value      = r.speedCurrent;
-      uniforms.brightness.value = r.brightnessCurrent;
-      uniforms.mousePos.value.x = r.mouseX;
-      uniforms.mousePos.value.y = r.mouseY;
-      renderer.render(scene, camera);
-    };
-    animateShader();
-    setShaderReady(true);
-  };
+  const handleVideoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = scrollVideoContainerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const MAX_OFFSET = 28;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const nx = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, (dx / (rect.width  * 0.5)) * MAX_OFFSET));
+    const ny = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, (dy / (rect.height * 0.5)) * MAX_OFFSET));
+    btnTargetOffset.current = { x: nx, y: ny };
+  }, []);
 
+  const handleVideoMouseLeave = useCallback(() => {
+    btnTargetOffset.current = { x: 0, y: 0 };
+  }, []);
+
+  // ─── Liquid Crystal WebGL2 Shader ────────────────────────────────────────
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const r = reactiveRef.current;
-      r.mouseXTarget = e.clientX / window.innerWidth;
-      r.mouseYTarget = 1.0 - e.clientY / window.innerHeight;
-      r.speedTarget = 1.4; r.brightnessTarget = 1.15;
-      clearTimeout((onMove as any)._t);
-      (onMove as any)._t = setTimeout(() => { r.speedTarget = 1.0; r.brightnessTarget = 1.0; }, 600);
+    const canvas = lcCanvasRef.current;
+    if (!canvas) return;
+    const gl = canvas.getContext('webgl2');
+    if (!gl) return;
+    lcGlRef.current = gl;
+
+    const vsSrc = `#version 300 es
+      in vec2 position;
+      void main() { gl_Position = vec4(position, 0.0, 1.0); }`;
+
+    const fsSrc = `#version 300 es
+      precision highp float;
+      uniform float u_time;
+      uniform vec2  u_resolution;
+      uniform float u_speed;
+      out vec4 fragColor;
+
+      float sdCircle(vec2 p, float r) { return length(p) - r; }
+
+      float opSmoothUnion(float d1, float d2, float k) {
+        float h = clamp(0.5 + 0.5*(d2-d1)/k, 0.0, 1.0);
+        return mix(d2, d1, h) - k*h*(1.0-h);
+      }
+
+      float mapScene(vec2 uv, float t) {
+        vec2 p1 = vec2(cos(t*0.50),       sin(t*0.50))       * 0.30;
+        vec2 p2 = vec2(cos(t*0.70 + 2.1), sin(t*0.60 + 2.1)) * 0.42;
+        vec2 p3 = vec2(cos(t*0.40 + 4.2), sin(t*0.80 + 4.2)) * 0.36;
+        float b1 = sdCircle(uv - p1, 0.22);
+        float b2 = sdCircle(uv - p2, 0.17);
+        float b3 = sdCircle(uv - p3, 0.25);
+        float u12 = opSmoothUnion(b1, b2, 0.22);
+        return opSmoothUnion(u12, b3, 0.28);
+      }
+
+      void main() {
+        vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+        float t  = u_time * u_speed;
+        float d  = mapScene(uv, t);
+        vec3 base = vec3(0.008 / max(abs(d), 0.001));
+        vec3 palette = 0.5 + 0.5 * cos(u_time * 0.3 + uv.xyx * 1.5 + vec3(0.0, 1.0, 2.0));
+        vec3 col = clamp(base * palette, 0.0, 1.0);
+        col *= 0.7;
+        fragColor = vec4(col, 1.0);
+      }`;
+
+    const compile = (type: GLenum, src: string) => {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error('LC shader error:', gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
     };
-    window.addEventListener("mousemove", onMove, { passive: true });
-    return () => window.removeEventListener("mousemove", onMove);
+    const vs = compile(gl.VERTEX_SHADER, vsSrc);
+    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    if (!vs || !fs) return;
+
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error('LC link error:', gl.getProgramInfoLog(prog));
+      return;
+    }
+    lcProgRef.current = prog;
+
+    const quad = new Float32Array([-1,1, -1,-1, 1,1, 1,-1]);
+    const buf = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+    const posLoc = gl.getAttribLocation(prog, 'position');
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    lcUniformsRef.current = {
+      time:  gl.getUniformLocation(prog, 'u_time'),
+      res:   gl.getUniformLocation(prog, 'u_resolution'),
+      speed: gl.getUniformLocation(prog, 'u_speed'),
+    };
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width  = canvas.clientWidth  * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+    };
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    const u = lcUniformsRef.current;
+    const animate = (ms: number) => {
+      lcRafRef.current = requestAnimationFrame(animate);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(prog);
+      gl.uniform1f(u.time!,   ms * 0.001);
+      gl.uniform2f(u.res!,    canvas.width, canvas.height);
+      gl.uniform1f(u.speed!,  0.5);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
+    lcRafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(lcRafRef.current);
+      window.removeEventListener('resize', resize);
+    };
   }, []);
 
   useEffect(() => {
     let t: any;
     const onScroll = () => {
-      const r = reactiveRef.current;
       const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
       setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
-      r.speedTarget = 1.0 + p * 1.2; r.brightnessTarget = 1.0 + p * 0.25;
-      clearTimeout(t); t = setTimeout(() => { r.speedTarget = 1.0; r.brightnessTarget = 1.0; }, 800);
+      clearTimeout(t);
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // ─── Scroll-Expanding Video ─────────────────────────────────────────────────
+  useEffect(() => {
+    const root = scrollVideoRootRef.current;
+    const container = scrollVideoContainerRef.current;
+    if (!root || !container) return;
+
+    const onScroll = () => {
+      const rect = root.getBoundingClientRect();
+      const rootH = root.offsetHeight;
+      const scrolled = -rect.top;
+      const total = rootH - window.innerHeight;
+      const p = Math.max(0, Math.min(1, scrolled / total));
+
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+      const startW = 380, endW = window.innerWidth * 0.92;
+      const startH = 380, endH = window.innerHeight * 0.88;
+      const w = startW + (endW - startW) * e;
+      const h = startH + (endH - startH) * e;
+      container.style.width = `${w}px`;
+      container.style.height = `${h}px`;
+      container.style.borderRadius = `24px`;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -297,7 +413,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   };
 
   useEffect(() => {
-    if (!isHoveringVideo || isModalOpen) return;
+    if (!isHoveringVideo || isPlayingIntro) return;
     let af: number;
     const follow = () => {
       setCurrentPos(prev => ({ x: prev.x + (targetPos.x - prev.x) * 0.12, y: prev.y + (targetPos.y - prev.y) * 0.12 }));
@@ -305,12 +421,14 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     };
     af = requestAnimationFrame(follow);
     return () => cancelAnimationFrame(af);
-  }, [targetPos, isHoveringVideo, isModalOpen]);
+  }, [targetPos, isHoveringVideo, isPlayingIntro]);
 
+  // ─── TIMING: CTA spawns faster after subtitle (300ms instead of 2200ms) ───
   useEffect(() => {
     if (!titleDone) return;
     const t1 = setTimeout(() => {
       setShowSubtitle(true);
+      // CTA now appears after 300ms (was 2200ms) — snappy, not sluggish
       const t2 = setTimeout(() => {
         setShowCTA(true);
         const t3 = setTimeout(() => {
@@ -319,7 +437,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           return () => clearTimeout(t4);
         }, 1000);
         return () => clearTimeout(t3);
-      }, 2200);
+      }, 300);
       return () => clearTimeout(t2);
     }, 400);
     return () => clearTimeout(t1);
@@ -346,175 +464,419 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     setTimeout(() => setIsSent(false), 3000);
   };
 
+  const titleShadowColors = {
+    first:  "#07bccc",
+    second: "#e601c0",
+    third:  "#e9019a",
+    fourth: "#f40468",
+    glow:   "#f40468",
+  };
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center bg-black text-white overflow-x-hidden pt-28 pb-12" style={{ fontFamily: 'Georgia, serif' }}>
-      <style>{`
-        @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
-        @keyframes underline-swipe-lr {
-          0% { left: 0%; width: 0%; opacity: 0; }
-          40% { left: 0%; width: 70%; opacity: 1; }
-          60% { left: 0%; width: 100%; opacity: 1; }
-          100% { left: 100%; width: 0%; opacity: 0; }
-        }
-        .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
-        .underline-dynamic {
-          position: absolute; bottom: -6px; height: 2px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
-          animation: underline-swipe-lr 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s forwards;
-        }
-      `}</style>
+    <>
+      <section
+        className="relative min-h-screen flex flex-col items-center bg-black text-white pt-28 pb-12"
+        style={{ fontFamily: 'Georgia, serif', overflowX: 'clip' }}
+      >
+        <style>{`
+          @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+          @keyframes spin { from { transform: translate(-50%,-50%) rotate(90deg); } to { transform: translate(-50%,-50%) rotate(450deg); } }
+          .before\:animate-spin::before { animation: spin 3s linear infinite; }
+          .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
 
-      {/* Shader BG */}
-      <div ref={shaderContainerRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-[2000ms] ${shaderReady ? 'opacity-100' : 'opacity-0'}`} style={{ width: '100vw', height: '100vh' }} />
-      <div className="fixed inset-0 z-[1] pointer-events-none bg-black/30" />
+          @keyframes play-btn-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.25); }
+            50% { box-shadow: 0 0 0 12px rgba(255,255,255,0); }
+          }
+          .play-btn-pulse { animation: play-btn-pulse 2.4s ease-in-out infinite; }
 
-      <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
+          /* ── Video glowing lines border — same conic style as the search input ── */
+          .video-glow-wrap {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 4;
+            overflow: hidden;
+          }
 
-        {/* ── Titles ── */}
-        <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
-          {[titleLine1, titleLine2].map((line, lineIdx) => {
-            const hovered = lineIdx === 0 ? hoveredTitle1 : hoveredTitle2;
-            const setHovered = lineIdx === 0 ? setHoveredTitle1 : setHoveredTitle2;
-            const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.038;
-            return (
-              <h1
-                key={lineIdx}
-                className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
-                style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em', fontSize: 'clamp(1.6rem, 6vw, 5.5rem)' }}
-                onMouseLeave={() => setHovered(null)}
-              >
-                {line.split("").map((char, i) => {
-                  const dist = hovered !== null ? Math.abs(hovered - i) : null;
-                  const isHovering = hovered !== null;
-                  let cls = "transition-all duration-300 ease-in-out cursor-default";
-                  if (!isHovering)      cls += " font-black text-white";
-                  else if (dist === 0)  cls += " font-thin text-white/40 scale-90";
-                  else if (dist === 1)  cls += " font-light text-white/60";
-                  else if (dist === 2)  cls += " font-normal text-white/75";
-                  else                  cls += " font-semibold text-white/90";
-                  return (
+          /* Layer 1: primary rotating conic */
+          .video-glow-l1 {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            overflow: hidden;
+          }
+          .video-glow-l1::before {
+            content: "";
+            position: absolute;
+            z-index: -2;
+            width: 999px; height: 999px;
+            background: conic-gradient(#000, #402fb5 5%, #000 38%, #000 50%, #cf30aa 60%, #000 87%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            animation: video-glow-spin1 4s linear infinite;
+            background-repeat: no-repeat;
+          }
+          .video-glow-l1::after {
+            content: "";
+            position: absolute;
+            inset: 3px;
+            border-radius: inherit;
+            background: transparent;
+            z-index: -1;
+          }
+
+          /* Layer 2: secondary conic for depth */
+          .video-glow-l2 {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            overflow: hidden;
+          }
+          
+
+          /* Layer 3: fine bright lines */
+          .video-glow-l3 {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            overflow: hidden;
+            filter: blur(1px);
+          }
+          .video-glow-l3::before {
+            content: "";
+            position: absolute;
+            z-index: -2;
+            width: 600px; height: 600px;
+            background: conic-gradient(rgba(0,0,0,0) 0%, #a099d8, rgba(0,0,0,0) 8%, rgba(0,0,0,0) 50%, #dfa2da, rgba(0,0,0,0) 58%);
+            filter: brightness(1.4);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(83deg);
+            animation: video-glow-spin3 4s linear infinite;
+            background-repeat: no-repeat;
+          }
+
+          /* mask each layer so only the border ring is visible */
+          .video-glow-l1,
+          .video-glow-l2,
+          .video-glow-l3 {
+            mask-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
+            -webkit-mask-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
+            mask-clip: border-box, content-box;
+            -webkit-mask-clip: border-box, content-box;
+            mask-composite: exclude;
+            -webkit-mask-composite: destination-out;
+            border: 3px solid transparent;
+          }
+
+          @keyframes video-glow-spin1 {
+            from { transform: translate(-50%, -50%) rotate(90deg); }
+            to   { transform: translate(-50%, -50%) rotate(450deg); }
+          }
+          @keyframes video-glow-spin2 {
+            from { transform: translate(-50%, -50%) rotate(82deg); }
+            to   { transform: translate(-50%, -50%) rotate(442deg); }
+          }
+          @keyframes video-glow-spin3 {
+            from { transform: translate(-50%, -50%) rotate(83deg); }
+            to   { transform: translate(-50%, -50%) rotate(443deg); }
+          }
+
+          /* soft outer glow bloom — sits on the video box edge, no overflow */
+          .video-glow-bloom {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 3;
+            border: 0px solid transparent;
+            box-shadow:
+              0 0 10px 2px rgba(64,47,181,0.6),
+              0 0 20px 3px rgba(207,48,170,0.4),
+              0 0 4px 1px rgba(160,153,216,0.7);
+            animation: video-bloom-pulse 4s linear infinite;
+          }
+          @keyframes video-bloom-pulse {
+            0%,100% { opacity: 0.85; }
+            50%     { opacity: 1;    }
+          }
+        `}</style>
+
+        {/* Liquid Crystal BG */}
+        <canvas ref={lcCanvasRef} className="fixed inset-0 z-0 pointer-events-none w-screen h-screen opacity-90" style={{ width: '100vw', height: '100vh' }} />
+        <div className="fixed inset-0 z-[1] pointer-events-none bg-black/40" />
+
+        <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
+
+          {/* ── Titles with TextRewind hover ── */}
+          <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
+            {[titleLine1, titleLine2].map((line, lineIdx) => {
+              const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.038;
+              return (
+                <h1
+                  key={lineIdx}
+                  className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
+                  style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em', fontSize: 'clamp(1.6rem, 6vw, 5.5rem)' }}
+                >
+                  {line.split("").map((char, i) => (
                     <motion.span
                       key={`l${lineIdx}-${i}`}
+                      style={{ display: 'inline-block' }}
                       initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
                       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                      transition={{ duration: 0.6, delay: 0.2 + baseDelay + i * 0.038, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ duration: 0.48, delay: 0.2 + baseDelay + i * 0.029, ease: [0.22, 1, 0.36, 1] }}
                       onAnimationComplete={() => { if (lineIdx === 1 && i === line.length - 1) setTitleDone(true); }}
-                      onMouseEnter={() => setHovered(i)}
-                      className={cls}
+                      whileHover={{
+                        scale: 1.08,
+                        textShadow: `4px 4px 0px ${titleShadowColors.first}, 8px 8px 0px ${titleShadowColors.second}, 12px 12px 0px ${titleShadowColors.third}, 16px 16px 0px ${titleShadowColors.fourth}, 28px 28px 8px ${titleShadowColors.glow}`,
+                        transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+                      }}
+                      className="cursor-default transition-[text-shadow] duration-200"
                     >
                       {char === " " ? "\u00A0" : char}
                     </motion.span>
-                  );
-                })}
-              </h1>
-            );
-          })}
-        </div>
-
-        {/* ── Subtitle ── */}
-        <div className="relative inline-block mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={showSubtitle ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
-            style={{ fontFamily: 'Georgia, serif' }}
-          >
-            <SubtitleSwap text={t.heroSubtitle} />
-          </motion.div>
-          {showSubtitle && <div className="underline-dynamic" />}
-        </div>
-
-        {/* ── CTA + Input ── */}
-        <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
-
-          {/* CTA Button */}
-          <div className={`relative rounded-full transition-all duration-1000 ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
-            <GlowingEffect spread={40} glow={true} disabled={false} proximity={60} inactiveZone={0.01} borderWidth={2} />
-            <button
-              onClick={onBookingClick}
-              className="group relative bg-white text-black px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 hover:bg-white/90 transition-all duration-300 shadow-2xl"
-            >
-              <span className="whitespace-nowrap">{t.startJourney}</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+                  ))}
+                </h1>
+              );
+            })}
           </div>
 
-          {/* AI Input */}
-          <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
-            <div className="flex flex-col items-center gap-1">
-              <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-white/90">{isSent ? t.openingChat : t.askAiAgent}</h3>
-              {!isSent && <ChevronDown className="w-7 h-7 text-white/80 stroke-[3] animate-bounce-down" />}
-            </div>
-            <div className="relative rounded-2xl">
-              <GlowingEffect spread={50} glow={false} disabled={false} proximity={80} inactiveZone={0.01} borderWidth={2} />
-              <form
-                onSubmit={handleAISubmit}
-                className={`relative flex items-center bg-white/10 border-2 backdrop-blur-sm rounded-2xl p-1.5 transition-all duration-300 shadow-2xl focus-within:bg-white/15 ${isSent ? 'border-green-400 bg-green-900/20' : 'border-white/30 focus-within:border-white/60'}`}
-              >
-                <input
-                  ref={heroInputRef} type="text" value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={isSent ? "" : placeholder} disabled={isSent}
-                  className="w-full bg-transparent px-5 py-4 text-base outline-none text-white font-medium placeholder-white/50"
-                  style={{ fontFamily: 'Georgia, serif' }}
+          {/* ── Subtitle: scramble entry + weight hover ── */}
+          <div className="relative inline-block mb-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={showSubtitle ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
+              {showSubtitle && <SubtitleScramble text={t.heroSubtitle} />}
+            </motion.div>
+          </div>
+
+          {/* ── CTA + Input ── */}
+          <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
+
+            {/* CTA Button — GlowingEffect mouse-tracking conic border */}
+            <div className={`transition-all duration-700 ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+              {/* Outer positioning shell — relative, rounded, gives GlowingEffect its -inset-px context */}
+              <div className="relative rounded-full border border-white/10 p-[2px]">
+                <GlowingEffect
+                  spread={40}
+                  glow={true}
+                  disabled={false}
+                  proximity={80}
+                  inactiveZone={0.01}
+                  borderWidth={2}
+                  movementDuration={1.5}
                 />
-                <button type="submit" disabled={!query.trim() || isSent}
-                  className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${query.trim() && !isSent ? 'bg-white text-black' : 'opacity-0'}`}>
-                  <Send className="w-5 h-5" />
+                <button
+                  onClick={onBookingClick}
+                  className="group relative bg-white text-black px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 hover:bg-white/90 transition-all duration-300 shadow-2xl"
+                >
+                  <span className="whitespace-nowrap">{t.startJourney}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
+              </div>
+            </div>
+
+            {/* AI Input — Animated Glowing Search Bar */}
+            <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
+              <div className="flex flex-col items-center gap-1">
+                <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-white/90">
+                  {isSent ? t.openingChat : t.askAiAgent}
+                </h3>
+                {!isSent && <ChevronDown className="w-7 h-7 text-white/80 stroke-[3] animate-bounce-down" />}
+              </div>
+
+              {/* Glowing border wrapper */}
+              <form onSubmit={handleAISubmit} className="relative flex items-center justify-center group w-full">
+                {/* Glow layer 1 */}
+                <div className={`absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
+                                transition-all duration-[2000ms]
+                                before:absolute before:content-[''] before:z-[-2] before:w-[999px] before:h-[999px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-60
+                                before:bg-[conic-gradient(#000,#402fb5_5%,#000_38%,#000_50%,#cf30aa_60%,#000_87%)] before:transition-all before:duration-[2000ms]
+                                group-hover:before:rotate-[-120deg] group-focus-within:before:rotate-[420deg] group-focus-within:before:duration-[4000ms]
+                                ${isSent ? 'before:bg-[conic-gradient(#000,#00c853_5%,#000_38%,#000_50%,#00e676_60%,#000_87%)]' : ''}`}
+                     style={{ height: 'calc(100% + 4px)', width: 'calc(100% + 4px)', top: '-2px', left: '-2px' }} />
+
+                {/* Glow layer 2 */}
+                <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
+                                before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
+                                before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-[2000ms]
+                                group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]"
+                     style={{ height: 'calc(100% + 2px)', width: 'calc(100% + 2px)', top: '-1px', left: '-1px' }} />
+
+                {/* Glow layer 3 */}
+                <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[2px] pointer-events-none
+                                before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[83deg]
+                                before:bg-[conic-gradient(rgba(0,0,0,0)_0%,#a099d8,rgba(0,0,0,0)_8%,rgba(0,0,0,0)_50%,#dfa2da,rgba(0,0,0,0)_58%)] before:brightness-[1.4]
+                                before:transition-all before:duration-[2000ms] group-hover:before:rotate-[-97deg] group-focus-within:before:rotate-[443deg] group-focus-within:before:duration-[4000ms]"
+                     style={{ height: 'calc(100% - 1px)', width: 'calc(100% - 2px)', top: '0px', left: '1px' }} />
+
+                {/* Inner dark fill */}
+                <div className="relative w-full flex items-center">
+                  <div className="pointer-events-none absolute w-[30px] h-[20px] bg-[#cf30aa] top-[10px] left-[5px] blur-2xl opacity-80 transition-all duration-[2000ms] group-hover:opacity-0 z-10" />
+
+                  {/* Search icon */}
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" viewBox="0 0 24 24" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" height="22" fill="none">
+                      <circle stroke="url(#hsearch)" r="8" cy="11" cx="11" />
+                      <line stroke="url(#hsearchl)" y2="16.65" y1="22" x2="16.65" x1="22" />
+                      <defs>
+                        <linearGradient gradientTransform="rotate(50)" id="hsearch">
+                          <stop stopColor="#f8e7f8" offset="0%" /><stop stopColor="#b6a9b7" offset="50%" />
+                        </linearGradient>
+                        <linearGradient id="hsearchl">
+                          <stop stopColor="#b6a9b7" offset="0%" /><stop stopColor="#837484" offset="50%" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+
+                  {/* Input */}
+                  <input
+                    ref={heroInputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={isSent ? "" : placeholder}
+                    disabled={isSent}
+                    className="w-full bg-[#010201] h-[56px] rounded-xl text-white pl-[52px] pr-[60px] text-base focus:outline-none placeholder-gray-400 transition-colors duration-300"
+                    style={{ fontFamily: 'Georgia, serif' }}
+                  />
+
+                  {/* Send button */}
+                  <div className="absolute right-[7px] top-1/2 -translate-y-1/2 flex items-center justify-center z-20">
+                    {query.trim() && !isSent && (
+                      <div className="absolute h-[42px] w-[42px] overflow-hidden rounded-lg pointer-events-none
+                                      before:absolute before:content-[''] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-90
+                                      before:bg-[conic-gradient(rgba(0,0,0,0),#3d3a4f,rgba(0,0,0,0)_50%,rgba(0,0,0,0)_50%,#3d3a4f,rgba(0,0,0,0)_100%)]
+                                      before:brightness-[1.35] before:animate-spin" />
+                    )}
+                    <button
+                      type="submit"
+                      disabled={!query.trim() || isSent}
+                      className={`relative flex items-center justify-center h-[42px] w-[42px] rounded-lg
+                                  bg-gradient-to-b from-[#161329] via-black to-[#1d1b4b] border border-white/10
+                                  transition-all duration-300 z-10
+                                  ${query.trim() && !isSent ? 'opacity-100 hover:brightness-125' : 'opacity-30 cursor-default'}`}
+                    >
+                      <Send className={`w-4 h-4 text-white/50 transition-all duration-300 ${query.trim() && !isSent ? 'text-white/90 translate-x-[1px]' : ''}`} />
+                    </button>
+                  </div>
+                </div>
               </form>
             </div>
           </div>
-        </div>
 
-        {/* ── Video ── */}
-        <div className="w-full max-w-6xl mt-48 mb-24 transition-all duration-700" style={{ opacity: scrollOpacity, transform: `scale(${scrollScale})` }}>
-          <div className="relative rounded-[2.5rem]">
-            <GlowingEffect spread={60} glow={false} disabled={false} proximity={120} inactiveZone={0.01} borderWidth={2} />
-            <div
-              ref={videoContainerRef}
-              onClick={() => setIsModalOpen(true)}
-              onMouseMove={handleMouseMove}
-              onMouseEnter={() => setIsHoveringVideo(true)}
-              onMouseLeave={() => setIsHoveringVideo(false)}
-              className={`group relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border border-white/10 ${isTouch ? 'cursor-pointer' : 'cursor-none'}`}
-            >
-              {!isTouch && (
-                <div
-                  className={`pointer-events-none absolute z-50 flex items-center gap-3 px-6 py-3 bg-white text-black rounded-full font-bold shadow-2xl transition-opacity duration-300 ${isHoveringVideo ? 'opacity-100' : 'opacity-0'}`}
-                  style={{ left: `${currentPos.x}px`, top: `${currentPos.y}px`, transform: 'translate(-50%, -50%)', fontFamily: '"Montserrat", sans-serif' }}
-                >
-                  <Play className="w-4 h-4 fill-black" />
-                  <span className="text-xs uppercase tracking-widest whitespace-nowrap">{t.playIntro}</span>
+          {/* ── Scroll-Expanding Video ── */}
+          <div ref={scrollVideoRootRef} className="w-full mt-32" style={{ position: 'relative', height: '280vh' }}>
+            {/* Sticky layer */}
+            <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/*
+                Single box: scrollVideoContainerRef grows via scroll handler.
+                overflow: visible so the glow border layers can sit on top of the edge.
+                A clip wrapper inside handles video overflow.
+              */}
+              <div
+                ref={scrollVideoContainerRef}
+                onClick={() => setIsPlayingIntro(p => !p)}
+                onMouseMove={handleVideoMouseMove}
+                onMouseLeave={handleVideoMouseLeave}
+                style={{
+                  position: 'relative',
+                  width: 380,
+                  height: 380,
+                  borderRadius: 24,
+                  overflow: 'visible',
+                  background: 'transparent',
+                  flexShrink: 0,
+                  cursor: 'pointer',
+                }}
+              >
+                {/* ── Glow bloom: box-shadow flush on this element's border ── */}
+                <div className="video-glow-bloom" style={{ borderRadius: 'inherit' }} />
+
+                {/* ── Animated conic border layers (sit on the border, no overflow) ── */}
+                <div className="video-glow-wrap" style={{ borderRadius: 'inherit' }}>
+                  <div className="video-glow-l1" style={{ borderRadius: 'inherit' }} />
+                  <div className="video-glow-l2" style={{ borderRadius: 'inherit' }} />
+                  <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
                 </div>
-              )}
-              {!isModalOpen && (
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0`}
-                  className="absolute inset-[-2%] w-[104%] h-[104%] opacity-60 grayscale pointer-events-none object-cover scale-110"
-                  style={{ border: 'none' }}
-                />
-              )}
+
+                {/* ── Clip inner: video + play button clipped to rounded rect ── */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: 'inherit',
+                  overflow: 'hidden',
+                  background: '#000',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                  zIndex: 1,
+                }}>
+                  {/* YouTube */}
+                  <iframe
+                    key={iframeSrc}
+                    src={iframeSrc}
+                    style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: 'none' }}
+                    allow="autoplay; encrypted-media"
+                  />
+
+                  {/* Magnetic Play Intro button */}
+                  {!isPlayingIntro && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <div ref={playBtnWrapRef} style={{ pointerEvents: 'auto', willChange: 'transform' }}>
+                        <button
+                          ref={playBtnRef}
+                          onClick={(e) => { e.stopPropagation(); setIsPlayingIntro(true); }}
+                          className="play-btn-pulse"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.55rem',
+                            padding: '0.8rem 1.8rem',
+                            borderRadius: 999,
+                            background: 'rgba(255,255,255,0.92)',
+                            color: '#000',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            letterSpacing: '0.07em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            border: 'none',
+                            fontFamily: '"Montserrat", sans-serif',
+                            backdropFilter: 'blur(8px)',
+                            transition: 'background 0.2s ease, transform 0.2s ease',
+                            userSelect: 'none',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,1)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.92)')}
+                        >
+                          <Play style={{ width: 13, height: 13, fill: '#000' }} />
+                          {t.playIntro}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* ── Modal ── */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="absolute top-8 right-8 z-[130] rounded-full">
-            <GlowingEffect spread={30} glow={false} disabled={false} proximity={50} inactiveZone={0.01} borderWidth={2} />
-            <button onClick={() => setIsModalOpen(false)} className="relative p-4 bg-white border-2 border-black rounded-full hover:scale-110 transition-all shadow-xl">
-              <X className="w-8 h-8 text-black" />
-            </button>
-          </div>
-          <div className="relative w-full max-w-6xl aspect-video z-[110] rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.3)] bg-black">
-            <iframe src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media; fullscreen" style={{ border: 'none' }} />
-          </div>
         </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 }
