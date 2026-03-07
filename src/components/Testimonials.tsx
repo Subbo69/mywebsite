@@ -74,7 +74,6 @@ function GlowCard({
     <div
       ref={ref}
       className={`gc-wrap rounded-xl relative ${className}`}
-      // Pure black background — no blur, no transparency
       style={{ background: '#000000' }}
       onClick={onClick}
     >
@@ -92,11 +91,8 @@ export default function Testimonials() {
   const [selectedReview, setSelectedReview] = useState<number | null>(null);
   const [hasRevealed, setHasRevealed] = useState(false);
   const sectionRef      = useRef<HTMLDivElement>(null);
-  const bottomBorderRef = useRef<HTMLDivElement>(null);
   const topBorderRef    = useRef<HTMLDivElement>(null);
 
-  // Fire very early — 800px before the section enters the viewport so cards
-  // are already mid-scroll when the user first sees them.
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -113,22 +109,16 @@ export default function Testimonials() {
 
   useEffect(() => {
     const section = sectionRef.current;
-    const border  = bottomBorderRef.current;
-    if (!section || !border) return;
     const top = topBorderRef.current;
+    if (!section || !top) return;
     const onMove = (e: PointerEvent) => {
       const r = section.getBoundingClientRect();
       const x = ((e.clientX - r.left) / r.width) * 100;
-      border.style.setProperty('--tbx', `${x.toFixed(2)}%`);
-      border.style.setProperty('--tb-opacity', '1');
-      if (top) {
-        top.style.setProperty('--tbx', `${x.toFixed(2)}%`);
-        top.style.setProperty('--tb-opacity', '1');
-      }
+      top.style.setProperty('--tbx', `${x.toFixed(2)}%`);
+      top.style.setProperty('--tb-opacity', '1');
     };
     const onLeave = () => {
-      border.style.setProperty('--tb-opacity', '0');
-      if (top) top.style.setProperty('--tb-opacity', '0');
+      top.style.setProperty('--tb-opacity', '0');
     };
     section.addEventListener('pointermove', onMove);
     section.addEventListener('pointerleave', onLeave);
@@ -184,17 +174,14 @@ export default function Testimonials() {
   };
 
   const css = `
-    /* ── Section: completely transparent background ── */
     .t-section { background: transparent; }
 
-    /* ── Title typewriter ── */
     @keyframes t-typing  { from { width: 0 } to { width: 100% } }
     @keyframes t-blink   { from, to { border-color: transparent } 50% { border-color: rgba(255,255,255,0.7) } }
 
     .t-typewriter {
       overflow: hidden;
       white-space: nowrap;
-      /* cursor blink border */
       border-right: 2px solid transparent;
       display: inline-block;
       width: 0;
@@ -207,7 +194,6 @@ export default function Testimonials() {
       animation-fill-mode: forwards;
     }
 
-    /* underline beneath title slides in after typing finishes */
     .t-underline {
       transform: scaleX(0);
       transform-origin: left center;
@@ -215,22 +201,14 @@ export default function Testimonials() {
     }
     .is-visible .t-underline { transform: scaleX(1); }
 
-    /* ── Marquee strip ── */
-    /*
-      Cards start translated 100% to the right (off-screen), then slide to 0.
-      The marquee animation then takes over. We use a wrapper translate so the
-      infinite-scroll transform and the entry-slide don't interfere.
-    */
     @keyframes t-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    /* Entry slide: the whole strip slides in from the right */
     @keyframes t-slide-in {
       from { transform: translateX(110vw); }
       to   { transform: translateX(0);     }
     }
 
     .t-marquee-outer {
-      /* hidden until hasRevealed so the 800px pre-fire doesn't show a flash */
       opacity: 0;
       transition: opacity 0.01s;
     }
@@ -238,23 +216,18 @@ export default function Testimonials() {
       opacity: 1;
     }
 
-    /* Inner belt: starts off-screen, slides to rest, then marquee loops */
     .t-marquee-belt {
       display: flex;
     }
 
-    /* Before reveal: belt sits far right — but already running so it's mid-scroll on appear */
     .t-animate-marquee {
       animation: t-marquee 18s linear infinite;
     }
 
-    /* When not yet visible, offset the whole outer strip so cards start outside */
     .t-marquee-outer:not(.is-visible) .t-animate-marquee {
       animation: t-marquee 18s linear infinite;
-      /* cards pre-position to the right; opacity 0 on parent hides them */
     }
 
-    /* Pause on hover */
     .t-pause-marquee:hover .t-animate-marquee { animation-play-state: paused; }
 
     .mask-fade {
@@ -268,7 +241,6 @@ export default function Testimonials() {
   return (
     <section
       ref={sectionRef}
-      // Fully transparent section — no background, no blur
       className="t-section relative py-8 md:py-12 overflow-hidden"
     >
       <style dangerouslySetInnerHTML={{ __html: css }} />
@@ -357,35 +329,6 @@ export default function Testimonials() {
             height: '48px',
             background:
               'radial-gradient(600px 48px at var(--tbx) 0%, rgba(160,210,255,0.16) 0%, transparent 70%)',
-            opacity: 'var(--tb-opacity)',
-            transition: 'opacity 0.4s ease',
-          }}
-        />
-      </div>
-
-      {/* Bottom border glow that follows cursor */}
-      <div
-        ref={bottomBorderRef}
-        className="bottom-border-glow pointer-events-none absolute bottom-0 left-0 right-0 z-10"
-        style={{ height: '1.2px' }}
-      >
-        <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(600px 80px at var(--tbx) 100%, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)',
-            opacity: 'var(--tb-opacity)',
-            transition: 'opacity 0.4s ease',
-          }}
-        />
-        <div
-          className="absolute left-0 right-0"
-          style={{
-            bottom: '0px',
-            height: '48px',
-            background:
-              'radial-gradient(600px 48px at var(--tbx) 100%, rgba(160,210,255,0.16) 0%, transparent 70%)',
             opacity: 'var(--tb-opacity)',
             transition: 'opacity 0.4s ease',
           }}
