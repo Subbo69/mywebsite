@@ -136,6 +136,7 @@ const ICONS_ROW1 = [
   { name: 'LinkedIn',       url: '__linkedin__' },
   { name: 'n8n',            url: CDN('n8n') },              // ✅ real n8n logo
   { name: 'Mail',           url: '__mail__' },
+  { name: 'Gmail',          url: CDN('gmail') },
   { name: 'Google Sheets',  url: CDN('googlesheets') },     // ✅ real Google Sheets logo
   { name: 'Excel',          url: CDN('microsoftexcel') },   // ✅ real Excel logo
   { name: 'Outlook',        url: CDN('microsoftoutlook') }, // ✅ real Outlook logo
@@ -144,8 +145,11 @@ const ICONS_ROW1 = [
 const ICONS_ROW2 = [
   { name: 'Google Drive',   url: CDN('googledrive') },
   { name: 'Calendar',       url: '__calendar__' },
-  { name: 'Teams',          url: CDN('microsoftteams') },   // ✅ real Teams logo
+  { name: 'Google Calendar', url: CDN('googlecalendar') },
+  { name: 'Teams',          url: CDN('microsoftteams') },
   { name: 'Discord',        url: '__discord__' },
+  { name: 'Telegram',       url: CDN('telegram') },
+  { name: 'Airtable',       url: CDN('airtable') },
   { name: 'Instagram',      url: CDN('instagram') },
   { name: 'Facebook',       url: CDN('facebook') },
   { name: 'Twitter/X',      url: CDN('x') },
