@@ -136,7 +136,7 @@ const ICONS_ROW1 = [
   { name: 'LinkedIn',       url: '__linkedin__' },
   { name: 'n8n',            url: CDN('n8n') },              // ✅ real n8n logo
   { name: 'Mail',           url: '__mail__' },
-  { name: 'Gmail',          url: CDN('gmail') },
+  { name: 'Gmail',          url: '__gmail__' },
   { name: 'Google Sheets',  url: CDN('googlesheets') },     // ✅ real Google Sheets logo
   { name: 'Excel',          url: CDN('microsoftexcel') },   // ✅ real Excel logo
   { name: 'Outlook',        url: CDN('microsoftoutlook') }, // ✅ real Outlook logo
@@ -227,7 +227,29 @@ const GeminiSVG = () => (
   </svg>
 );
 
-// ── Improved Calendar SVG: full grid with header bar + date dots ──────────────
+// Gmail — accurate M-chevron envelope matching the real logo
+const GmailSVG = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={S}>
+    {/* Outer envelope frame */}
+    <rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="white" strokeWidth="0" opacity="0"/>
+    {/* White background fill */}
+    <path d="M2 6.5C2 5.12 3.12 4 4.5 4h15C20.88 4 22 5.12 22 6.5v11c0 1.38-1.12 2.5-2.5 2.5h-15C3.12 20 2 18.88 2 17.5V6.5z" fill="white" opacity="0.12"/>
+    {/* Envelope border */}
+    <path d="M2 6.5C2 5.12 3.12 4 4.5 4h15C20.88 4 22 5.12 22 6.5v11c0 1.38-1.12 2.5-2.5 2.5h-15C3.12 20 2 18.88 2 17.5V6.5z" fill="none" stroke="white" strokeWidth="1.4" opacity="0.7"/>
+    {/* The M chevron — solid white fills matching Gmail's inner flap shape */}
+    <path d="M2 6.5L12 13.5L22 6.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinejoin="round" opacity="0.9"/>
+    {/* Left diagonal panel */}
+    <path d="M2 7L2 19L7.5 13.5L2 7Z" fill="white" opacity="0.85"/>
+    {/* Right diagonal panel */}
+    <path d="M22 7L22 19L16.5 13.5L22 7Z" fill="white" opacity="0.85"/>
+    {/* Bottom left flap */}
+    <path d="M2 19L7.5 13.5L12 17L16.5 13.5L22 19H2Z" fill="white" opacity="0.85"/>
+    {/* Top M chevron sharp re-draw on top */}
+    <path d="M2 5.5L12 13L22 5.5" fill="none" stroke="white" strokeWidth="1.8" strokeLinejoin="round" opacity="1"/>
+  </svg>
+);
+
+: full grid with header bar + date dots ──────────────
 const CalendarSVG = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={S}>
     {/* Outer frame */}
@@ -273,8 +295,10 @@ function LogoBubble({ src, name, registerRef }: { src: string; name: string; reg
   const isCalendar    = src === '__calendar__';
   const isDiscord     = src === '__discord__';
 
+  const isGmail       = src === '__gmail__';
+
   const isInline = isOpenAI || isClaude || isGemini || isGoogle || isMicrosoft ||
-                   isSlack || isNotion || isLinkedIn || isMail ||
+                   isSlack || isNotion || isLinkedIn || isMail || isGmail ||
                    isYourWebsite || isCalendar || isDiscord;
 
   return (
@@ -296,6 +320,7 @@ function LogoBubble({ src, name, registerRef }: { src: string; name: string; reg
           {isNotion      && <NotionSVG />}
           {isLinkedIn    && <LinkedInSVG />}
           {isMail        && <MailSVG />}
+          {isGmail       && <GmailSVG />}
           {isYourWebsite && <YourWebsiteSVG />}
           {isCalendar    && <CalendarSVG />}
           {isDiscord     && <DiscordSVG />}
@@ -352,7 +377,7 @@ function LogoCarousel({
   }, [direction]);
 
   useEffect(() => {
-    const BASE_DRIFT = 0.112 * direction;
+    const BASE_DRIFT = 0.168 * direction;
     const tick = () => {
       velRef.current += (scrollVelRef.current - velRef.current) * 0.025;
       scrollVelRef.current *= 0.94;
