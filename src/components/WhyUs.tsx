@@ -110,7 +110,6 @@ function GlowCard({
     <div
       ref={ref}
       className={`gc-wrap relative ${className}`}
-      // Dark grey — no transparency, no blur
       style={{ background: '#111111' }}
       onClick={onClick}
     >
@@ -247,7 +246,6 @@ export default function WhyUs({ language }: WhyUsProps) {
   const [logosVisible, setLogosVisible] = useState(false);
 
   const sectionRef      = useRef<HTMLElement>(null);
-  const topBorderRef    = useRef<HTMLDivElement>(null);
   const itemRefs        = useRef<(HTMLDivElement | null)[]>([]);
   const founderRef      = useRef<HTMLDivElement | null>(null);
   const logosRef        = useRef<HTMLDivElement | null>(null);
@@ -257,39 +255,12 @@ export default function WhyUs({ language }: WhyUsProps) {
     if (el) allCardEls.current.add(el);
   };
 
-  // Single section-level pointermove → updates every card's --lx/--ly + top border
+  // Single section-level pointermove → updates every card's --lx/--ly
   useEffect(() => {
     const section = sectionRef.current;
-    const border  = topBorderRef.current;
     if (!section) return;
 
-    let targetX = 50;
-    let currentX = 50;
-    let velocity = 0;
-    let rafId = 0;
-    let active = false;
-
-    const stiffness = 0.09;
-    const damping   = 0.48;
-
-    const tick = () => {
-      const force = (targetX - currentX) * stiffness;
-      velocity = (velocity + force) * damping;
-      currentX += velocity;
-      if (border) border.style.setProperty('--tbx', `${currentX.toFixed(3)}%`);
-      if (Math.abs(currentX - targetX) > 0.004 || Math.abs(velocity) > 0.004) {
-        rafId = requestAnimationFrame(tick);
-      } else {
-        currentX = targetX;
-        velocity = 0;
-        rafId = 0;
-      }
-    };
-
     const onMove = (e: PointerEvent) => {
-      const r = section.getBoundingClientRect();
-      targetX = ((e.clientX - r.left) / r.width) * 100;
-
       // Update all cards
       allCardEls.current.forEach((el) => {
         if (!el.isConnected) { allCardEls.current.delete(el); return; }
@@ -297,25 +268,11 @@ export default function WhyUs({ language }: WhyUsProps) {
         el.style.setProperty('--lx', `${(e.clientX - cr.left).toFixed(1)}px`);
         el.style.setProperty('--ly', `${(e.clientY - cr.top).toFixed(1)}px`);
       });
-
-      if (!active) {
-        if (border) border.style.setProperty('--tb-opacity', '1');
-        active = true;
-      }
-      if (!rafId) rafId = requestAnimationFrame(tick);
-    };
-
-    const onLeave = () => {
-      if (border) border.style.setProperty('--tb-opacity', '0');
-      active = false;
     };
 
     section.addEventListener('pointermove', onMove as EventListener, { passive: true });
-    section.addEventListener('pointerleave', onLeave);
     return () => {
       section.removeEventListener('pointermove', onMove as EventListener);
-      section.removeEventListener('pointerleave', onLeave);
-      if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
 
@@ -471,33 +428,6 @@ export default function WhyUs({ language }: WhyUsProps) {
           mask-composite: exclude;
         }
       `}</style>
-
-      {/* ── Top cursor-following border glow ── */}
-      <div
-        ref={topBorderRef}
-        className="pointer-events-none absolute top-0 left-0 right-0 z-20"
-        style={{ height: '1.2px', '--tbx': '50%', '--tb-opacity': '0' } as React.CSSProperties}
-      >
-        <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(600px 80px at var(--tbx) 0%, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)',
-            opacity: 'var(--tb-opacity)',
-            transition: 'opacity 0.4s ease',
-          }}
-        />
-        <div
-          className="absolute left-0 right-0"
-          style={{
-            top: '0px',
-            height: '48px',
-            background: 'radial-gradient(600px 48px at var(--tbx) 0%, rgba(160,210,255,0.16) 0%, transparent 70%)',
-            opacity: 'var(--tb-opacity)',
-            transition: 'opacity 0.4s ease',
-          }}
-        />
-      </div>
 
       {/* ── Vertical black fade overlay: 0% at top → 60% at bottom ── */}
       <div
