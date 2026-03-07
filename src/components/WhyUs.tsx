@@ -38,16 +38,12 @@ function RevealText({ text, className = '' }: { text: string; className?: string
   );
 }
 
-// ─── WaveText: letters bounce on hover — NO scale to prevent jitter ──────────
-// Key fix: translateY only, overflow:visible on parent, no layout-affecting props
 function WaveText({
   text,
   className = '',
-  as: Tag = 'span',
 }: {
   text: string;
   className?: string;
-  as?: 'span' | 'p' | 'h3';
 }) {
   return (
     <motion.span
@@ -65,12 +61,7 @@ function WaveText({
             rest: { y: 0 },
             hover: {
               y: -5,
-              transition: {
-                type: 'spring',
-                stiffness: 400,
-                damping: 18,
-                delay: i * 0.025,
-              },
+              transition: { type: 'spring', stiffness: 400, damping: 18, delay: i * 0.025 },
             },
           }}
         >
@@ -81,7 +72,6 @@ function WaveText({
   );
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 const glowHsl: Record<string, string> = {
   cyan:   '190 100% 60%',
   purple: '270 100% 65%',
@@ -92,8 +82,6 @@ const glowHsl: Record<string, string> = {
 type GlowColor = keyof typeof glowHsl;
 const glowPalette: GlowColor[] = ['cyan', 'purple', 'green', 'amber', 'white'];
 
-// ─── GlowCard ─────────────────────────────────────────────────────────────────
-// cardRefs is a shared set so the section's single mouse listener can update all cards
 function GlowCard({
   children,
   className = '',
@@ -122,7 +110,8 @@ function GlowCard({
     <div
       ref={ref}
       className={`gc-wrap relative ${className}`}
-      style={{ background: 'rgba(255,255,255,0.06)' }}
+      // Dark grey — no transparency, no blur
+      style={{ background: '#111111' }}
       onClick={onClick}
     >
       <div className="gc-fill" />
@@ -132,54 +121,33 @@ function GlowCard({
   );
 }
 
-// ─── Real brand logos only ────────────────────────────────────────────────────
 const ICONS_ROW1 = [
-  // ChatGPT
   'https://cdn.simpleicons.org/openai/white',
-  // Gmail
   'https://cdn-icons-png.flaticon.com/512/281/281769.png',
-  // Slack
   'https://cdn-icons-png.flaticon.com/512/2111/2111615.png',
-  // LinkedIn
   'https://cdn-icons-png.flaticon.com/512/174/174857.png',
-  // Microsoft Excel
   'https://cdn-icons-png.flaticon.com/512/732/732220.png',
-  // Google Drive
   'https://cdn-icons-png.flaticon.com/512/2965/2965278.png',
-  // Facebook
   'https://cdn-icons-png.flaticon.com/512/733/733547.png',
-  // Discord
   'https://cdn-icons-png.flaticon.com/512/2111/2111370.png',
-  // Microsoft Word
   'https://cdn-icons-png.flaticon.com/512/732/732226.png',
-  // Notion
   'https://cdn-icons-png.flaticon.com/512/5968/5968885.png',
 ];
 const ICONS_ROW2 = [
-  // Google
   'https://cdn-icons-png.flaticon.com/512/300/300221.png',
-  // Microsoft
   'https://cdn-icons-png.flaticon.com/512/732/732221.png',
-  // Instagram
   'https://cdn-icons-png.flaticon.com/512/174/174855.png',
-  // GitHub
   'https://cdn-icons-png.flaticon.com/512/733/733553.png',
-  // Google Sheets
   'https://cdn-icons-png.flaticon.com/512/2965/2965327.png',
-  // WhatsApp
   'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-  // Zapier
   'https://cdn-icons-png.flaticon.com/512/5968/5968755.png',
-  // Zoom
   'https://cdn-icons-png.flaticon.com/512/4401/4401470.png',
-  // YouTube
   'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
 ];
 
 const repeatedIcons = (icons: string[], repeat = 6) =>
   Array.from({ length: repeat }).flatMap(() => icons);
 
-// ─── Scroll-driven logo carousel ─────────────────────────────────────────────
 function LogoCarousel({
   icons,
   direction = 1,
@@ -253,7 +221,6 @@ function LogoCarousel({
               '--ly': '-9999px',
             } as React.CSSProperties}
           >
-            {/* Glow border ring — same technique as GlowCard */}
             <div className="logo-bubble-border" />
             <img
               src={src}
@@ -268,7 +235,6 @@ function LogoCarousel({
   );
 }
 
-// ─── WhyUs ────────────────────────────────────────────────────────────────────
 interface WhyUsProps {
   language: Language;
 }
@@ -280,30 +246,77 @@ export default function WhyUs({ language }: WhyUsProps) {
   const [founderVisible, setFounderVisible] = useState(false);
   const [logosVisible, setLogosVisible] = useState(false);
 
-  const sectionRef = useRef<HTMLElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const founderRef = useRef<HTMLDivElement | null>(null);
-  const logosRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef      = useRef<HTMLElement>(null);
+  const topBorderRef    = useRef<HTMLDivElement>(null);
+  const itemRefs        = useRef<(HTMLDivElement | null)[]>([]);
+  const founderRef      = useRef<HTMLDivElement | null>(null);
+  const logosRef        = useRef<HTMLDivElement | null>(null);
 
-  // All GlowCard elements register here so one listener can drive them all
   const allCardEls = useRef<Set<HTMLDivElement>>(new Set());
   const registerCard = (el: HTMLDivElement | null) => {
     if (el) allCardEls.current.add(el);
-    else allCardEls.current.forEach(c => { /* cleanup handled by WeakRef in card */ });
   };
 
-  // Single section-level pointermove → updates every card's --lx/--ly
+  // Single section-level pointermove → updates every card's --lx/--ly + top border
   useEffect(() => {
+    const section = sectionRef.current;
+    const border  = topBorderRef.current;
+    if (!section) return;
+
+    let targetX = 50;
+    let currentX = 50;
+    let velocity = 0;
+    let rafId = 0;
+    let active = false;
+
+    const stiffness = 0.09;
+    const damping   = 0.48;
+
+    const tick = () => {
+      const force = (targetX - currentX) * stiffness;
+      velocity = (velocity + force) * damping;
+      currentX += velocity;
+      if (border) border.style.setProperty('--tbx', `${currentX.toFixed(3)}%`);
+      if (Math.abs(currentX - targetX) > 0.004 || Math.abs(velocity) > 0.004) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        currentX = targetX;
+        velocity = 0;
+        rafId = 0;
+      }
+    };
+
     const onMove = (e: PointerEvent) => {
+      const r = section.getBoundingClientRect();
+      targetX = ((e.clientX - r.left) / r.width) * 100;
+
+      // Update all cards
       allCardEls.current.forEach((el) => {
         if (!el.isConnected) { allCardEls.current.delete(el); return; }
-        const r = el.getBoundingClientRect();
-        el.style.setProperty('--lx', `${(e.clientX - r.left).toFixed(1)}px`);
-        el.style.setProperty('--ly', `${(e.clientY - r.top).toFixed(1)}px`);
+        const cr = el.getBoundingClientRect();
+        el.style.setProperty('--lx', `${(e.clientX - cr.left).toFixed(1)}px`);
+        el.style.setProperty('--ly', `${(e.clientY - cr.top).toFixed(1)}px`);
       });
+
+      if (!active) {
+        if (border) border.style.setProperty('--tb-opacity', '1');
+        active = true;
+      }
+      if (!rafId) rafId = requestAnimationFrame(tick);
     };
-    window.addEventListener('pointermove', onMove, { passive: true });
-    return () => window.removeEventListener('pointermove', onMove);
+
+    const onLeave = () => {
+      if (border) border.style.setProperty('--tb-opacity', '0');
+      active = false;
+    };
+
+    section.addEventListener('pointermove', onMove as EventListener, { passive: true });
+    section.addEventListener('pointerleave', onLeave);
+    return () => {
+      section.removeEventListener('pointermove', onMove as EventListener);
+      section.removeEventListener('pointerleave', onLeave);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const toggleReason = (index: number) => {
@@ -360,24 +373,19 @@ export default function WhyUs({ language }: WhyUsProps) {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-12 md:py-16 bg-transparent text-white overflow-hidden">
+    <section ref={sectionRef} className="relative py-12 md:py-16 text-white overflow-hidden" style={{ background: 'transparent' }}>
       <style>{`
-        /* ── GlowCard styles — always rendered, no injection race ── */
         .gc-wrap {
           isolation: isolate;
           --lx: -9999px;
           --ly: -9999px;
-          backdrop-filter: blur(60px) saturate(200%);
-          -webkit-backdrop-filter: blur(60px) saturate(200%);
         }
-        /* Faint base border — always visible */
         .gc-border {
           position: absolute; inset: 0;
           border-radius: inherit;
           pointer-events: none; z-index: 1;
           border: 1px solid rgba(255,255,255,0.14);
         }
-        /* Coloured aura on the border that follows the cursor */
         .gc-border::after {
           content: '';
           position: absolute; inset: -1px;
@@ -392,7 +400,6 @@ export default function WhyUs({ language }: WhyUsProps) {
           -webkit-mask-composite: xor;
           mask-composite: exclude;
         }
-        /* Subtle inner fill */
         .gc-fill {
           position: absolute; inset: 0;
           border-radius: inherit;
@@ -408,7 +415,6 @@ export default function WhyUs({ language }: WhyUsProps) {
           height: 100%; display: flex; flex-direction: column;
         }
 
-        /* ── Section animations ── */
         @keyframes slideInLeft {
           0%   { opacity: 0; transform: translateX(-52px); }
           30%  { opacity: 0.6; }
@@ -430,7 +436,6 @@ export default function WhyUs({ language }: WhyUsProps) {
         .logos-in  { animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .logos-out { opacity: 0; transform: translateY(20px); }
 
-        /* True transparent edge fade — CSS mask, no colour overlay */
         .carousel-masked {
           -webkit-mask-image: linear-gradient(
             to right, transparent 0%, black 16%, black 84%, transparent 100%
@@ -440,7 +445,6 @@ export default function WhyUs({ language }: WhyUsProps) {
           );
         }
 
-        /* ── Logo bubble glow border — same aura technique as GlowCard ── */
         .logo-bubble {
           --lx: -9999px;
           --ly: -9999px;
@@ -449,7 +453,6 @@ export default function WhyUs({ language }: WhyUsProps) {
           position: absolute; inset: 0;
           border-radius: 50%;
           pointer-events: none;
-          /* Base faint ring */
           border: 1px solid rgba(255,255,255,0.16);
           z-index: 1;
         }
@@ -469,10 +472,45 @@ export default function WhyUs({ language }: WhyUsProps) {
         }
       `}</style>
 
+      {/* ── Top cursor-following border glow ── */}
+      <div
+        ref={topBorderRef}
+        className="pointer-events-none absolute top-0 left-0 right-0 z-20"
+        style={{ height: '1.2px', '--tbx': '50%', '--tb-opacity': '0' } as React.CSSProperties}
+      >
+        <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(600px 80px at var(--tbx) 0%, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)',
+            opacity: 'var(--tb-opacity)',
+            transition: 'opacity 0.4s ease',
+          }}
+        />
+        <div
+          className="absolute left-0 right-0"
+          style={{
+            top: '0px',
+            height: '48px',
+            background: 'radial-gradient(600px 48px at var(--tbx) 0%, rgba(160,210,255,0.16) 0%, transparent 70%)',
+            opacity: 'var(--tb-opacity)',
+            transition: 'opacity 0.4s ease',
+          }}
+        />
+      </div>
+
+      {/* ── Vertical black fade overlay: 0% at top → 60% at bottom ── */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%)',
+        }}
+      />
+
       <div className="relative max-w-7xl mx-auto px-6 z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
-          {/* ── Left: Accordion reasons ───────────────────────────────────── */}
+          {/* ── Left: Accordion reasons ── */}
           <div className="space-y-4">
             <RevealText
               text={t.whyUsTitle}
@@ -536,7 +574,7 @@ export default function WhyUs({ language }: WhyUsProps) {
             </div>
           </div>
 
-          {/* ── Right: Founder block ──────────────────────────────────────── */}
+          {/* ── Right: Founder block ── */}
           <div
             ref={founderRef}
             className={`lg:sticky lg:top-24 ${founderVisible ? 'wu-animate-right' : 'wu-pre-right'}`}
@@ -584,7 +622,7 @@ export default function WhyUs({ language }: WhyUsProps) {
 
         </div>
 
-        {/* ── Integrations logo carousel ────────────────────────────────── */}
+        {/* ── Integrations logo carousel ── */}
         <div
           ref={logosRef}
           className={`mt-14 ${logosVisible ? 'logos-in' : 'logos-out'}`}
