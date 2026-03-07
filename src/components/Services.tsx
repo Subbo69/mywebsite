@@ -130,10 +130,9 @@ function GlowFilterButton({ children, isActive, onClick }: { children: React.Rea
   );
 }
 
-// ── Animated letter-by-letter title ──────────────────────────────────────────
 function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
   const letters = Array.from(text);
-  const delay = 0.04; // per-letter delay
+  const delay = 0.04;
 
   const container: Variants = {
     hidden: { opacity: 0 },
@@ -177,7 +176,6 @@ function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
         ))}
       </motion.div>
 
-      {/* underline bar */}
       <motion.div
         variants={lineVariants}
         initial="hidden"
@@ -189,7 +187,6 @@ function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
   );
 }
 
-// ── Animated letter-by-letter subtitle (no underline, faster) ─────────────────
 function AnimatedSubtitle({ text, animate }: { text: string; animate: boolean }) {
   const letters = Array.from(text);
   const delay = 0.018;
@@ -236,13 +233,16 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   const [hasAnimated, setHasAnimated] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('agents');
   const [marqueeVisible, setMarqueeVisible] = useState(false);
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const topBorderRef = useRef<HTMLDivElement>(null);
+  const sectionRef     = useRef<HTMLDivElement>(null);
+  const topBorderRef   = useRef<HTMLDivElement>(null);
+  const bottomBorderRef = useRef<HTMLDivElement>(null); // ← NEW
 
+  // Shared spring-smoothed cursor tracker for both borders
   useEffect(() => {
     const section = sectionRef.current;
-    const border  = topBorderRef.current;
-    if (!section || !border) return;
+    const topEl   = topBorderRef.current;
+    const botEl   = bottomBorderRef.current;
+    if (!section) return;
 
     let targetX = 50;
     let currentX = 50;
@@ -257,7 +257,9 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
       const force = (targetX - currentX) * stiffness;
       velocity = (velocity + force) * damping;
       currentX += velocity;
-      border.style.setProperty('--tbx', `${currentX.toFixed(3)}%`);
+      const val = `${currentX.toFixed(3)}%`;
+      if (topEl) topEl.style.setProperty('--tbx', val);
+      if (botEl) botEl.style.setProperty('--tbx', val);
       if (Math.abs(currentX - targetX) > 0.004 || Math.abs(velocity) > 0.004) {
         rafId = requestAnimationFrame(tick);
       } else {
@@ -270,12 +272,17 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     const onMove = (e: PointerEvent) => {
       const r = section.getBoundingClientRect();
       targetX = ((e.clientX - r.left) / r.width) * 100;
-      if (!active) { border.style.setProperty('--tb-opacity', '1'); active = true; }
+      if (!active) {
+        if (topEl) topEl.style.setProperty('--tb-opacity', '1');
+        if (botEl) botEl.style.setProperty('--tb-opacity', '1');
+        active = true;
+      }
       if (!rafId) rafId = requestAnimationFrame(tick);
     };
 
     const onLeave = () => {
-      border.style.setProperty('--tb-opacity', '0');
+      if (topEl) topEl.style.setProperty('--tb-opacity', '0');
+      if (botEl) botEl.style.setProperty('--tb-opacity', '0');
       active = false;
     };
 
@@ -301,7 +308,6 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Show filter/marquee area shortly after section animates in
   useEffect(() => {
     if (!hasAnimated) return;
     const t2 = setTimeout(() => setMarqueeVisible(true), 400);
@@ -368,6 +374,40 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     </GlowCard>
   );
 
+  // Shared border glow layer — reused for top and bottom
+  const BorderGlow = ({ position, ref: bRef }: { position: 'top' | 'bottom'; ref: React.RefObject<HTMLDivElement> }) => (
+    <div
+      ref={bRef}
+      className="pointer-events-none absolute left-0 right-0 z-10"
+      style={{
+        [position]: 0,
+        height: '1.2px',
+        '--tbx': '50%',
+        '--tb-opacity': '0',
+      } as React.CSSProperties}
+    >
+      <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(600px 80px at var(--tbx) ${position === 'top' ? '0%' : '100%'}, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)`,
+          opacity: 'var(--tb-opacity)',
+          transition: 'opacity 0.4s ease',
+        }}
+      />
+      <div
+        className="absolute left-0 right-0"
+        style={{
+          [position]: '0px',
+          height: '48px',
+          background: `radial-gradient(600px 48px at var(--tbx) ${position === 'top' ? '0%' : '100%'}, rgba(160,210,255,0.16) 0%, transparent 70%)`,
+          opacity: 'var(--tb-opacity)',
+          transition: 'opacity 0.4s ease',
+        }}
+      />
+    </div>
+  );
+
   return (
     <section
       ref={sectionRef}
@@ -386,13 +426,28 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         .mask-fade { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
         .marquee-reveal { opacity: 0; transform: translateX(-24px); transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s; }
         .marquee-reveal.visible { opacity: 1; transform: translateX(0); }
-        .top-border-glow { --tbx: 50%; --tb-opacity: 0; }
       `}} />
 
-      <div ref={topBorderRef} className="top-border-glow pointer-events-none absolute top-0 left-0 right-0 z-10" style={{ height: '1.2px' }}>
+      {/* ── Top border glow ── */}
+      <div
+        ref={topBorderRef}
+        className="pointer-events-none absolute top-0 left-0 right-0 z-10"
+        style={{ height: '1.2px', '--tbx': '50%', '--tb-opacity': '0' } as React.CSSProperties}
+      >
         <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(600px 80px at var(--tbx) 0px, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
-        <div className="absolute left-0 right-0" style={{ top: '0px', height: '48px', background: 'radial-gradient(600px 48px at var(--tbx) 0px, rgba(160,210,255,0.16) 0%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(600px 80px at var(--tbx) 0%, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+        <div className="absolute left-0 right-0" style={{ top: '0px', height: '48px', background: 'radial-gradient(600px 48px at var(--tbx) 0%, rgba(160,210,255,0.16) 0%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+      </div>
+
+      {/* ── Bottom border glow ── */}
+      <div
+        ref={bottomBorderRef}
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-10"
+        style={{ height: '1.2px', '--tbx': '50%', '--tb-opacity': '0' } as React.CSSProperties}
+      >
+        <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(600px 80px at var(--tbx) 100%, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '0px', height: '48px', background: 'radial-gradient(600px 48px at var(--tbx) 100%, rgba(160,210,255,0.16) 0%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
       </div>
 
       {/* Title & subtitle */}
