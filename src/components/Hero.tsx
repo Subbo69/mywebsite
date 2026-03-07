@@ -1,7 +1,8 @@
-import { ArrowRight, Send, Play } from 'lucide-react';
-import { translations, Language } from '../utils/translations';
-import { useEffect, useRef, useState, useCallback, memo } from 'react';
-import { motion, animate as motionAnimate } from 'framer-motion';
+import { ArrowRight, Send, Play } from 'lucide-react'
+import { translations, Language } from '../utils/translations'
+import React, { useEffect, useRef, useState, useCallback, memo } from 'react'
+import { motion, animate as motionAnimate } from 'framer-motion'
+import { TubesBackground } from '../components/ui/neon-flow'
 
 // ─── GlowingEffect (inlined) ──────────────────────────────────────────────────
 const GlowingEffect = memo(({
@@ -92,6 +93,83 @@ const GlowingEffect = memo(({
   );
 });
 GlowingEffect.displayName = "GlowingEffect";
+
+// ─── CTA Button ──────────────────────────────────────────────────────────────
+const CTA_GLOW_COLORS = ["#7dd3fc", "#3b82f6", "#a78bfa"]; // light-blue, blue, purple
+
+function CTAButton({ onClick, label }: { onClick: () => void; label: string }) {
+  const [hovered, setHovered] = useState(false);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % CTA_GLOW_COLORS.length), 1800);
+    return () => clearInterval(id);
+  }, []);
+
+  const glow = CTA_GLOW_COLORS[idx];
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transform: hovered ? 'scale(1.12)' : 'scale(1)',
+        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+    >
+      {/* Glow shadow behind the button */}
+      <div style={{
+        position: 'absolute',
+        inset: '-10px',
+        borderRadius: '999px',
+        background: glow,
+        filter: 'blur(24px)',
+        opacity: hovered ? 0.85 : 0.5,
+        transition: 'background 1.6s ease, opacity 0.35s ease',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
+
+      {/* The button itself */}
+      <button
+        onClick={onClick}
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '14px 34px',
+          borderRadius: '999px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)',
+          color: 'white',
+          fontFamily: '"Montserrat", sans-serif',
+          fontSize: '15px',
+          fontWeight: 600,
+          letterSpacing: '0.03em',
+          whiteSpace: 'nowrap',
+          cursor: 'pointer',
+        }}
+      >
+        {label}
+        <ArrowRight style={{ width: 16, height: 16, flexShrink: 0 }} />
+      </button>
+    </div>
+  );
+}
 
 // ── Subtitle: TextScramble entry + weight-on-hover ────────────────────────────
 const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -192,7 +270,7 @@ function BubbleText({ text, className = "" }: { text: string; className?: string
 function ReactiveBounceArrow() {
   const arrowRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [proximity, setProximity] = useState(0); // 0 = far, 1 = close
+  const [proximity, setProximity] = useState(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const el = arrowRef.current;
@@ -292,12 +370,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
   const btnTargetOffset = useRef({ x: 0, y: 0 });
   const btnCurrentOffset = useRef({ x: 0, y: 0 });
   const btnRafRef = useRef<number>(0);
-  const isOverVideo = useRef(false);
-  const lcCanvasRef = useRef<HTMLCanvasElement>(null);
-  const lcRafRef = useRef<number>(0);
-  const lcGlRef = useRef<WebGL2RenderingContext | null>(null);
-  const lcProgRef = useRef<WebGLProgram | null>(null);
-  const lcUniformsRef = useRef<Record<string, WebGLUniformLocation | null>>({});
 
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
@@ -375,124 +447,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
     };
   }, [isPlayingIntro]);
 
-  // ─── Liquid Crystal WebGL2 Shader ────────────────────────────────────────
   useEffect(() => {
-    const canvas = lcCanvasRef.current;
-    if (!canvas) return;
-    const gl = canvas.getContext('webgl2');
-    if (!gl) return;
-    lcGlRef.current = gl;
-
-    const vsSrc = `#version 300 es
-      in vec2 position;
-      void main() { gl_Position = vec4(position, 0.0, 1.0); }`;
-
-    const fsSrc = `#version 300 es
-      precision highp float;
-      uniform float u_time;
-      uniform vec2  u_resolution;
-      uniform float u_speed;
-      out vec4 fragColor;
-
-      float sdCircle(vec2 p, float r) { return length(p) - r; }
-
-      float opSmoothUnion(float d1, float d2, float k) {
-        float h = clamp(0.5 + 0.5*(d2-d1)/k, 0.0, 1.0);
-        return mix(d2, d1, h) - k*h*(1.0-h);
-      }
-
-      float mapScene(vec2 uv, float t) {
-        vec2 p1 = vec2(cos(t*0.50),       sin(t*0.50))       * 0.30;
-        vec2 p2 = vec2(cos(t*0.70 + 2.1), sin(t*0.60 + 2.1)) * 0.42;
-        vec2 p3 = vec2(cos(t*0.40 + 4.2), sin(t*0.80 + 4.2)) * 0.36;
-        float b1 = sdCircle(uv - p1, 0.22);
-        float b2 = sdCircle(uv - p2, 0.17);
-        float b3 = sdCircle(uv - p3, 0.25);
-        float u12 = opSmoothUnion(b1, b2, 0.22);
-        return opSmoothUnion(u12, b3, 0.28);
-      }
-
-      void main() {
-        vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
-        float t  = u_time * u_speed;
-        float d  = mapScene(uv, t);
-        vec3 base = vec3(0.008 / max(abs(d), 0.001));
-        vec3 palette = 0.5 + 0.5 * cos(u_time * 0.3 + uv.xyx * 1.5 + vec3(0.0, 1.0, 2.0));
-        vec3 col = clamp(base * palette, 0.0, 1.0);
-        col *= 0.7;
-        fragColor = vec4(col, 1.0);
-      }`;
-
-    const compile = (type: GLenum, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.error('LC shader error:', gl.getShaderInfoLog(s));
-        return null;
-      }
-      return s;
-    };
-    const vs = compile(gl.VERTEX_SHADER, vsSrc);
-    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
-    if (!vs || !fs) return;
-
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, vs); gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error('LC link error:', gl.getProgramInfoLog(prog));
-      return;
-    }
-    lcProgRef.current = prog;
-
-    const quad = new Float32Array([-1,1, -1,-1, 1,1, 1,-1]);
-    const buf = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
-    const posLoc = gl.getAttribLocation(prog, 'position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    lcUniformsRef.current = {
-      time:  gl.getUniformLocation(prog, 'u_time'),
-      res:   gl.getUniformLocation(prog, 'u_resolution'),
-      speed: gl.getUniformLocation(prog, 'u_speed'),
-    };
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width  = canvas.clientWidth  * dpr;
-      canvas.height = canvas.clientHeight * dpr;
-    };
-    resize();
-    window.addEventListener('resize', resize, { passive: true });
-
-    const u = lcUniformsRef.current;
-    const animate = (ms: number) => {
-      lcRafRef.current = requestAnimationFrame(animate);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.useProgram(prog);
-      gl.uniform1f(u.time!,   ms * 0.001);
-      gl.uniform2f(u.res!,    canvas.width, canvas.height);
-      gl.uniform1f(u.speed!,  0.5);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    };
-    lcRafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(lcRafRef.current);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  // ─── Hero fade-out on scroll ──────────────────────────────────────────────
-  useEffect(() => {
+    let t: any;
     const onScroll = () => {
       const p = Math.min(Math.max(window.scrollY / 250, 0), 1);
-      setScrollOpacity(p);
-      setScrollScale(0.85 + p * 0.15);
+      setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
+      clearTimeout(t);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -521,17 +481,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const startW = mobile ? 260 : 380;
       const startH = mobile ? 200 : 380;
-      const endW = window.innerWidth * (mobile ? 0.94 : 0.92);
+      const endW = window.innerWidth * (mobile ? 0.94 : 0.856);
       const endH = mobile
         ? Math.min(window.innerWidth * 0.94 * 0.6, window.innerHeight * 0.55)
-        : window.innerHeight * 0.88;
+        : window.innerHeight * 0.82;
+      const videoOpacity = Math.min(1, p * 2.2);
       const w = startW + (endW - startW) * e;
       const h = startH + (endH - startH) * e;
       container.style.width  = `${w}px`;
       container.style.height = `${h}px`;
       container.style.borderRadius = `24px`;
-      // Fade in: invisible at p=0, fully visible at p≈0.45
-      container.style.opacity = `${Math.min(1, p * 2.2)}`;
+      container.style.opacity = `${videoOpacity}`;
+      container.style.pointerEvents = videoOpacity > 0.15 ? 'auto' : 'none';
     };
 
     setup();
@@ -625,6 +586,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
     return () => clearTimeout(timer);
   }, [phraseIdx, language]);
 
+  // ── Device capability detection ──────────────────────────────────────────
+  const [isHighPerf, setIsHighPerf] = useState(false);
+  useEffect(() => {
+    const isTouchOnly = window.matchMedia('(hover: none)').matches;
+    const isSmallScreen = window.innerWidth < 1024;
+    const cores = navigator.hardwareConcurrency ?? 2;
+    const memory = (navigator as any).deviceMemory ?? 2;
+    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const highPerf = !isTouchOnly && !isSmallScreen && !isCoarsePointer && cores >= 4 && memory >= 4;
+    setIsHighPerf(highPerf);
+  }, []);
+
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || messageCount >= 25) return;
@@ -636,9 +609,19 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
 
   return (
     <>
+      {/* ── TubesBackground wraps the entire section as a fixed full-screen layer ── */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <TubesBackground
+          className="w-full h-full"
+          enableClickInteraction={isHighPerf}
+        />
+        {/* Subtle dark overlay so text remains legible over the tubes */}
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
       <section
-        className="relative text-white bg-black"
-        style={{ fontFamily: 'Georgia, serif', overflowX: 'clip' }}
+        className="relative text-white"
+        style={{ fontFamily: 'Georgia, serif', background: 'transparent' }}
       >
         <style>{`
           @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
@@ -716,18 +699,10 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
           .video-hover-glow.active { opacity: 1; }
         `}</style>
 
-        {/* Liquid Crystal BG */}
-        <canvas ref={lcCanvasRef} className="fixed inset-0 z-0 pointer-events-none w-screen h-screen opacity-90" style={{ width: '100vw', height: '100vh' }} />
-        <div className="fixed inset-0 z-[1] pointer-events-none bg-black/40" />
-
         {/* ── Sticky hero — fades & shrinks as video grows ── */}
-        <div style={{
-          position: 'sticky', top: 0, height: '100vh', zIndex: 20,
-          overflow: 'hidden',
-          pointerEvents: scrollOpacity > 0.6 ? 'none' : 'auto',
-        }}>
+        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 20, pointerEvents: scrollOpacity > 0.5 ? 'none' : 'auto' }}>
           <div
-            className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl mx-auto pt-28 h-full"
+            className="relative flex flex-col items-center text-center px-6 w-full max-w-7xl mx-auto pt-28 h-full"
             style={{
               opacity: Math.max(0, 1 - scrollOpacity * 1.8),
               transform: `scale(${1 - 0.13 * scrollOpacity}) translateY(${-55 * scrollOpacity}px)`,
@@ -736,277 +711,264 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
               willChange: 'opacity, transform',
             }}
           >
-
-            {/* ── Titles ── */}
-            <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
-              {[titleLine1, titleLine2].map((line, lineIdx) => {
-                const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.046;
-                return (
-                  <h1
-                    key={lineIdx}
-                    className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
-                    style={{
-                      fontFamily: '"Montserrat", sans-serif',
-                      letterSpacing: '0.03em',
-                      fontSize: 'clamp(2rem, 8.5vw, 5.5rem)',
-                    }}
-                  >
-                    {line.split("").map((char, i) => {
-                      const globalIdx = lineIdx === 0 ? i : titleLine1.length + i;
-                      const autoGlow = charGlowProgress >= globalIdx && charGlowProgress >= 0;
-                      return (
-                        <GlowChar
-                          key={`l${lineIdx}-${i}`}
-                          char={char}
-                          autoGlow={autoGlow}
-                          motionProps={{
-                            initial: { opacity: 0, y: 24, filter: 'blur(8px)' },
-                            animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-                            transition: {
-                              duration: 0.576,
-                              delay: 0.24 + baseDelay + i * 0.035,
-                              ease: [0.22, 1, 0.36, 1],
-                            },
-                            onAnimationComplete: lineIdx === 1 && i === line.length - 1
-                              ? () => setTitleDone(true)
-                              : undefined,
-                          }}
-                        />
-                      );
-                    })}
-                  </h1>
-                );
-              })}
-            </div>
-
-            {/* ── Subtitle ── */}
-            <div className="relative inline-block mb-8">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={showSubtitle ? { opacity: 1 } : { opacity: 0 }}
-                transition={{ duration: 0.30 }}
-                className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
-                {showSubtitle && <SubtitleScramble text={t.heroSubtitle} />}
-              </motion.div>
-            </div>
-
-            {/* ── CTA + Input ── */}
-            <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
-
-              {/* CTA Button */}
-              <div className={`transition-all duration-[840ms] ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
-                <button
-                  onClick={onBookingClick}
-                  className="group relative border border-white/20 bg-white/5 hover:bg-white/0 text-white mx-auto text-center rounded-full px-10 py-4 text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-300"
-                >
-                  <span className="absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 top-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#e601c0] to-transparent" />
-                  <span className="whitespace-nowrap">{t.startJourney}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  <span className="absolute group-hover:opacity-60 opacity-20 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#07bccc] to-transparent" />
-                </button>
-              </div>
-
-              {/* AI Input */}
-              <div className={`w-full space-y-3 transition-all duration-[1200ms] ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
-                <div className="flex flex-col items-center gap-1">
-                  <h3 className="text-[13px] md:text-[15px] uppercase font-black text-white/90">
-                    {isSent ? (
-                      <span style={{ letterSpacing: "0.5em" }}>{t.openingChat}</span>
-                    ) : (
-                      <BubbleText text={t.askAiAgent} />
-                    )}
-                  </h3>
-                  {!isSent && <ReactiveBounceArrow />}
-                </div>
-
-                {/* Glowing border form */}
-                <form onSubmit={handleAISubmit} className="relative flex items-center justify-center group w-full">
-                  {/* Glow layer 1 */}
-                  <div className={`absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
-                                  transition-all duration-[2000ms]
-                                  before:absolute before:content-[''] before:z-[-2] before:w-[999px] before:h-[999px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-60
-                                  before:bg-[conic-gradient(#000,#402fb5_5%,#000_38%,#000_50%,#cf30aa_60%,#000_87%)] before:transition-all before:duration-[2000ms]
-                                  group-hover:before:rotate-[-120deg] group-focus-within:before:rotate-[420deg] group-focus-within:before:duration-[4000ms]
-                                  ${isSent ? 'before:bg-[conic-gradient(#000,#00c853_5%,#000_38%,#000_50%,#00e676_60%,#000_87%)]' : ''}`}
-                       style={{ height: 'calc(100% + 4px)', width: 'calc(100% + 4px)', top: '-2px', left: '-2px' }} />
-
-                  {/* Glow layer 2 */}
-                  <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
-                                  before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
-                                  before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-[2000ms]
-                                  group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]"
-                       style={{ height: 'calc(100% + 2px)', width: 'calc(100% + 2px)', top: '-1px', left: '-1px' }} />
-
-                  {/* Glow layer 3 */}
-                  <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[2px] pointer-events-none
-                                  before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[83deg]
-                                  before:bg-[conic-gradient(rgba(0,0,0,0)_0%,#a099d8,rgba(0,0,0,0)_8%,rgba(0,0,0,0)_50%,#dfa2da,rgba(0,0,0,0)_58%)] before:brightness-[1.4]
-                                  before:transition-all before:duration-[2000ms] group-hover:before:rotate-[-97deg] group-focus-within:before:rotate-[443deg] group-focus-within:before:duration-[4000ms]"
-                       style={{ height: 'calc(100% - 1px)', width: 'calc(100% - 2px)', top: '0px', left: '1px' }} />
-
-                  {/* Inner dark fill */}
-                  <div className="relative w-full flex items-center">
-                    <div className="pointer-events-none absolute w-[30px] h-[20px] bg-[#cf30aa] top-[10px] left-[5px] blur-2xl opacity-80 transition-all duration-[2000ms] group-hover:opacity-0 z-10" />
-
-                    {/* Search icon */}
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="22" viewBox="0 0 24 24" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" height="22" fill="none">
-                        <circle stroke="url(#hsearch)" r="8" cy="11" cx="11" />
-                        <line stroke="url(#hsearchl)" y2="16.65" y1="22" x2="16.65" x1="22" />
-                        <defs>
-                          <linearGradient gradientTransform="rotate(50)" id="hsearch">
-                            <stop stopColor="#f8e7f8" offset="0%" /><stop stopColor="#b6a9b7" offset="50%" />
-                          </linearGradient>
-                          <linearGradient id="hsearchl">
-                            <stop stopColor="#b6a9b7" offset="0%" /><stop stopColor="#837484" offset="50%" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-
-                    {/* Input */}
-                    <input
-                      ref={heroInputRef}
-                      type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder={isSent ? "" : placeholder}
-                      disabled={isSent}
-                      className="w-full bg-[#010201] h-[56px] rounded-xl text-white pl-[52px] pr-[60px] text-base focus:outline-none placeholder-gray-400 transition-colors duration-300"
-                      style={{ fontFamily: 'Georgia, serif' }}
-                    />
-
-                    {/* Send button */}
-                    <div className="absolute right-[7px] top-1/2 -translate-y-1/2 flex items-center justify-center z-20">
-                      {query.trim() && !isSent && (
-                        <div className="absolute h-[42px] w-[42px] overflow-hidden rounded-lg pointer-events-none
-                                        before:absolute before:content-[''] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-90
-                                        before:bg-[conic-gradient(rgba(0,0,0,0),#3d3a4f,rgba(0,0,0,0)_50%,rgba(0,0,0,0)_50%,#3d3a4f,rgba(0,0,0,0)_100%)]
-                                        before:brightness-[1.35] before:animate-spin" />
-                      )}
-                      <button
-                        type="submit"
-                        disabled={!query.trim() || isSent}
-                        className={`relative flex items-center justify-center h-[42px] w-[42px] rounded-lg
-                                    bg-gradient-to-b from-[#161329] via-black to-[#1d1b4b] border border-white/10
-                                    transition-all duration-300 z-10
-                                    ${query.trim() && !isSent ? 'opacity-100 hover:brightness-125' : 'opacity-30 cursor-default'}`}
-                      >
-                        <Send className={`w-4 h-4 text-white/50 transition-all duration-300 ${query.trim() && !isSent ? 'text-white/90 translate-x-[1px]' : ''}`} />
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-          </div>
-        </div>{/* end sticky hero */}
-
-        {/* ── Scroll-Expanding Video ──────────────────────────────────────────
-            marginTop: '-100vh' pulls this up to overlap the sticky hero.
-            z-index 25 sits above the sticky hero (z-index 20) so the video
-            grows on top of the fading hero text as you scroll.
-        ── */}
-        <div ref={scrollVideoRootRef} style={{ position: 'relative', marginTop: '-100vh', zIndex: 25 }}>
-          <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div
-              ref={scrollVideoContainerRef}
-              onMouseEnter={() => setIsHoveringVideo(true)}
-              onMouseLeave={() => setIsHoveringVideo(false)}
-              style={{
-                position: 'relative',
-                width: 260,
-                height: 200,
-                borderRadius: 24,
-                overflow: 'visible',
-                background: 'transparent',
-                flexShrink: 0,
-                cursor: isPlayingIntro ? 'default' : 'pointer',
-                opacity: 0, // starts invisible; scroll handler sets opacity via style
-              }}
-            >
-              {/* Hover glow */}
-              <div className={`video-hover-glow${isHoveringVideo && !isPlayingIntro ? ' active' : ''}`} style={{ pointerEvents: 'none' }} />
-              <div className="video-glow-bloom" style={{ borderRadius: 'inherit', pointerEvents: 'none' }} />
-              <div className="video-glow-wrap" style={{ borderRadius: 'inherit', pointerEvents: 'none' }}>
-                <div className="video-glow-l1" style={{ borderRadius: 'inherit' }} />
-                <div className="video-glow-l2" style={{ borderRadius: 'inherit' }} />
-                <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
-              </div>
-
-              {/* Video iframe */}
-              <div style={{
-                position: 'absolute', inset: 0, borderRadius: 'inherit',
-                overflow: 'hidden', background: '#000',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1,
-                pointerEvents: isPlayingIntro ? 'auto' : 'none',
-              }}>
-                <iframe
-                  key={iframeSrc}
-                  src={iframeSrc}
-                  style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: isPlayingIntro ? 'auto' : 'none' }}
-                  allow="autoplay; encrypted-media"
-                />
-              </div>
-
-              {/* Full-cover click zone when not playing */}
-              {!isPlayingIntro && (
-                <div
-                  onClick={() => setIsPlayingIntro(true)}
+          {/* ── Titles ── */}
+          <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
+            {[titleLine1, titleLine2].map((line, lineIdx) => {
+              const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.046;
+              return (
+                <h1
+                  key={lineIdx}
+                  className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
                   style={{
-                    position: 'absolute', inset: 0, zIndex: 9,
-                    cursor: 'pointer', borderRadius: 'inherit',
+                    fontFamily: '"Montserrat", sans-serif',
+                    letterSpacing: '0.03em',
+                    fontSize: 'clamp(2rem, 8.5vw, 5.5rem)',
                   }}
-                />
-              )}
+                >
+                  {line.split("").map((char, i) => {
+                    const globalIdx = lineIdx === 0 ? i : titleLine1.length + i;
+                    const autoGlow = charGlowProgress >= globalIdx && charGlowProgress >= 0;
+                    return (
+                      <GlowChar
+                        key={`l${lineIdx}-${i}`}
+                        char={char}
+                        autoGlow={autoGlow}
+                        motionProps={{
+                          initial: { opacity: 0, y: 24, filter: 'blur(8px)' },
+                          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+                          transition: {
+                            duration: 0.576,
+                            delay: 0.24 + baseDelay + i * 0.035,
+                            ease: [0.22, 1, 0.36, 1],
+                          },
+                          onAnimationComplete: lineIdx === 1 && i === line.length - 1
+                            ? () => setTitleDone(true)
+                            : undefined,
+                        }}
+                      />
+                    );
+                  })}
+                </h1>
+              );
+            })}
+          </div>
 
-              {/* Play button */}
-              {!isPlayingIntro && (
-                <div style={{
-                  position: 'absolute', inset: 0, zIndex: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}>
-                  <div ref={playBtnWrapRef} style={{ position: 'relative', pointerEvents: 'auto', willChange: 'transform' }}>
-                    {/* Ocean-blue glow behind button */}
-                    <div style={{
-                      position: 'absolute', inset: '-14px',
-                      borderRadius: 999,
-                      background: 'radial-gradient(ellipse, rgba(6,182,212,0.55) 0%, rgba(14,116,144,0.3) 45%, transparent 75%)',
-                      filter: 'blur(10px)',
-                      pointerEvents: 'none',
-                    }} />
+          {/* ── Subtitle ── */}
+          <div className="relative inline-block mb-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={showSubtitle ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.30 }}
+              className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
+              {showSubtitle && <SubtitleScramble text={t.heroSubtitle} />}
+            </motion.div>
+          </div>
+
+          {/* ── CTA + Input ── */}
+          <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
+
+            {/* CTA Button */}
+            <div className={`transition-all duration-[840ms] ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+              <CTAButton onClick={onBookingClick} label={t.startJourney} />
+            </div>
+
+            {/* AI Input */}
+            <div className={`w-full space-y-3 transition-all duration-[1200ms] ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
+              <div className="flex flex-col items-center gap-1">
+                <h3 className="text-[13px] md:text-[15px] uppercase font-black text-white/90">
+                  {isSent ? (
+                    <span style={{ letterSpacing: "0.5em" }}>{t.openingChat}</span>
+                  ) : (
+                    <BubbleText text={t.askAiAgent} />
+                  )}
+                </h3>
+                {!isSent && <ReactiveBounceArrow />}
+              </div>
+
+              {/* Glowing border form */}
+              <form onSubmit={handleAISubmit} className="relative flex items-center justify-center group w-full">
+                {/* Glow layer 1 */}
+                <div className={`absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
+                                transition-all duration-[2000ms]
+                                before:absolute before:content-[''] before:z-[-2] before:w-[999px] before:h-[999px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-60
+                                before:bg-[conic-gradient(#000,#402fb5_5%,#000_38%,#000_50%,#cf30aa_60%,#000_87%)] before:transition-all before:duration-[2000ms]
+                                group-hover:before:rotate-[-120deg] group-focus-within:before:rotate-[420deg] group-focus-within:before:duration-[4000ms]
+                                ${isSent ? 'before:bg-[conic-gradient(#000,#00c853_5%,#000_38%,#000_50%,#00e676_60%,#000_87%)]' : ''}`}
+                     style={{ height: 'calc(100% + 4px)', width: 'calc(100% + 4px)', top: '-2px', left: '-2px' }} />
+
+                {/* Glow layer 2 */}
+                <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
+                                before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
+                                before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-[2000ms]
+                                group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]"
+                     style={{ height: 'calc(100% + 2px)', width: 'calc(100% + 2px)', top: '-1px', left: '-1px' }} />
+
+                {/* Glow layer 3 */}
+                <div className="absolute z-[-1] overflow-hidden rounded-xl blur-[2px] pointer-events-none
+                                before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[83deg]
+                                before:bg-[conic-gradient(rgba(0,0,0,0)_0%,#a099d8,rgba(0,0,0,0)_8%,rgba(0,0,0,0)_50%,#dfa2da,rgba(0,0,0,0)_58%)] before:brightness-[1.4]
+                                before:transition-all before:duration-[2000ms] group-hover:before:rotate-[-97deg] group-focus-within:before:rotate-[443deg] group-focus-within:before:duration-[4000ms]"
+                     style={{ height: 'calc(100% - 1px)', width: 'calc(100% - 2px)', top: '0px', left: '1px' }} />
+
+                {/* Inner dark fill */}
+                <div className="relative w-full flex items-center">
+                  <div className="pointer-events-none absolute w-[30px] h-[20px] bg-[#cf30aa] top-[10px] left-[5px] blur-2xl opacity-80 transition-all duration-[2000ms] group-hover:opacity-0 z-10" />
+
+                  {/* Search icon */}
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" viewBox="0 0 24 24" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" height="22" fill="none">
+                      <circle stroke="url(#hsearch)" r="8" cy="11" cx="11" />
+                      <line stroke="url(#hsearchl)" y2="16.65" y1="22" x2="16.65" x1="22" />
+                      <defs>
+                        <linearGradient gradientTransform="rotate(50)" id="hsearch">
+                          <stop stopColor="#f8e7f8" offset="0%" /><stop stopColor="#b6a9b7" offset="50%" />
+                        </linearGradient>
+                        <linearGradient id="hsearchl">
+                          <stop stopColor="#b6a9b7" offset="0%" /><stop stopColor="#837484" offset="50%" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+
+                  {/* Input */}
+                  <input
+                    ref={heroInputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={isSent ? "" : placeholder}
+                    disabled={isSent}
+                    className="w-full bg-[#010201] h-[56px] rounded-xl text-white pl-[52px] pr-[60px] text-base focus:outline-none placeholder-gray-400 transition-colors duration-300"
+                    style={{ fontFamily: 'Georgia, serif' }}
+                  />
+
+                  {/* Send button */}
+                  <div className="absolute right-[7px] top-1/2 -translate-y-1/2 flex items-center justify-center z-20">
+                    {query.trim() && !isSent && (
+                      <div className="absolute h-[42px] w-[42px] overflow-hidden rounded-lg pointer-events-none
+                                      before:absolute before:content-[''] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-90
+                                      before:bg-[conic-gradient(rgba(0,0,0,0),#3d3a4f,rgba(0,0,0,0)_50%,rgba(0,0,0,0)_50%,#3d3a4f,rgba(0,0,0,0)_100%)]
+                                      before:brightness-[1.35] before:animate-spin" />
+                    )}
                     <button
-                      ref={playBtnRef}
-                      onClick={() => setIsPlayingIntro(true)}
-                      className="play-btn-pulse"
-                      style={{
-                        position: 'relative',
-                        display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
-                        padding: '0.8rem 1.8rem', borderRadius: 999,
-                        background: 'rgba(255,255,255,0.92)', color: '#000',
-                        fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.07em',
-                        textTransform: 'uppercase', cursor: 'pointer', border: 'none',
-                        fontFamily: '"Montserrat", sans-serif', backdropFilter: 'blur(8px)',
-                        transition: 'background 0.2s ease, transform 0.2s ease',
-                        userSelect: 'none',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,1)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.92)')}
+                      type="submit"
+                      disabled={!query.trim() || isSent}
+                      className={`relative flex items-center justify-center h-[42px] w-[42px] rounded-lg
+                                  bg-gradient-to-b from-[#161329] via-black to-[#1d1b4b] border border-white/10
+                                  transition-all duration-300 z-10
+                                  ${query.trim() && !isSent ? 'opacity-100 hover:brightness-125' : 'opacity-30 cursor-default'}`}
                     >
-                      <Play style={{ width: 13, height: 13, fill: '#000' }} />
-                      {t.playIntro}
+                      <Send className={`w-4 h-4 text-white/50 transition-all duration-300 ${query.trim() && !isSent ? 'text-white/90 translate-x-[1px]' : ''}`} />
                     </button>
                   </div>
                 </div>
-              )}
+              </form>
             </div>
           </div>
-        </div>{/* end scroll-expanding video */}
 
+          </div>{/* close fade-content */}
+        </div>{/* close sticky hero */}
+
+          {/* ── Scroll-Expanding Video — overlaps hero, grows as you scroll ── */}
+          <div ref={scrollVideoRootRef} style={{ position: 'relative', marginTop: '-100vh', zIndex: 30 }}>
+            <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                ref={scrollVideoContainerRef}
+                onMouseEnter={() => setIsHoveringVideo(true)}
+                onMouseLeave={() => setIsHoveringVideo(false)}
+                style={{
+                  position: 'relative',
+                  width: 260,
+                  height: 200,
+                  borderRadius: 24,
+                  overflow: 'visible',
+                  background: 'transparent',
+                  flexShrink: 0,
+                  cursor: isPlayingIntro ? 'default' : 'pointer',
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              >
+                {/* Hover glow — sits behind everything */}
+                <div className={`video-hover-glow${isHoveringVideo && !isPlayingIntro ? ' active' : ''}`} style={{ pointerEvents: 'none' }} />
+                <div className="video-glow-bloom" style={{ borderRadius: 'inherit', pointerEvents: 'none' }} />
+                <div className="video-glow-wrap" style={{ borderRadius: 'inherit', pointerEvents: 'none' }}>
+                  <div className="video-glow-l1" style={{ borderRadius: 'inherit' }} />
+                  <div className="video-glow-l2" style={{ borderRadius: 'inherit' }} />
+                  <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
+                </div>
+
+                {/* Video iframe — clipped to rounded rect */}
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: 'inherit',
+                  overflow: 'hidden', background: '#000',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1,
+                  pointerEvents: 'none',
+                }}>
+                  <iframe
+                    key={iframeSrc}
+                    src={iframeSrc}
+                    style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: 'none' }}
+                    allow="autoplay; encrypted-media"
+                  />
+                </div>
+
+                {/* Full-cover click zone — catches any click inside the video when not playing */}
+                {!isPlayingIntro && (
+                  <div
+                    onClick={() => setIsPlayingIntro(true)}
+                    style={{
+                      position: 'absolute', inset: 0, zIndex: 9,
+                      cursor: 'pointer', borderRadius: 'inherit',
+                    }}
+                  />
+                )}
+
+                {/* Play button — sits above click zone with ocean-blue glow */}
+                {!isPlayingIntro && (
+                  <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}>
+                    <div ref={playBtnWrapRef} style={{ position: 'relative', pointerEvents: 'auto', willChange: 'transform' }}>
+                      {/* Ocean-blue glow behind button */}
+                      <div style={{
+                        position: 'absolute', inset: '-14px',
+                        borderRadius: 999,
+                        background: 'radial-gradient(ellipse, rgba(6,182,212,0.55) 0%, rgba(14,116,144,0.3) 45%, transparent 75%)',
+                        filter: 'blur(10px)',
+                        pointerEvents: 'none',
+                      }} />
+                      <button
+                        ref={playBtnRef}
+                        onClick={() => setIsPlayingIntro(true)}
+                        className="play-btn-pulse"
+                        style={{
+                          position: 'relative',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
+                          padding: '0.8rem 1.8rem', borderRadius: 999,
+                          background: 'rgba(255,255,255,0.92)', color: '#000',
+                          fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.07em',
+                          textTransform: 'uppercase', cursor: 'pointer', border: 'none',
+                          fontFamily: '"Montserrat", sans-serif', backdropFilter: 'blur(8px)',
+                          transition: 'background 0.2s ease, transform 0.2s ease',
+                          userSelect: 'none',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,1)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.92)')}
+                      >
+                        <Play style={{ width: 13, height: 13, fill: '#000' }} />
+                        {t.playIntro}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
       </section>
     </>
   );
