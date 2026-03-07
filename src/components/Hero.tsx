@@ -123,7 +123,8 @@ function CTAButton({ onClick, label }: { onClick: () => void; label: string }) {
         justifyContent: 'center',
         cursor: 'pointer',
         transform: hovered ? 'scale(1.12)' : 'scale(1)',
-        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+        transition: hovered ? 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
+        willChange: 'transform',
       }}
     >
       {/* Glow shadow behind the button */}
@@ -147,8 +148,8 @@ function CTAButton({ onClick, label }: { onClick: () => void; label: string }) {
           zIndex: 1,
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '14px 34px',
+          gap: '6px',
+          padding: '11px 27px',
           borderRadius: '999px',
           background: 'rgba(255, 255, 255, 0.08)',
           backdropFilter: 'blur(20px)',
@@ -157,7 +158,7 @@ function CTAButton({ onClick, label }: { onClick: () => void; label: string }) {
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)',
           color: 'white',
           fontFamily: '"Montserrat", sans-serif',
-          fontSize: '15px',
+          fontSize: '12px',
           fontWeight: 600,
           letterSpacing: '0.03em',
           whiteSpace: 'nowrap',
@@ -165,7 +166,7 @@ function CTAButton({ onClick, label }: { onClick: () => void; label: string }) {
         }}
       >
         {label}
-        <ArrowRight style={{ width: 16, height: 16, flexShrink: 0 }} />
+        <ArrowRight style={{ width: 13, height: 13, flexShrink: 0 }} />
       </button>
     </div>
   );
@@ -200,7 +201,10 @@ function SubtitleScramble({ text }: { text: string }) {
   }, [text]);
 
   return (
-    <span className="flex flex-wrap justify-center cursor-default">
+    <span
+      className="flex flex-wrap justify-center cursor-default"
+      style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 4px 32px rgba(0,0,0,0.5), 0 0 60px rgba(7,188,204,0.12)' }}
+    >
       {displayChars.map((char, i) => (
         <motion.span
           key={i}
@@ -222,6 +226,7 @@ function BubbleText({ text, className = "" }: { text: string; className?: string
     <span
       className={`inline-flex flex-wrap justify-center cursor-default ${className}`}
       onMouseLeave={() => setHoveredIndex(null)}
+      style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 4px 24px rgba(0,0,0,0.6), 0 0 40px rgba(230,1,192,0.2)' }}
     >
       {text.split("").map((char, idx) => {
         const distance = hoveredIndex !== null ? Math.abs(hoveredIndex - idx) : null;
@@ -316,6 +321,7 @@ function ReactiveBounceArrow() {
           transform: `rotate3d(1, 0, 0, ${tilt.x}deg) rotate3d(0, 1, 0, ${tilt.y}deg)`,
           transition: "stroke 0.15s ease, transform 0.12s ease",
           display: "block",
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
         }}
       >
         <polyline points="6 9 12 15 18 9" />
@@ -328,6 +334,9 @@ function ReactiveBounceArrow() {
 const GLOW_SHADOW = `4px 4px 0px #07bccc, 8px 8px 0px #e601c0, 12px 12px 0px #e9019a, 15px 15px 0px #f40468, 20px 20px 6px #f40468`;
 const NO_SHADOW   = `0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent`;
 
+// Base shadow always applied under the hero title characters
+const TITLE_BASE_SHADOW = `0 2px 4px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.5), 0 0 80px rgba(7,188,204,0.15)`;
+
 function GlowChar({ char, motionProps, autoGlow }: { char: string; motionProps: any; autoGlow: boolean }) {
   const [isHovered, setIsHovered] = useState(false);
   const showGlow = isHovered || autoGlow;
@@ -338,7 +347,9 @@ function GlowChar({ char, motionProps, autoGlow }: { char: string; motionProps: 
         onMouseLeave={() => setIsHovered(false)}
         style={{
           display: 'inline-block',
-          textShadow: showGlow ? GLOW_SHADOW : NO_SHADOW,
+          textShadow: showGlow
+            ? `${GLOW_SHADOW}, ${TITLE_BASE_SHADOW}`
+            : TITLE_BASE_SHADOW,
           fontWeight: isHovered ? 900 : 800,
           transform: isHovered ? 'scale(1.04)' : 'scale(1)',
           transition: showGlow
@@ -482,15 +493,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const startW = mobile ? 260 : 380;
       const startH = mobile ? 200 : 380;
-      const endW = window.innerWidth * (mobile ? 0.94 : 0.856);
+      const endW = Math.min(window.innerWidth * (mobile ? 0.94 : 0.856), window.innerWidth - (mobile ? 16 : 32));
       const endH = mobile
         ? Math.min(window.innerWidth * 0.94 * 0.6, window.innerHeight * 0.55)
         : window.innerHeight * 0.82;
       const videoOpacity = Math.min(1, p * 2.2);
-      const w = startW + (endW - startW) * e;
+      const w = Math.min(startW + (endW - startW) * e, window.innerWidth - (mobile ? 16 : 32));
       const h = startH + (endH - startH) * e;
       container.style.width  = `${w}px`;
       container.style.height = `${h}px`;
+      container.style.maxWidth = `calc(100vw - ${mobile ? 16 : 32}px)`;
       container.style.borderRadius = `24px`;
       container.style.opacity = `${videoOpacity}`;
       const videoVisible = videoOpacity > 0.15;
@@ -724,7 +736,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
               return (
                 <h1
                   key={lineIdx}
-                  className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
+                  className="flex whitespace-nowrap justify-center font-black text-white w-full"
                   style={{
                     fontFamily: '"Montserrat", sans-serif',
                     letterSpacing: '0.03em',
@@ -785,7 +797,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
               <div className="flex flex-col items-center gap-1">
                 <h3 className="text-[13px] md:text-[15px] uppercase font-black text-white/90">
                   {isSent ? (
-                    <span style={{ letterSpacing: "0.5em" }}>{t.openingChat}</span>
+                    <span style={{ letterSpacing: "0.5em", textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 4px 24px rgba(0,0,0,0.6), 0 0 40px rgba(230,1,192,0.2)' }}>{t.openingChat}</span>
                   ) : (
                     <BubbleText text={t.askAiAgent} />
                   )}
