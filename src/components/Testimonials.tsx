@@ -163,7 +163,8 @@ export default function Testimonials() {
     },
   ];
 
-  const infiniteReviews = [...reviews, ...reviews];
+  // 4 copies so there are always enough cards to fill the strip + overflow right
+  const infiniteReviews = [...reviews, ...reviews, ...reviews, ...reviews];
 
   const getIcon = (iconType: string) => {
     switch (iconType) {
@@ -201,12 +202,8 @@ export default function Testimonials() {
     }
     .is-visible .t-underline { transform: scaleX(1); }
 
-    @keyframes t-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-    @keyframes t-slide-in {
-      from { transform: translateX(110vw); }
-      to   { transform: translateX(0);     }
-    }
+    /* Belt is 4 copies; loop shifts by 1 copy = 25% of total width */
+    @keyframes t-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-25%); } }
 
     .t-marquee-outer {
       opacity: 0;
@@ -220,12 +217,15 @@ export default function Testimonials() {
       display: flex;
     }
 
+    /* Negative delay = already mid-scroll on first paint, right side pre-filled */
     .t-animate-marquee {
-      animation: t-marquee 18s linear infinite;
+      animation: t-marquee 36s linear infinite;
+      animation-delay: -18s;
     }
 
     .t-marquee-outer:not(.is-visible) .t-animate-marquee {
-      animation: t-marquee 18s linear infinite;
+      animation: t-marquee 36s linear infinite;
+      animation-delay: -18s;
     }
 
     .t-pause-marquee:hover .t-animate-marquee { animation-play-state: paused; }
@@ -335,10 +335,11 @@ export default function Testimonials() {
         />
       </div>
 
-      {/* Modal */}
+      {/* Modal — scoped to section only, not fullscreen */}
       {selectedReview !== null && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          className="absolute inset-0 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
           onClick={() => setSelectedReview(null)}
         >
           <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
