@@ -2,6 +2,7 @@ import { ArrowRight, Send, Play } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { motion, animate as motionAnimate } from 'framer-motion';
+import { TubesBackground } from '../components/ui/neon-flow';
 
 // ─── GlowingEffect (inlined) ──────────────────────────────────────────────────
 const GlowingEffect = memo(({
@@ -192,7 +193,7 @@ function BubbleText({ text, className = "" }: { text: string; className?: string
 function ReactiveBounceArrow() {
   const arrowRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [proximity, setProximity] = useState(0); // 0 = far, 1 = close
+  const [proximity, setProximity] = useState(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const el = arrowRef.current;
@@ -292,12 +293,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
   const btnTargetOffset = useRef({ x: 0, y: 0 });
   const btnCurrentOffset = useRef({ x: 0, y: 0 });
   const btnRafRef = useRef<number>(0);
-  const isOverVideo = useRef(false);
-  const lcCanvasRef = useRef<HTMLCanvasElement>(null);
-  const lcRafRef = useRef<number>(0);
-  const lcGlRef = useRef<WebGL2RenderingContext | null>(null);
-  const lcProgRef = useRef<WebGLProgram | null>(null);
-  const lcUniformsRef = useRef<Record<string, WebGLUniformLocation | null>>({});
 
   const [query, setQuery] = useState("");
   const [isSent, setIsSent] = useState(false);
@@ -360,118 +355,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
 
   const handleVideoMouseLeave = useCallback(() => {
     btnTargetOffset.current = { x: 0, y: 0 };
-  }, []);
-
-  // ─── Liquid Crystal WebGL2 Shader ────────────────────────────────────────
-  useEffect(() => {
-    const canvas = lcCanvasRef.current;
-    if (!canvas) return;
-    const gl = canvas.getContext('webgl2');
-    if (!gl) return;
-    lcGlRef.current = gl;
-
-    const vsSrc = `#version 300 es
-      in vec2 position;
-      void main() { gl_Position = vec4(position, 0.0, 1.0); }`;
-
-    const fsSrc = `#version 300 es
-      precision highp float;
-      uniform float u_time;
-      uniform vec2  u_resolution;
-      uniform float u_speed;
-      out vec4 fragColor;
-
-      float sdCircle(vec2 p, float r) { return length(p) - r; }
-
-      float opSmoothUnion(float d1, float d2, float k) {
-        float h = clamp(0.5 + 0.5*(d2-d1)/k, 0.0, 1.0);
-        return mix(d2, d1, h) - k*h*(1.0-h);
-      }
-
-      float mapScene(vec2 uv, float t) {
-        vec2 p1 = vec2(cos(t*0.50),       sin(t*0.50))       * 0.30;
-        vec2 p2 = vec2(cos(t*0.70 + 2.1), sin(t*0.60 + 2.1)) * 0.42;
-        vec2 p3 = vec2(cos(t*0.40 + 4.2), sin(t*0.80 + 4.2)) * 0.36;
-        float b1 = sdCircle(uv - p1, 0.22);
-        float b2 = sdCircle(uv - p2, 0.17);
-        float b3 = sdCircle(uv - p3, 0.25);
-        float u12 = opSmoothUnion(b1, b2, 0.22);
-        return opSmoothUnion(u12, b3, 0.28);
-      }
-
-      void main() {
-        vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
-        float t  = u_time * u_speed;
-        float d  = mapScene(uv, t);
-        vec3 base = vec3(0.008 / max(abs(d), 0.001));
-        vec3 palette = 0.5 + 0.5 * cos(u_time * 0.3 + uv.xyx * 1.5 + vec3(0.0, 1.0, 2.0));
-        vec3 col = clamp(base * palette, 0.0, 1.0);
-        col *= 0.7;
-        fragColor = vec4(col, 1.0);
-      }`;
-
-    const compile = (type: GLenum, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.error('LC shader error:', gl.getShaderInfoLog(s));
-        return null;
-      }
-      return s;
-    };
-    const vs = compile(gl.VERTEX_SHADER, vsSrc);
-    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
-    if (!vs || !fs) return;
-
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, vs); gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error('LC link error:', gl.getProgramInfoLog(prog));
-      return;
-    }
-    lcProgRef.current = prog;
-
-    const quad = new Float32Array([-1,1, -1,-1, 1,1, 1,-1]);
-    const buf = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
-    const posLoc = gl.getAttribLocation(prog, 'position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    lcUniformsRef.current = {
-      time:  gl.getUniformLocation(prog, 'u_time'),
-      res:   gl.getUniformLocation(prog, 'u_resolution'),
-      speed: gl.getUniformLocation(prog, 'u_speed'),
-    };
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width  = canvas.clientWidth  * dpr;
-      canvas.height = canvas.clientHeight * dpr;
-    };
-    resize();
-    window.addEventListener('resize', resize, { passive: true });
-
-    const u = lcUniformsRef.current;
-    const animate = (ms: number) => {
-      lcRafRef.current = requestAnimationFrame(animate);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.useProgram(prog);
-      gl.uniform1f(u.time!,   ms * 0.001);
-      gl.uniform2f(u.res!,    canvas.width, canvas.height);
-      gl.uniform1f(u.speed!,  0.5);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    };
-    lcRafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(lcRafRef.current);
-      window.removeEventListener('resize', resize);
-    };
   }, []);
 
   useEffect(() => {
@@ -560,7 +443,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
         setShowCTA(true);
         const t3 = setTimeout(() => {
           setShowInput(true);
-          // Only auto-focus if the AI chat is NOT already open
           const t4 = setTimeout(() => {
             if (!isChatOpen) {
               heroInputRef.current?.focus({ preventScroll: true });
@@ -622,9 +504,19 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
 
   return (
     <>
+      {/* ── TubesBackground wraps the entire section as a fixed full-screen layer ── */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <TubesBackground
+          className="w-full h-full"
+          enableClickInteraction={false}
+        />
+        {/* Subtle dark overlay so text remains legible over the tubes */}
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
       <section
-        className="relative min-h-screen flex flex-col items-center bg-black text-white pt-28 pb-12"
-        style={{ fontFamily: 'Georgia, serif', overflowX: 'clip' }}
+        className="relative min-h-screen flex flex-col items-center text-white pt-28 pb-12"
+        style={{ fontFamily: 'Georgia, serif', overflowX: 'clip', background: 'transparent' }}
       >
         <style>{`
           @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
@@ -687,10 +579,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
           }
           @keyframes video-bloom-pulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
         `}</style>
-
-        {/* Liquid Crystal BG */}
-        <canvas ref={lcCanvasRef} className="fixed inset-0 z-0 pointer-events-none w-screen h-screen opacity-90" style={{ width: '100vw', height: '100vh' }} />
-        <div className="fixed inset-0 z-[1] pointer-events-none bg-black/40" />
 
         <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
 
@@ -768,7 +656,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
             {/* AI Input */}
             <div className={`w-full space-y-3 transition-all duration-[1200ms] ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
               <div className="flex flex-col items-center gap-1">
-                {/* BubbleText: reactive per-character hover on "ASK OUR AI AGENT" */}
                 <h3 className="text-[13px] md:text-[15px] uppercase font-black text-white/90">
                   {isSent ? (
                     <span style={{ letterSpacing: "0.5em" }}>{t.openingChat}</span>
@@ -776,7 +663,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
                     <BubbleText text={t.askAiAgent} />
                   )}
                 </h3>
-                {/* Reactive arrow: tilts toward cursor, glows magenta/cyan on proximity */}
                 {!isSent && <ReactiveBounceArrow />}
               </div>
 
