@@ -1,8 +1,8 @@
-import { ArrowRight, Send, Play } from 'lucide-react';
-import { translations, Language } from '../utils/translations';
-import { useEffect, useRef, useState, useCallback, memo } from 'react';
-import { motion, animate as motionAnimate } from 'framer-motion';
-import { TubesBackground } from '../components/ui/neon-flow';
+import { ArrowRight, Send, Play } from 'lucide-react'
+import { translations, Language } from '../utils/translations'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
+import { motion, animate as motionAnimate } from 'framer-motion'
+import { TubesBackground } from '../components/ui/neon-flow'
 
 // ─── GlowingEffect (inlined) ──────────────────────────────────────────────────
 const GlowingEffect = memo(({
