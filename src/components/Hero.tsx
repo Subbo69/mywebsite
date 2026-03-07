@@ -388,6 +388,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
   const [charGlowProgress, setCharGlowProgress] = useState<number>(-1);
+  const [isVideoVisible, setIsVideoVisible] = useState(false);
 
   const titleLine1 = t.heroTitle1;
   const titleLine2 = t.heroTitle2;
@@ -492,7 +493,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
       container.style.height = `${h}px`;
       container.style.borderRadius = `24px`;
       container.style.opacity = `${videoOpacity}`;
-      container.style.pointerEvents = videoOpacity > 0.15 ? 'auto' : 'none';
+      const videoVisible = videoOpacity > 0.15;
+      container.style.pointerEvents = videoVisible ? 'auto' : 'none';
+      // Propagate to sticky wrapper so hero inputs/buttons are never blocked
+      const stickyWrapper = root.firstElementChild as HTMLElement | null;
+      if (stickyWrapper) stickyWrapper.style.pointerEvents = videoVisible ? 'auto' : 'none';
+      if (videoVisible) setIsVideoVisible(true);
     };
 
     setup();
@@ -872,8 +878,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
         </div>{/* close sticky hero */}
 
           {/* ── Scroll-Expanding Video — overlaps hero, grows as you scroll ── */}
-          <div ref={scrollVideoRootRef} style={{ position: 'relative', marginTop: '-100vh', zIndex: 30 }}>
-            <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div ref={scrollVideoRootRef} style={{ position: 'relative', marginTop: '-100vh', zIndex: 30, pointerEvents: 'none' }}>
+            <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div
                 ref={scrollVideoContainerRef}
                 onMouseEnter={() => setIsHoveringVideo(true)}
@@ -900,19 +906,21 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
                   <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
                 </div>
 
-                {/* Video iframe — clipped to rounded rect */}
+                {/* Video iframe — clipped to rounded rect, only mounted once video is visible */}
                 <div style={{
                   position: 'absolute', inset: 0, borderRadius: 'inherit',
                   overflow: 'hidden', background: '#000',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1,
                   pointerEvents: 'none',
                 }}>
-                  <iframe
-                    key={iframeSrc}
-                    src={iframeSrc}
-                    style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: 'none' }}
-                    allow="autoplay; encrypted-media"
-                  />
+                  {isVideoVisible && (
+                    <iframe
+                      key={iframeSrc}
+                      src={iframeSrc}
+                      style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: 'none' }}
+                      allow="autoplay; encrypted-media"
+                    />
+                  )}
                 </div>
 
                 {/* Full-cover click zone — catches any click inside the video when not playing */}
