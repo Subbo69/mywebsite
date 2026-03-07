@@ -1,9 +1,13 @@
 'use client'
 
-import React, { useState, useCallback, useEffect, useRef, memo, CSSProperties, ReactNode } from 'react';
+import React, { useState, useCallback, useEffect, useRef, memo, CSSProperties } from 'react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 import { animate as motionAnimate, DynamicAnimationOptions, motion, useAnimate } from 'framer-motion';
+// Inline cn helper — no @/lib/utils needed
+function cn(...classes: (string | undefined | false | null)[]) {
+  return classes.filter(Boolean).join(' ');
+}
 
 // ─── Inline debounce (no lodash) ──────────────────────────────
 function debounce<T extends (...args: unknown[]) => void>(
@@ -182,78 +186,84 @@ function RandomLetterSwapForward({
   );
 }
 
-// ─── StarBackground ───────────────────────────────────────
-function StarBackground({ color }: { color?: string }) {
-  return (
-    <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g clipPath="url(#clip0)">
-        <path d="M32.34 26.68C32.34 26.3152 32.0445 26.02 31.68 26.02C31.3155 26.02 31.02 26.3152 31.02 26.68C31.02 27.0448 31.3155 27.34 31.68 27.34C32.0445 27.34 32.34 27.0448 32.34 26.68Z" fill={color || "currentColor"} />
-      </g>
-      <defs><clipPath id="clip0"><rect width="100" height="40" fill="white"/></clipPath></defs>
-    </svg>
-  );
+// ─── NeonButton ─────────────────────────────────────────────
+// Idle animation: cycles glow color through blue → purple → light-blue
+const GLOW_COLORS = [
+  // blue
+  { shadow: "rgba(96,165,250,0.55)",  border: "rgba(96,165,250,0.55)",  via: "#93c5fd" },
+  // light blue
+  { shadow: "rgba(125,211,252,0.50)", border: "rgba(125,211,252,0.50)", via: "#7dd3fc" },
+  // purple
+  { shadow: "rgba(167,139,250,0.50)", border: "rgba(167,139,250,0.50)", via: "#c4b5fd" },
+  // blue-purple
+  { shadow: "rgba(129,140,248,0.50)", border: "rgba(129,140,248,0.50)", via: "#a5b4fc" },
+];
+
+interface NeonButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  neon?: boolean;
 }
 
-// ─── StarButton ─────────────────────────────────────────────
-interface StarButtonProps {
-  children: ReactNode;
-  lightWidth?: number;
-  duration?: number;
-  lightColor?: string;
-  backgroundColor?: string;
-  borderWidth?: number;
-  className?: string;
-  onClick?: () => void;
-}
+const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>(
+  ({ className, neon = true, children, style, ...props }, ref) => {
+    const [colorIdx, setColorIdx] = useState(0);
+    const [hovered, setHovered] = useState(false);
 
-function StarButton({
-  children,
-  lightWidth = 110,
-  duration = 3,
-  lightColor = "#FAFAFA",
-  backgroundColor = "currentColor",
-  borderWidth = 2,
-  className,
-  onClick,
-}: StarButtonProps) {
-  const pathRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+      if (hovered) return;
+      const id = setInterval(() => {
+        setColorIdx(i => (i + 1) % GLOW_COLORS.length);
+      }, 1800);
+      return () => clearInterval(id);
+    }, [hovered]);
 
-  useEffect(() => {
-    if (pathRef.current) {
-      const div = pathRef.current;
-      div.style.setProperty(
-        "--path",
-        `path('M 0 0 H ${div.offsetWidth} V ${div.offsetHeight} H 0 V 0')`
-      );
-    }
-  }, []);
+    const c = GLOW_COLORS[colorIdx];
 
-  return (
-    <button
-      style={{
-        "--duration": duration,
-        "--light-width": `${lightWidth}px`,
-        "--light-color": lightColor,
-        "--border-width": `${borderWidth}px`,
-        isolation: "isolate",
-      } as CSSProperties}
-      ref={pathRef}
-      onClick={onClick}
-      className={`relative z-[3] overflow-hidden inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all hover:scale-[1.03] active:scale-[0.97] shadow-lg ${className ?? ''}`}
-    >
-      <div className="absolute aspect-square inset-0 animate-star-btn bg-[radial-gradient(ellipse_at_center,var(--light-color),transparent,transparent)]"
-        style={{ offsetPath: "var(--path)", offsetDistance: "0%", width: "var(--light-width)" } as CSSProperties}
-      />
-      <div className="absolute inset-0 z-[4] overflow-hidden rounded-[inherit]"
-        style={{ borderWidth: "var(--border-width)", borderColor: "rgba(255,255,255,0.15)", borderStyle: "solid" }}
-        aria-hidden="true"
+    return (
+      <button
+        ref={ref}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={cn(
+          "relative group rounded-full backdrop-blur-sm",
+          "px-4 md:px-6 py-1.5 md:py-2.5",
+          "hover:scale-[1.03] active:scale-[0.97]",
+          className
+        )}
+        style={{
+          background: hovered
+            ? "rgba(255,255,255,0.15)"
+            : "rgba(255,255,255,0.08)",
+          border: `1px solid ${hovered ? "rgba(255,255,255,0.45)" : c.border}`,
+          boxShadow: neon
+            ? `0 0 18px ${c.shadow}, 0 0 48px ${c.shadow.replace("0.5", "0.15")}, inset 0 1px 0 rgba(255,255,255,0.18)`
+            : undefined,
+          transition: "box-shadow 1.2s ease, border-color 1.2s ease, background 0.3s ease, transform 0.15s ease",
+          ...style,
+        }}
+        {...props}
       >
-        <StarBackground color={backgroundColor} />
-      </div>
-      <span className="z-10 relative flex items-center gap-2 text-white">{children}</span>
-    </button>
-  );
-}
+        {/* Animated top shimmer — idle cycles color, hover brightens */}
+        <span
+          style={{
+            background: `linear-gradient(to right, transparent, ${c.via}, transparent)`,
+            transition: "background 1.2s ease, opacity 0.5s ease",
+          }}
+          className="absolute h-px inset-x-0 top-0 w-3/4 mx-auto opacity-60 group-hover:opacity-100"
+        />
+        {children}
+        {/* Bottom neon line */}
+        <span
+          style={{
+            background: `linear-gradient(to right, transparent, ${c.via}, transparent)`,
+            transition: "background 1.2s ease, opacity 0.5s ease",
+          }}
+          className="absolute inset-x-0 h-px -bottom-px w-3/4 mx-auto opacity-40 group-hover:opacity-70"
+        />
+      </button>
+    );
+  }
+);
+NeonButton.displayName = "NeonButton";
 
 // ─── Header ────────────────────────────────────────────────
 interface HeaderProps {
@@ -318,7 +328,7 @@ export default function Header({ onBookingClick, language, onLanguageChange }: H
               )}
             </div>
 
-            {/* CTA Button */}
+            {/* CTA Button — neon style with glowing shadow */}
             <div className="relative rounded-full">
               <GlowingEffect
                 spread={35}
@@ -328,18 +338,19 @@ export default function Header({ onBookingClick, language, onLanguageChange }: H
                 inactiveZone={0.01}
                 borderWidth={2}
               />
-              <StarButton
+              <NeonButton
+                neon={true}
                 onClick={onBookingClick}
-                lightColor="rgba(255,255,255,0.6)"
-                backgroundColor="rgba(255,255,255,0.08)"
-                lightWidth={90}
-                duration={2.5}
-                borderWidth={1}
-                className="bg-white/10 backdrop-blur-sm px-4 md:px-6 py-1.5 md:py-2.5 text-[10px] md:text-sm"
+                className="text-[10px] md:text-sm font-semibold text-white"
               >
-                <span style={{ fontFamily: '"Montserrat", sans-serif' }}>{t.letsTalk}</span>
-                <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
-              </StarButton>
+                <span
+                  className="relative z-10 flex items-center gap-2"
+                  style={{ fontFamily: '"Montserrat", sans-serif' }}
+                >
+                  {t.letsTalk}
+                  <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                </span>
+              </NeonButton>
             </div>
 
           </div>
