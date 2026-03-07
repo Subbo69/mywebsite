@@ -146,7 +146,7 @@ function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
       if (!parent) return;
 
       const maxWidth = parent.getBoundingClientRect().width;
-      let size = window.innerWidth >= 768 ? 55 : 33;
+      let size = window.innerWidth >= 768 ? 38 : 24;
 
       el.style.fontSize = `${size}px`;
 
@@ -200,11 +200,13 @@ function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
           fontSize: fontSize ? `${fontSize}px` : undefined,
+          letterSpacing: '0.08em',
+          wordSpacing: '0.2em',
         }}
         variants={container}
         initial="hidden"
         animate={animate ? 'visible' : 'hidden'}
-        className={`font-black text-white tracking-tighter uppercase${!fontSize ? ' text-[33px] md:text-[55px]' : ''}`}
+        className={`font-black text-white uppercase${!fontSize ? ' text-[24px] md:text-[38px]' : ''}`}
       >
         {letters.map((letter, i) => (
           <motion.span key={i} variants={child}>
