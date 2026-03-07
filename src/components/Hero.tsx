@@ -1,4 +1,4 @@
-import { ArrowRight, Send, Play } from 'lucide-react'
+import { ArrowRight, Send, Play, Square } from 'lucide-react'
 import { translations, Language } from '../utils/translations'
 import React, { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { motion, animate as motionAnimate } from 'framer-motion'
@@ -972,6 +972,36 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
                         {t.playIntro}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Stop button — shown while intro is playing */}
+                {isPlayingIntro && (
+                  <div style={{
+                    position: 'absolute', bottom: '16px', right: '16px', zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <button
+                      onClick={() => setIsPlayingIntro(false)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                        padding: '0.55rem 1.2rem', borderRadius: 999,
+                        background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.9)',
+                        fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.07em',
+                        textTransform: 'uppercase', cursor: 'pointer',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        fontFamily: '"Montserrat", sans-serif',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        transition: 'background 0.2s ease, opacity 0.2s ease',
+                        userSelect: 'none',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.75)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.55)')}
+                    >
+                      <Square style={{ width: 11, height: 11, fill: 'rgba(255,255,255,0.9)' }} />
+                      Stop
+                    </button>
                   </div>
                 )}
               </div>
