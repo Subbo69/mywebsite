@@ -1,7 +1,7 @@
-import { ArrowRight, Send, Play, X, ChevronDown } from 'lucide-react';
+import { ArrowRight, Send, Play } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
-import { motion, useAnimate, animate as motionAnimate } from 'framer-motion';
+import { motion, animate as motionAnimate } from 'framer-motion';
 
 // ─── GlowingEffect (inlined) ──────────────────────────────────────────────────
 const GlowingEffect = memo(({
@@ -60,11 +60,11 @@ const GlowingEffect = memo(({
 
   const gradient = variant === "white"
     ? `repeating-conic-gradient(from 236.84deg at 50% 50%, var(--black), var(--black) calc(25% / 5))`
-    : `radial-gradient(circle, #dd7bbb 10%, #dd7bbb00 20%),
-       radial-gradient(circle at 40% 40%, #d79f1e 5%, #d79f1e00 15%),
-       radial-gradient(circle at 60% 60%, #5a922c 10%, #5a922c00 20%),
-       radial-gradient(circle at 40% 60%, #4c7894 10%, #4c789400 20%),
-       repeating-conic-gradient(from 236.84deg at 50% 50%, #dd7bbb 0%, #d79f1e calc(25%/5), #5a922c calc(50%/5), #4c7894 calc(75%/5), #dd7bbb calc(100%/5))`;
+    : `radial-gradient(circle, #07bccc 10%, #07bccc00 20%),
+       radial-gradient(circle at 40% 40%, #e601c0 5%, #e601c000 15%),
+       radial-gradient(circle at 60% 60%, #e9019a 10%, #e9019a00 20%),
+       radial-gradient(circle at 40% 60%, #f40468 10%, #f4046800 20%),
+       repeating-conic-gradient(from 236.84deg at 50% 50%, #07bccc 0%, #e601c0 calc(25%/5), #e9019a calc(50%/5), #f40468 calc(75%/5), #07bccc calc(100%/5))`;
 
   if (disabled) return <div className="pointer-events-none absolute -inset-px hidden rounded-[inherit] border opacity-0 transition-opacity" />;
 
@@ -93,35 +93,6 @@ const GlowingEffect = memo(({
 });
 GlowingEffect.displayName = "GlowingEffect";
 
-// ── TextRewind: shadow-drop hover effect for titles ───────────────────────────
-function TextRewindSpan({
-  char,
-  shadowColors,
-}: {
-  char: string;
-  shadowColors?: { first?: string; second?: string; third?: string; fourth?: string; glow?: string };
-}) {
-  const sc = {
-    first:  shadowColors?.first  ?? "#07bccc",
-    second: shadowColors?.second ?? "#e601c0",
-    third:  shadowColors?.third  ?? "#e9019a",
-    fourth: shadowColors?.fourth ?? "#f40468",
-    glow:   shadowColors?.glow   ?? "#f40468",
-  };
-  const shadowStyle = {
-    textShadow: `4px 4px 0px ${sc.first}, 8px 8px 0px ${sc.second}, 12px 12px 0px ${sc.third}, 16px 16px 0px ${sc.fourth}, 28px 28px 8px ${sc.glow}`,
-  };
-  return (
-    <motion.span
-      style={{ display: 'inline-block' }}
-      whileHover={shadowStyle}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-    >
-      {char === ' ' ? '\u00A0' : char}
-    </motion.span>
-  );
-}
-
 // ── Subtitle: TextScramble entry + weight-on-hover ────────────────────────────
 const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
 
@@ -129,13 +100,12 @@ function SubtitleScramble({ text }: { text: string }) {
   const [displayChars, setDisplayChars] = useState<string[]>(() => text.split('').map(() =>
     SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
   ));
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     const chars = text.split('');
     const total = chars.length;
-    const duration = 0.7;
-    const speed = 0.032;
+    const duration = 0.84;
+    const speed = 0.038;
     const steps = Math.ceil(duration / speed);
     let step = 0;
     const interval = setInterval(() => {
@@ -146,7 +116,7 @@ function SubtitleScramble({ text }: { text: string }) {
         return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
       }));
       step++;
-      if (step > steps) { clearInterval(interval); setDisplayChars(chars); setDone(true); }
+      if (step > steps) { clearInterval(interval); setDisplayChars(chars); }
     }, speed * 1000);
     return () => clearInterval(interval);
   }, [text]);
@@ -166,19 +136,157 @@ function SubtitleScramble({ text }: { text: string }) {
   );
 }
 
+// ── BubbleText: per-character wave/glow reaction on hover ─────────────────────
+function BubbleText({ text, className = "" }: { text: string; className?: string }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  return (
+    <span
+      className={`inline-flex flex-wrap justify-center cursor-default ${className}`}
+      onMouseLeave={() => setHoveredIndex(null)}
+    >
+      {text.split("").map((char, idx) => {
+        const distance = hoveredIndex !== null ? Math.abs(hoveredIndex - idx) : null;
+
+        let style: React.CSSProperties = {
+          display: "inline-block",
+          transition: "all 0.25s ease",
+          fontWeight: 900,
+          color: "rgba(255,255,255,0.9)",
+          letterSpacing: "0.5em",
+        };
+
+        if (distance === 0) {
+          style = {
+            ...style,
+            color: "#ffffff",
+            transform: "translateY(-3px) scale(1.15)",
+            textShadow: "0 0 12px #e601c0, 0 0 24px #07bccc, 0 0 4px #fff",
+          };
+        } else if (distance === 1) {
+          style = {
+            ...style,
+            color: "rgba(255,255,255,0.95)",
+            transform: "translateY(-1.5px) scale(1.07)",
+            textShadow: "0 0 8px #cf30aa88",
+          };
+        } else if (distance === 2) {
+          style = {
+            ...style,
+            color: "rgba(255,255,255,0.85)",
+            transform: "translateY(-0.5px) scale(1.02)",
+          };
+        }
+
+        return (
+          <span key={idx} style={style} onMouseEnter={() => setHoveredIndex(idx)}>
+            {char === " " ? "\u00A0" : char}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+// ── ReactiveBounceArrow: arrow that tilts toward mouse proximity ──────────────
+function ReactiveBounceArrow() {
+  const arrowRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [proximity, setProximity] = useState(0); // 0 = far, 1 = close
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const el = arrowRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.hypot(dx, dy);
+    const maxDist = 120;
+    if (dist < maxDist) {
+      const factor = (1 - dist / maxDist) * 14;
+      setTilt({ x: (dy / dist) * factor, y: -(dx / dist) * factor });
+      setProximity(1 - dist / maxDist);
+    } else {
+      setTilt({ x: 0, y: 0 });
+      setProximity(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [handleMouseMove]);
+
+  const strokeOpacity = 0.8 + proximity * 0.2;
+
+  return (
+    <div ref={arrowRef} style={{ display: "inline-block" }}>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="animate-bounce-down"
+        style={{
+          stroke: `rgba(255,255,255,${strokeOpacity})`,
+          transform: `rotate3d(1, 0, 0, ${tilt.x}deg) rotate3d(0, 1, 0, ${tilt.y}deg)`,
+          transition: "stroke 0.15s ease, transform 0.12s ease",
+          display: "block",
+        }}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+  );
+}
+
+// ── Title glow constants ──────────────────────────────────────────────────────
+const GLOW_SHADOW = `4px 4px 0px #07bccc, 8px 8px 0px #e601c0, 12px 12px 0px #e9019a, 15px 15px 0px #f40468, 20px 20px 6px #f40468`;
+const NO_SHADOW   = `0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent, 0px 0px 0px transparent`;
+
+function GlowChar({ char, motionProps, autoGlow }: { char: string; motionProps: any; autoGlow: boolean }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const showGlow = isHovered || autoGlow;
+  return (
+    <motion.span {...motionProps} style={{ ...motionProps.style, display: 'inline-block' }} className="cursor-default">
+      <span
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          display: 'inline-block',
+          textShadow: showGlow ? GLOW_SHADOW : NO_SHADOW,
+          fontWeight: isHovered ? 900 : 800,
+          transform: isHovered ? 'scale(1.04)' : 'scale(1)',
+          transition: showGlow
+            ? 'text-shadow 0.12s ease-out 0s, transform 0.15s ease, font-weight 0.15s ease'
+            : 'text-shadow 2s ease-out 1.2s, transform 0.25s ease, font-weight 0.25s ease',
+        }}
+      >
+        {char === " " ? "\u00A0" : char}
+      </span>
+    </motion.span>
+  );
+}
+
 interface HeroProps {
   onBookingClick: () => void;
   onAskAIClick: (initialMessage?: string) => void;
   language: Language;
+  isChatOpen?: boolean;
 }
 
-export default function Hero({ onBookingClick, onAskAIClick, language }: HeroProps) {
+export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpen = false }: HeroProps) {
   const t = translations[language];
   const heroInputRef = useRef<HTMLInputElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const scrollVideoRootRef = useRef<HTMLDivElement>(null);
   const scrollVideoContainerRef = useRef<HTMLDivElement>(null);
-  // Magnetic play button refs
   const playBtnRef = useRef<HTMLButtonElement>(null);
   const playBtnWrapRef = useRef<HTMLDivElement>(null);
   const btnTargetOffset = useRef({ x: 0, y: 0 });
@@ -207,20 +315,20 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
+  const [charGlowProgress, setCharGlowProgress] = useState<number>(-1);
+
   const titleLine1 = t.heroTitle1;
   const titleLine2 = t.heroTitle2;
   const VIDEO_ID = "Py1ClI35v_k";
+  const totalChars = titleLine1.length + titleLine2.length;
 
-  // Iframe src: muted autoplay loop by default, unmuted replay on click
   const iframeSrc = isPlayingIntro
     ? `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=0&controls=1&playsinline=1&rel=0`
     : `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&playsinline=1&rel=0`;
 
   // ─── Magnetic button RAF loop ─────────────────────────────────────────────
   useEffect(() => {
-    const MAX_OFFSET = 28;
     const LERP = 0.07;
-
     const tick = () => {
       btnRafRef.current = requestAnimationFrame(tick);
       const cur = btnCurrentOffset.current;
@@ -383,27 +491,42 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     const container = scrollVideoContainerRef.current;
     if (!root || !container) return;
 
+    const isMobile = () => window.innerWidth < 768;
+
+    const setup = () => {
+      const mobile = isMobile();
+      root.style.height = mobile ? '130vh' : '224vh';
+    };
+
     const onScroll = () => {
+      const mobile = isMobile();
       const rect = root.getBoundingClientRect();
       const rootH = root.offsetHeight;
       const scrolled = -rect.top;
       const total = rootH - window.innerHeight;
       const p = Math.max(0, Math.min(1, scrolled / total));
-
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-
-      const startW = 380, endW = window.innerWidth * 0.92;
-      const startH = 380, endH = window.innerHeight * 0.88;
+      const startW = mobile ? 260 : 380;
+      const startH = mobile ? 200 : 380;
+      const endW = window.innerWidth * (mobile ? 0.94 : 0.92);
+      const endH = mobile
+        ? Math.min(window.innerWidth * 0.94 * 0.6, window.innerHeight * 0.55)
+        : window.innerHeight * 0.88;
       const w = startW + (endW - startW) * e;
       const h = startH + (endH - startH) * e;
-      container.style.width = `${w}px`;
+      container.style.width  = `${w}px`;
       container.style.height = `${h}px`;
       container.style.borderRadius = `24px`;
     };
 
+    setup();
+    window.addEventListener('resize', setup, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('resize', setup);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -423,25 +546,58 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     return () => cancelAnimationFrame(af);
   }, [targetPos, isHoveringVideo, isPlayingIntro]);
 
-  // ─── TIMING: CTA spawns faster after subtitle (300ms instead of 2200ms) ───
+  // ─── TIMING: Subtitle waits for glow sweep to finish ─────────────────────
   useEffect(() => {
     if (!titleDone) return;
-    const t1 = setTimeout(() => {
+    const sweepDelay = 200;
+    const charIntervalMs = 30;
+    const holdMs = 800;
+    const totalSweepTime = sweepDelay + totalChars * charIntervalMs + holdMs;
+
+    const tSubtitle = setTimeout(() => {
       setShowSubtitle(true);
-      // CTA now appears after 300ms (was 2200ms) — snappy, not sluggish
       const t2 = setTimeout(() => {
         setShowCTA(true);
         const t3 = setTimeout(() => {
           setShowInput(true);
-          const t4 = setTimeout(() => { heroInputRef.current?.focus({ preventScroll: true }); }, 800);
+          // Only auto-focus if the AI chat is NOT already open
+          const t4 = setTimeout(() => {
+            if (!isChatOpen) {
+              heroInputRef.current?.focus({ preventScroll: true });
+            }
+          }, 960);
           return () => clearTimeout(t4);
-        }, 1000);
+        }, 900);
         return () => clearTimeout(t3);
-      }, 300);
+      }, 1200);
       return () => clearTimeout(t2);
-    }, 400);
-    return () => clearTimeout(t1);
-  }, [titleDone]);
+    }, totalSweepTime);
+
+    return () => clearTimeout(tSubtitle);
+  }, [titleDone, totalChars, isChatOpen]);
+
+  // ─── Glow sweep ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!titleDone) return;
+    const sweepDelay = 200;
+    const charIntervalMs = 30;
+    const holdMs = 800;
+
+    const startTimer = setTimeout(() => {
+      let idx = 0;
+      const interval = setInterval(() => {
+        setCharGlowProgress(idx);
+        idx++;
+        if (idx >= totalChars) {
+          clearInterval(interval);
+          setTimeout(() => setCharGlowProgress(-1), holdMs);
+        }
+      }, charIntervalMs);
+      return () => clearInterval(interval);
+    }, sweepDelay);
+
+    return () => clearTimeout(startTimer);
+  }, [titleDone, totalChars]);
 
   useEffect(() => {
     let cur = ""; let del = false; let timer: NodeJS.Timeout;
@@ -464,14 +620,6 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
     setTimeout(() => setIsSent(false), 3000);
   };
 
-  const titleShadowColors = {
-    first:  "#07bccc",
-    second: "#e601c0",
-    third:  "#e9019a",
-    fourth: "#f40468",
-    glow:   "#f40468",
-  };
-
   return (
     <>
       <section
@@ -481,7 +629,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
         <style>{`
           @keyframes bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
           @keyframes spin { from { transform: translate(-50%,-50%) rotate(90deg); } to { transform: translate(-50%,-50%) rotate(450deg); } }
-          .before\:animate-spin::before { animation: spin 3s linear infinite; }
+          .before\\:animate-spin::before { animation: spin 3s linear infinite; }
           .animate-bounce-down { animation: bounce-down 1.2s ease-in-out infinite; }
 
           @keyframes play-btn-pulse {
@@ -490,117 +638,54 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           }
           .play-btn-pulse { animation: play-btn-pulse 2.4s ease-in-out infinite; }
 
-          /* ── Video glowing lines border — same conic style as the search input ── */
           .video-glow-wrap {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            pointer-events: none;
-            z-index: 4;
-            overflow: hidden;
+            position: absolute; inset: 0; border-radius: inherit;
+            pointer-events: none; z-index: 4; overflow: hidden;
           }
-
-          /* Layer 1: primary rotating conic */
-          .video-glow-l1 {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            overflow: hidden;
-          }
+          .video-glow-l1 { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
           .video-glow-l1::before {
-            content: "";
-            position: absolute;
-            z-index: -2;
-            width: 999px; height: 999px;
+            content: ""; position: absolute; z-index: -2; width: 999px; height: 999px;
             background: conic-gradient(#000, #402fb5 5%, #000 38%, #000 50%, #cf30aa 60%, #000 87%);
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(0deg);
-            animation: video-glow-spin1 4s linear infinite;
-            background-repeat: no-repeat;
+            top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);
+            animation: video-glow-spin1 4s linear infinite; background-repeat: no-repeat;
           }
           .video-glow-l1::after {
-            content: "";
-            position: absolute;
-            inset: 3px;
-            border-radius: inherit;
-            background: transparent;
-            z-index: -1;
+            content: ""; position: absolute; inset: 3px;
+            border-radius: inherit; background: transparent; z-index: -1;
           }
-
-          /* Layer 2: secondary conic for depth */
-          .video-glow-l2 {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            overflow: hidden;
-          }
-          
-
-          /* Layer 3: fine bright lines */
+          .video-glow-l2 { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
           .video-glow-l3 {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            overflow: hidden;
-            filter: blur(1px);
+            position: absolute; inset: 0; border-radius: inherit; overflow: hidden; filter: blur(1px);
           }
           .video-glow-l3::before {
-            content: "";
-            position: absolute;
-            z-index: -2;
-            width: 600px; height: 600px;
+            content: ""; position: absolute; z-index: -2; width: 600px; height: 600px;
             background: conic-gradient(rgba(0,0,0,0) 0%, #a099d8, rgba(0,0,0,0) 8%, rgba(0,0,0,0) 50%, #dfa2da, rgba(0,0,0,0) 58%);
-            filter: brightness(1.4);
-            top: 50%; left: 50%;
+            filter: brightness(1.4); top: 50%; left: 50%;
             transform: translate(-50%, -50%) rotate(83deg);
-            animation: video-glow-spin3 4s linear infinite;
-            background-repeat: no-repeat;
+            animation: video-glow-spin3 4s linear infinite; background-repeat: no-repeat;
           }
-
-          /* mask each layer so only the border ring is visible */
-          .video-glow-l1,
-          .video-glow-l2,
-          .video-glow-l3 {
+          .video-glow-l1, .video-glow-l2, .video-glow-l3 {
             mask-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
             -webkit-mask-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
-            mask-clip: border-box, content-box;
-            -webkit-mask-clip: border-box, content-box;
-            mask-composite: exclude;
-            -webkit-mask-composite: destination-out;
+            mask-clip: border-box, content-box; -webkit-mask-clip: border-box, content-box;
+            mask-composite: exclude; -webkit-mask-composite: destination-out;
             border: 3px solid transparent;
           }
-
           @keyframes video-glow-spin1 {
             from { transform: translate(-50%, -50%) rotate(90deg); }
             to   { transform: translate(-50%, -50%) rotate(450deg); }
-          }
-          @keyframes video-glow-spin2 {
-            from { transform: translate(-50%, -50%) rotate(82deg); }
-            to   { transform: translate(-50%, -50%) rotate(442deg); }
           }
           @keyframes video-glow-spin3 {
             from { transform: translate(-50%, -50%) rotate(83deg); }
             to   { transform: translate(-50%, -50%) rotate(443deg); }
           }
-
-          /* soft outer glow bloom — sits on the video box edge, no overflow */
           .video-glow-bloom {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            pointer-events: none;
-            z-index: 3;
-            border: 0px solid transparent;
-            box-shadow:
-              0 0 10px 2px rgba(64,47,181,0.6),
-              0 0 20px 3px rgba(207,48,170,0.4),
-              0 0 4px 1px rgba(160,153,216,0.7);
+            position: absolute; inset: 0; border-radius: inherit;
+            pointer-events: none; z-index: 3; border: 0px solid transparent;
+            box-shadow: 0 0 10px 2px rgba(64,47,181,0.6), 0 0 20px 3px rgba(207,48,170,0.4), 0 0 4px 1px rgba(160,153,216,0.7);
             animation: video-bloom-pulse 4s linear infinite;
           }
-          @keyframes video-bloom-pulse {
-            0%,100% { opacity: 0.85; }
-            50%     { opacity: 1;    }
-          }
+          @keyframes video-bloom-pulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
         `}</style>
 
         {/* Liquid Crystal BG */}
@@ -609,45 +694,54 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
 
         <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
 
-          {/* ── Titles with TextRewind hover ── */}
+          {/* ── Titles ── */}
           <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
             {[titleLine1, titleLine2].map((line, lineIdx) => {
-              const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.038;
+              const baseDelay = lineIdx === 0 ? 0 : titleLine1.length * 0.046;
               return (
                 <h1
                   key={lineIdx}
                   className="flex whitespace-nowrap justify-center font-black text-white drop-shadow-2xl w-full"
-                  style={{ fontFamily: '"Montserrat", sans-serif', letterSpacing: '0.03em', fontSize: 'clamp(1.6rem, 6vw, 5.5rem)' }}
+                  style={{
+                    fontFamily: '"Montserrat", sans-serif',
+                    letterSpacing: '0.03em',
+                    fontSize: 'clamp(2rem, 8.5vw, 5.5rem)',
+                  }}
                 >
-                  {line.split("").map((char, i) => (
-                    <motion.span
-                      key={`l${lineIdx}-${i}`}
-                      style={{ display: 'inline-block' }}
-                      initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
-                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                      transition={{ duration: 0.48, delay: 0.2 + baseDelay + i * 0.029, ease: [0.22, 1, 0.36, 1] }}
-                      onAnimationComplete={() => { if (lineIdx === 1 && i === line.length - 1) setTitleDone(true); }}
-                      whileHover={{
-                        scale: 1.08,
-                        textShadow: `4px 4px 0px ${titleShadowColors.first}, 8px 8px 0px ${titleShadowColors.second}, 12px 12px 0px ${titleShadowColors.third}, 16px 16px 0px ${titleShadowColors.fourth}, 28px 28px 8px ${titleShadowColors.glow}`,
-                        transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-                      }}
-                      className="cursor-default transition-[text-shadow] duration-200"
-                    >
-                      {char === " " ? "\u00A0" : char}
-                    </motion.span>
-                  ))}
+                  {line.split("").map((char, i) => {
+                    const globalIdx = lineIdx === 0 ? i : titleLine1.length + i;
+                    const autoGlow = charGlowProgress >= globalIdx && charGlowProgress >= 0;
+                    return (
+                      <GlowChar
+                        key={`l${lineIdx}-${i}`}
+                        char={char}
+                        autoGlow={autoGlow}
+                        motionProps={{
+                          initial: { opacity: 0, y: 24, filter: 'blur(8px)' },
+                          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+                          transition: {
+                            duration: 0.576,
+                            delay: 0.24 + baseDelay + i * 0.035,
+                            ease: [0.22, 1, 0.36, 1],
+                          },
+                          onAnimationComplete: lineIdx === 1 && i === line.length - 1
+                            ? () => setTitleDone(true)
+                            : undefined,
+                        }}
+                      />
+                    );
+                  })}
                 </h1>
               );
             })}
           </div>
 
-          {/* ── Subtitle: scramble entry + weight hover ── */}
+          {/* ── Subtitle ── */}
           <div className="relative inline-block mb-8">
             <motion.div
               initial={{ opacity: 0 }}
               animate={showSubtitle ? { opacity: 1 } : { opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.30 }}
               className="text-base md:text-2xl text-white/80 font-light italic drop-shadow-lg"
               style={{ fontFamily: 'Georgia, serif' }}
             >
@@ -658,39 +752,35 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           {/* ── CTA + Input ── */}
           <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
 
-            {/* CTA Button — GlowingEffect mouse-tracking conic border */}
-            <div className={`transition-all duration-700 ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
-              {/* Outer positioning shell — relative, rounded, gives GlowingEffect its -inset-px context */}
-              <div className="relative rounded-full border border-white/10 p-[2px]">
-                <GlowingEffect
-                  spread={40}
-                  glow={true}
-                  disabled={false}
-                  proximity={80}
-                  inactiveZone={0.01}
-                  borderWidth={2}
-                  movementDuration={1.5}
-                />
-                <button
-                  onClick={onBookingClick}
-                  className="group relative bg-white text-black px-10 py-4 rounded-full text-base font-medium flex items-center gap-2 hover:scale-105 hover:bg-white/90 transition-all duration-300 shadow-2xl"
-                >
-                  <span className="whitespace-nowrap">{t.startJourney}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
+            {/* CTA Button */}
+            <div className={`transition-all duration-[840ms] ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+              <button
+                onClick={onBookingClick}
+                className="group relative border border-white/20 bg-white/5 hover:bg-white/0 text-white mx-auto text-center rounded-full px-10 py-4 text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-300"
+              >
+                <span className="absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 top-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#e601c0] to-transparent" />
+                <span className="whitespace-nowrap">{t.startJourney}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <span className="absolute group-hover:opacity-60 opacity-20 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#07bccc] to-transparent" />
+              </button>
             </div>
 
-            {/* AI Input — Animated Glowing Search Bar */}
-            <div className={`w-full space-y-3 transition-all duration-1000 ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
+            {/* AI Input */}
+            <div className={`w-full space-y-3 transition-all duration-[1200ms] ${showInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'}`}>
               <div className="flex flex-col items-center gap-1">
-                <h3 className="text-[13px] md:text-[15px] uppercase tracking-[0.5em] font-black text-white/90">
-                  {isSent ? t.openingChat : t.askAiAgent}
+                {/* BubbleText: reactive per-character hover on "ASK OUR AI AGENT" */}
+                <h3 className="text-[13px] md:text-[15px] uppercase font-black text-white/90">
+                  {isSent ? (
+                    <span style={{ letterSpacing: "0.5em" }}>{t.openingChat}</span>
+                  ) : (
+                    <BubbleText text={t.askAiAgent} />
+                  )}
                 </h3>
-                {!isSent && <ChevronDown className="w-7 h-7 text-white/80 stroke-[3] animate-bounce-down" />}
+                {/* Reactive arrow: tilts toward cursor, glows magenta/cyan on proximity */}
+                {!isSent && <ReactiveBounceArrow />}
               </div>
 
-              {/* Glowing border wrapper */}
+              {/* Glowing border form */}
               <form onSubmit={handleAISubmit} className="relative flex items-center justify-center group w-full">
                 {/* Glow layer 1 */}
                 <div className={`absolute z-[-1] overflow-hidden rounded-xl blur-[3px] pointer-events-none
@@ -772,14 +862,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
           </div>
 
           {/* ── Scroll-Expanding Video ── */}
-          <div ref={scrollVideoRootRef} className="w-full mt-32" style={{ position: 'relative', height: '280vh' }}>
-            {/* Sticky layer */}
+          <div ref={scrollVideoRootRef} className="w-full mt-32" style={{ position: 'relative' }}>
             <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/*
-                Single box: scrollVideoContainerRef grows via scroll handler.
-                overflow: visible so the glow border layers can sit on top of the edge.
-                A clip wrapper inside handles video overflow.
-              */}
               <div
                 ref={scrollVideoContainerRef}
                 onClick={() => setIsPlayingIntro(p => !p)}
@@ -787,8 +871,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                 onMouseLeave={handleVideoMouseLeave}
                 style={{
                   position: 'relative',
-                  width: 380,
-                  height: 380,
+                  width: 260,
+                  height: 200,
                   borderRadius: 24,
                   overflow: 'visible',
                   background: 'transparent',
@@ -796,27 +880,18 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                   cursor: 'pointer',
                 }}
               >
-                {/* ── Glow bloom: box-shadow flush on this element's border ── */}
                 <div className="video-glow-bloom" style={{ borderRadius: 'inherit' }} />
-
-                {/* ── Animated conic border layers (sit on the border, no overflow) ── */}
                 <div className="video-glow-wrap" style={{ borderRadius: 'inherit' }}>
                   <div className="video-glow-l1" style={{ borderRadius: 'inherit' }} />
                   <div className="video-glow-l2" style={{ borderRadius: 'inherit' }} />
                   <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
                 </div>
 
-                {/* ── Clip inner: video + play button clipped to rounded rect ── */}
                 <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 'inherit',
-                  overflow: 'hidden',
-                  background: '#000',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                  zIndex: 1,
+                  position: 'absolute', inset: 0, borderRadius: 'inherit',
+                  overflow: 'hidden', background: '#000',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1,
                 }}>
-                  {/* YouTube */}
                   <iframe
                     key={iframeSrc}
                     src={iframeSrc}
@@ -824,40 +899,24 @@ export default function Hero({ onBookingClick, onAskAIClick, language }: HeroPro
                     allow="autoplay; encrypted-media"
                   />
 
-                  {/* Magnetic Play Intro button */}
                   {!isPlayingIntro && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: 3,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        pointerEvents: 'none',
-                      }}
-                    >
+                    <div style={{
+                      position: 'absolute', inset: 0, zIndex: 3,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      pointerEvents: 'none',
+                    }}>
                       <div ref={playBtnWrapRef} style={{ pointerEvents: 'auto', willChange: 'transform' }}>
                         <button
                           ref={playBtnRef}
                           onClick={(e) => { e.stopPropagation(); setIsPlayingIntro(true); }}
                           className="play-btn-pulse"
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.55rem',
-                            padding: '0.8rem 1.8rem',
-                            borderRadius: 999,
-                            background: 'rgba(255,255,255,0.92)',
-                            color: '#000',
-                            fontWeight: 700,
-                            fontSize: '0.82rem',
-                            letterSpacing: '0.07em',
-                            textTransform: 'uppercase',
-                            cursor: 'pointer',
-                            border: 'none',
-                            fontFamily: '"Montserrat", sans-serif',
-                            backdropFilter: 'blur(8px)',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
+                            padding: '0.8rem 1.8rem', borderRadius: 999,
+                            background: 'rgba(255,255,255,0.92)', color: '#000',
+                            fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.07em',
+                            textTransform: 'uppercase', cursor: 'pointer', border: 'none',
+                            fontFamily: '"Montserrat", sans-serif', backdropFilter: 'blur(8px)',
                             transition: 'background 0.2s ease, transform 0.2s ease',
                             userSelect: 'none',
                           }}
