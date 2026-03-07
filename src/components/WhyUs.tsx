@@ -17,6 +17,8 @@ const GLOW_CSS = `
   .gc-wrap {
     isolation: isolate;
     --lx: -9999px; --ly: -9999px; --inside: 0;
+    backdrop-filter: blur(60px) saturate(200%);
+    -webkit-backdrop-filter: blur(60px) saturate(200%);
   }
   .gc-border {
     position: absolute; inset: 0;
@@ -104,7 +106,7 @@ function GlowCard({
     <div
       ref={ref}
       className={`gc-wrap relative ${className}`}
-      style={{ background: 'transparent' }}
+      style={{ background: 'rgba(15, 15, 25, 0.35)' }}
       onClick={onClick}
     >
       <div className="gc-fill" />
