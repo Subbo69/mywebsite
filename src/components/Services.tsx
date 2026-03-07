@@ -8,7 +8,7 @@ import {
   LayoutGrid, HelpCircle, LineChart, ArrowRight
 } from 'lucide-react';
 import { translations, Language } from '../utils/translations';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, Variants } from 'framer-motion';
 
 interface ServicesProps {
   onAskAIClick: (context: string) => void;
@@ -27,26 +27,6 @@ interface ServiceNode {
 }
 
 type FilterKey = 'agents' | 'faq' | 'roi';
-
-function useTypewriter(text: string, speed = 28, startDelay = 0, enabled = false) {
-  const [displayed, setDisplayed] = useState('');
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    if (!enabled) return;
-    setDisplayed(''); setDone(false);
-    let i = 0;
-    const outer = setTimeout(() => {
-      const iv = setInterval(() => {
-        i++;
-        setDisplayed(text.slice(0, i));
-        if (i >= text.length) { clearInterval(iv); setDone(true); }
-      }, speed);
-      return () => clearInterval(iv);
-    }, startDelay);
-    return () => clearTimeout(outer);
-  }, [enabled, text, speed, startDelay]);
-  return { displayed, done };
-}
 
 const filterIcons: Record<FilterKey, any> = {
   agents: Bot, faq: HelpCircle, roi: LineChart,
@@ -104,7 +84,7 @@ function GlowCard({ children, className = '', glowColor = 'cyan', cardIndex = 0,
     return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave); };
   }, [color, cardIndex]);
   return (
-    <div ref={ref} className={`gc-wrap rounded-2xl relative cursor-pointer ${className}`} style={{ background: '#000' }} onClick={onClick}>
+    <div ref={ref} className={`gc-wrap rounded-2xl relative cursor-pointer ${className}`} style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} onClick={onClick}>
       <div className="gc-fill" /><div className="gc-border" /><div className="gc-idle-border" /><div className="gc-content">{children}</div>
     </div>
   );
@@ -136,51 +116,126 @@ function GlowFilterButton({ children, isActive, onClick }: { children: React.Rea
       className={`gc-wrap relative flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-all duration-150 ${isActive ? 'bg-white text-black border-transparent' : 'bg-white/8 text-white/70 hover:text-white'}`}
       style={{ isolation: 'isolate', '--lx': '-9999px', '--ly': '-9999px', '--inside': '0' } as React.CSSProperties}
     >
-      {/* hover-only glow border — no idle spin */}
       {!isActive && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-lg z-[1]"
-          style={{
-            border: '1.2px solid rgba(255,255,255,0.22)',
-          }}
-        />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-lg z-[1]" style={{ border: '1.2px solid rgba(255,255,255,0.22)' }} />
       )}
       {!isActive && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute rounded-lg z-[2]"
-          style={{
-            inset: '-1.2px',
-            padding: '1.2px',
-            background: 'radial-gradient(260px 260px at var(--lx) var(--ly), hsl(var(--gc-color) / calc(var(--inside) * 1)), transparent 60%)',
-            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-            WebkitMaskComposite: 'xor',
-            maskComposite: 'exclude',
-          }}
-        />
+        <span aria-hidden="true" className="pointer-events-none absolute rounded-lg z-[2]" style={{ inset: '-1.2px', padding: '1.2px', background: 'radial-gradient(260px 260px at var(--lx) var(--ly), hsl(var(--gc-color) / calc(var(--inside) * 1)), transparent 60%)', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }} />
       )}
       {isActive && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-lg z-[1]"
-          style={{ background: 'white' }}
-        />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-lg z-[1]" style={{ background: 'white' }} />
       )}
       <span className="relative z-[3] flex items-center gap-1">{children}</span>
     </button>
   );
 }
 
-// Both Services and Testimonials use this same solid background.
-// This eliminates the backdrop-filter stacking context seam.
-export const SECTION_BG = 'rgb(10, 10, 10)';
+// ── Animated letter-by-letter title ──────────────────────────────────────────
+function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
+  const letters = Array.from(text);
+  const delay = 0.04; // per-letter delay
+
+  const container: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: delay, delayChildren: 0 },
+    },
+  };
+
+  const child: Variants = {
+    hidden: { opacity: 0, y: 22 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', damping: 12, stiffness: 220 },
+    },
+  };
+
+  const lineVariants: Variants = {
+    hidden: { width: '0%', left: '50%' },
+    visible: {
+      width: '100%',
+      left: '0%',
+      transition: { delay: letters.length * delay + 0.1, duration: 0.7, ease: 'easeOut' },
+    },
+  };
+
+  return (
+    <div className="relative inline-block">
+      <motion.div
+        style={{ display: 'flex', overflow: 'hidden', flexWrap: 'wrap' }}
+        variants={container}
+        initial="hidden"
+        animate={animate ? 'visible' : 'hidden'}
+        className="text-[33px] md:text-[55px] font-black text-white tracking-tighter uppercase"
+      >
+        {letters.map((letter, i) => (
+          <motion.span key={i} variants={child}>
+            {letter === ' ' ? '\u00A0' : letter}
+          </motion.span>
+        ))}
+      </motion.div>
+
+      {/* underline bar */}
+      <motion.div
+        variants={lineVariants}
+        initial="hidden"
+        animate={animate ? 'visible' : 'hidden'}
+        className="absolute h-1 rounded-full bg-white/50"
+        style={{ bottom: '-6px' }}
+      />
+    </div>
+  );
+}
+
+// ── Animated letter-by-letter subtitle (no underline, faster) ─────────────────
+function AnimatedSubtitle({ text, animate }: { text: string; animate: boolean }) {
+  const letters = Array.from(text);
+  const delay = 0.018;
+
+  const container: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: delay, delayChildren: 0.18 },
+    },
+  };
+
+  const child: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', damping: 14, stiffness: 260 },
+    },
+  };
+
+  return (
+    <motion.div
+      style={{ display: 'flex', flexWrap: 'wrap', overflow: 'hidden' }}
+      variants={container}
+      initial="hidden"
+      animate={animate ? 'visible' : 'hidden'}
+      className="text-[15px] md:text-[18px] font-bold text-white/65 max-w-2xl"
+    >
+      {letters.map((letter, i) => (
+        <motion.span key={i} variants={child}>
+          {letter === ' ' ? '\u00A0' : letter}
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+}
+
+export const SECTION_BG = 'transparent';
 
 export default function Services({ onAskAIClick, language }: ServicesProps) {
   const t = translations[language];
   const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('agents');
+  const [marqueeVisible, setMarqueeVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const topBorderRef = useRef<HTMLDivElement>(null);
 
@@ -195,9 +250,8 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     let rafId = 0;
     let active = false;
 
-    // Spring constants — high stiffness + low damping = aggressive wobbly overshoot
-    const stiffness = 0.09;   // strong pull = fast acceleration
-    const damping   = 0.48;   // very underdamped = big swings, slow to settle
+    const stiffness = 0.09;
+    const damping   = 0.48;
 
     const tick = () => {
       const force = (targetX - currentX) * stiffness;
@@ -237,28 +291,27 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setHasAnimated(true); observer.disconnect(); } }, { threshold: 0.15 });
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setHasAnimated(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.15 });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const titleText    = t.servicesTitle as string;
-  const subtitleText = t.servicesSubtitle as string;
-  const titleDuration    = titleText.length * 22;
-  const subtitleDuration = subtitleText.length * 14;
-  const marqueeDelay     = titleDuration + subtitleDuration + 300;
-
-  const { displayed: titleDisplayed, done: titleDone       } = useTypewriter(titleText,    22, 0,                   hasAnimated);
-  const { displayed: subtitleDisplayed, done: subtitleDone } = useTypewriter(subtitleText, 14, titleDuration + 100, hasAnimated);
-
-  const [marqueeVisible, setMarqueeVisible] = useState(false);
+  // Show filter/marquee area shortly after section animates in
   useEffect(() => {
     if (!hasAnimated) return;
-    const t2 = setTimeout(() => setMarqueeVisible(true), marqueeDelay);
+    const t2 = setTimeout(() => setMarqueeVisible(true), 400);
     return () => clearTimeout(t2);
-  }, [hasAnimated, marqueeDelay]);
+  }, [hasAnimated]);
 
   const handleAskAI = (context: string) => { setSelectedNode(null); onAskAIClick?.(context); };
+
+  const titleText    = t.servicesTitle as string;
+  const subtitleText = t.servicesSubtitle as string;
 
   const serviceNodes: ServiceNode[] = [
     { id: 1,  icon: Rocket,        title: t.node2Title,   description: t.node2Desc,   category: t.catGrowth,     filterGroup: 'agents', context: 'lead-generation', impact: t.impactLive },
@@ -296,8 +349,6 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   const filtered = serviceNodes.filter(n => n.filterGroup === activeFilter);
   const showMarquee = filtered.length >= 7;
   const infiniteNodes = [...filtered, ...filtered];
-  const titleCursor    = hasAnimated && !titleDone;
-  const subtitleCursor = hasAnimated && subtitleDisplayed.length > 0 && !subtitleDone;
 
   const Card = ({ node, fullWidth = false, index = 0 }: { node: ServiceNode; fullWidth?: boolean; index?: number }) => (
     <GlowCard glowColor={glowPalette[index % glowPalette.length]} cardIndex={index} onClick={() => setSelectedNode(node)} className={`group ${fullWidth ? 'h-full' : 'flex-shrink-0 w-[310px] md:w-[330px] whitespace-normal'}`}>
@@ -318,16 +369,21 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   );
 
   return (
-    <section ref={sectionRef} className="relative py-12 overflow-hidden" style={{ background: SECTION_BG }}>
+    <section
+      ref={sectionRef}
+      className="relative py-12 overflow-hidden"
+      style={{
+        background: 'rgba(10, 10, 10, 0.45)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+    >
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes marqueeReverse { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
         .animate-marquee-reverse { animation: marqueeReverse 60s linear infinite; animation-play-state: paused; }
         .marquee-running .animate-marquee-reverse { animation-play-state: running; }
         .pause-marquee:hover .animate-marquee-reverse { animation-play-state: paused; }
         .mask-fade { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .tw-cursor::after { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 900; }
-        .tw-cursor-sub::after { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 700; opacity: 0.45; }
         .marquee-reveal { opacity: 0; transform: translateX(-24px); transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s; }
         .marquee-reveal.visible { opacity: 1; transform: translateX(0); }
         .top-border-glow { --tbx: 50%; --tb-opacity: 0; }
@@ -339,19 +395,15 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         <div className="absolute left-0 right-0" style={{ top: '0px', height: '48px', background: 'radial-gradient(600px 48px at var(--tbx) 0px, rgba(160,210,255,0.16) 0%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
       </div>
 
+      {/* Title & subtitle */}
       <div className="max-w-7xl mx-auto px-6 mb-7">
-        <div className="inline-block mb-2">
-          <h2 className={`text-[33px] md:text-[55px] font-black text-white tracking-tighter uppercase min-h-[1.2em] ${titleCursor ? 'tw-cursor' : ''}`}>
-            {hasAnimated ? titleDisplayed : <span className="invisible">{titleText}</span>}
-          </h2>
-          <div className="mt-1 h-1 w-16 bg-white/50 rounded-full" />
+        <div className="inline-block mb-4 pb-2">
+          <AnimatedTitle text={titleText} animate={hasAnimated} />
         </div>
-        <div className="relative text-[15px] md:text-[18px] font-bold max-w-2xl">
-          <p className="invisible" aria-hidden="true">{subtitleText}</p>
-          <p className={`absolute inset-0 text-white/65 ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>{hasAnimated ? subtitleDisplayed : ''}</p>
-        </div>
+        <AnimatedSubtitle text={subtitleText} animate={hasAnimated} />
       </div>
 
+      {/* Filters */}
       <div className={`max-w-7xl mx-auto px-6 mb-6 marquee-reveal ${marqueeVisible ? 'visible' : ''}`}>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Filter className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
@@ -395,7 +447,13 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         {selectedNode && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedNode(null)} className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 10, transition: { duration: 0.2 } }} className="relative w-full max-w-lg bg-black border border-white/20 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-2xl p-6 md:p-10 max-h-[90vh] overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 10, transition: { duration: 0.2 } }}
+              className="relative w-full max-w-lg border border-white/20 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-2xl p-6 md:p-10 max-h-[90vh] overflow-y-auto"
+              style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
+            >
               <button onClick={() => setSelectedNode(null)} className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors z-10"><X className="w-5 h-5 text-white/70" /></button>
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-3 bg-white/15 text-white rounded-xl flex-shrink-0 border border-white/20"><selectedNode.icon className="w-6 h-6" /></div>
