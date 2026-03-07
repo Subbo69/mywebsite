@@ -21,14 +21,13 @@ interface ServiceNode {
   title: string;
   description: string;
   category: string;
-  filterGroup: 'all' | 'agents' | 'faq' | 'roi';
+  filterGroup: 'agents' | 'faq' | 'roi';
   context: string;
   impact?: string;
 }
 
-type FilterKey = 'all' | 'agents' | 'faq' | 'roi';
+type FilterKey = 'agents' | 'faq' | 'roi';
 
-// ─── Typewriter hook ──────────────────────────────────────────────────────────
 function useTypewriter(text: string, speed = 28, startDelay = 0, enabled = false) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
@@ -50,10 +49,9 @@ function useTypewriter(text: string, speed = 28, startDelay = 0, enabled = false
 }
 
 const filterIcons: Record<FilterKey, any> = {
-  all: LayoutGrid, agents: Bot, faq: HelpCircle, roi: LineChart,
+  agents: Bot, faq: HelpCircle, roi: LineChart,
 };
 
-// ─── GlowCard — local-coordinate spotlight border ────────────────────────────
 const glowHsl: Record<string, string> = {
   cyan:   '190 100% 60%',
   purple: '270 100% 65%',
@@ -65,44 +63,18 @@ const glowHsl: Record<string, string> = {
 type GlowColor = keyof typeof glowHsl;
 
 const GLOW_CSS = `
-  .gc-wrap {
-    isolation: isolate;
-    --lx: -9999px; --ly: -9999px; --inside: 0;
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
   }
-  .gc-border {
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    pointer-events: none; z-index: 1;
-    border: 1px solid rgba(255,255,255,0.09);
-  }
-  .gc-border::after {
-    content: '';
-    position: absolute; inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: radial-gradient(
-      200px 200px at var(--lx) var(--ly),
-      hsl(var(--gc-color) / calc(var(--inside) * 1)),
-      transparent 65%
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-  }
-  .gc-fill {
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    pointer-events: none; z-index: 0;
-    background: radial-gradient(
-      160px 160px at var(--lx) var(--ly),
-      hsl(var(--gc-color) / calc(var(--inside) * 0.08)),
-      transparent 70%
-    );
-  }
-  .gc-content {
-    position: relative; z-index: 2;
-    height: 100%; display: flex; flex-direction: column;
-  }
+  @keyframes borderRotate { to { --angle: 360deg; } }
+  .gc-wrap { isolation: isolate; --lx: -9999px; --ly: -9999px; --inside: 0; }
+  .gc-border { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1; border: 1.2px solid rgba(255,255,255,0.22); }
+  .gc-border::after { content: ''; position: absolute; inset: -1.2px; border-radius: inherit; padding: 1.2px; background: radial-gradient(520px 520px at var(--lx) var(--ly), hsl(var(--gc-color) / calc(var(--inside) * 1)), transparent 60%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .gc-idle-border { position: absolute; inset: -1.2px; border-radius: inherit; padding: 1.2px; --angle: 0deg; background: conic-gradient(from var(--angle), transparent 0%, hsl(var(--gc-color) / 0.06) 8%, hsl(var(--gc-color) / 0.55) 14%, hsl(var(--gc-color) / 0.9) 17%, hsl(var(--gc-color) / 0.55) 20%, hsl(var(--gc-color) / 0.06) 27%, transparent 38%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 2; animation: borderRotate var(--idle-duration, 6s) linear infinite var(--idle-delay, 0s); opacity: calc(1 - var(--inside)); transition: opacity 0.5s ease; }
+  .gc-fill { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0; background: radial-gradient(420px 420px at var(--lx) var(--ly), hsl(var(--gc-color) / calc(var(--inside) * 0.13)), transparent 70%); }
+  .gc-content { position: relative; z-index: 3; height: 100%; display: flex; flex-direction: column; }
 `;
 
 const GLOW_STYLE_ID = 'gc-shared-styles';
@@ -115,26 +87,37 @@ function injectGlowStyle() {
   document.head.appendChild(el);
 }
 
-function GlowCard({
-  children,
-  className = '',
-  glowColor = 'cyan',
-  onClick,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  glowColor?: GlowColor;
-  onClick?: () => void;
-}) {
+function GlowCard({ children, className = '', glowColor = 'cyan', cardIndex = 0, onClick }: { children: React.ReactNode; className?: string; glowColor?: GlowColor; cardIndex?: number; onClick?: () => void; }) {
   const ref = useRef<HTMLDivElement>(null);
   const color = glowHsl[glowColor] ?? glowHsl.cyan;
-
   useEffect(() => {
     injectGlowStyle();
     const el = ref.current;
     if (!el) return;
     el.style.setProperty('--gc-color', color);
+    el.style.setProperty('--idle-delay', `${-(cardIndex * 0.35) % 8}s`);
+    el.style.setProperty('--idle-duration', `${5 + (cardIndex % 5) * 0.7}s`);
+    const onMove = (e: PointerEvent) => { const r = el.getBoundingClientRect(); el.style.setProperty('--lx', `${(e.clientX - r.left).toFixed(1)}px`); el.style.setProperty('--ly', `${(e.clientY - r.top).toFixed(1)}px`); el.style.setProperty('--inside', '1'); };
+    const onLeave = () => el.style.setProperty('--inside', '0');
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+    return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave); };
+  }, [color, cardIndex]);
+  return (
+    <div ref={ref} className={`gc-wrap rounded-2xl relative cursor-pointer ${className}`} style={{ background: '#000' }} onClick={onClick}>
+      <div className="gc-fill" /><div className="gc-border" /><div className="gc-idle-border" /><div className="gc-content">{children}</div>
+    </div>
+  );
+}
 
+const glowPalette: GlowColor[] = ['cyan', 'purple', 'green', 'amber', 'white'];
+
+function GlowFilterButton({ children, isActive, onClick }: { children: React.ReactNode; isActive: boolean; onClick: () => void; }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty('--gc-color', glowHsl.white);
     const onMove = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
       el.style.setProperty('--lx', `${(e.clientX - r.left).toFixed(1)}px`);
@@ -142,46 +125,119 @@ function GlowCard({
       el.style.setProperty('--inside', '1');
     };
     const onLeave = () => el.style.setProperty('--inside', '0');
-
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerleave', onLeave);
-    return () => {
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerleave', onLeave);
-    };
-  }, [color]);
-
+    return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave); };
+  }, []);
   return (
-    <div
+    <button
       ref={ref}
-      className={`gc-wrap rounded-2xl relative cursor-pointer ${className}`}
-      style={{ background: 'transparent' }}
       onClick={onClick}
+      className={`gc-wrap relative flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-all duration-150 ${isActive ? 'bg-white text-black border-transparent' : 'bg-white/8 text-white/70 hover:text-white'}`}
+      style={{ isolation: 'isolate', '--lx': '-9999px', '--ly': '-9999px', '--inside': '0' } as React.CSSProperties}
     >
-      <div className="gc-fill" />
-      <div className="gc-border" />
-      <div className="gc-content">{children}</div>
-    </div>
+      {/* hover-only glow border — no idle spin */}
+      {!isActive && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-lg z-[1]"
+          style={{
+            border: '1.2px solid rgba(255,255,255,0.22)',
+          }}
+        />
+      )}
+      {!isActive && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute rounded-lg z-[2]"
+          style={{
+            inset: '-1.2px',
+            padding: '1.2px',
+            background: 'radial-gradient(260px 260px at var(--lx) var(--ly), hsl(var(--gc-color) / calc(var(--inside) * 1)), transparent 60%)',
+            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+          }}
+        />
+      )}
+      {isActive && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-lg z-[1]"
+          style={{ background: 'white' }}
+        />
+      )}
+      <span className="relative z-[3] flex items-center gap-1">{children}</span>
+    </button>
   );
 }
 
-const glowPalette: GlowColor[] = ['cyan', 'purple', 'green', 'amber', 'white'];
+// Both Services and Testimonials use this same solid background.
+// This eliminates the backdrop-filter stacking context seam.
+export const SECTION_BG = 'rgb(10, 10, 10)';
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function Services({ onAskAIClick, language }: ServicesProps) {
   const t = translations[language];
   const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('agents');
   const sectionRef = useRef<HTMLDivElement>(null);
+  const topBorderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const border  = topBorderRef.current;
+    if (!section || !border) return;
+
+    let targetX = 50;
+    let currentX = 50;
+    let velocity = 0;
+    let rafId = 0;
+    let active = false;
+
+    // Spring constants — high stiffness + low damping = aggressive wobbly overshoot
+    const stiffness = 0.09;   // strong pull = fast acceleration
+    const damping   = 0.48;   // very underdamped = big swings, slow to settle
+
+    const tick = () => {
+      const force = (targetX - currentX) * stiffness;
+      velocity = (velocity + force) * damping;
+      currentX += velocity;
+      border.style.setProperty('--tbx', `${currentX.toFixed(3)}%`);
+      if (Math.abs(currentX - targetX) > 0.004 || Math.abs(velocity) > 0.004) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        currentX = targetX;
+        velocity = 0;
+        rafId = 0;
+      }
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const r = section.getBoundingClientRect();
+      targetX = ((e.clientX - r.left) / r.width) * 100;
+      if (!active) { border.style.setProperty('--tb-opacity', '1'); active = true; }
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    };
+
+    const onLeave = () => {
+      border.style.setProperty('--tb-opacity', '0');
+      active = false;
+    };
+
+    section.addEventListener('pointermove', onMove);
+    section.addEventListener('pointerleave', onLeave);
+    return () => {
+      section.removeEventListener('pointermove', onMove);
+      section.removeEventListener('pointerleave', onLeave);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setHasAnimated(true); observer.disconnect(); } },
-      { threshold: 0.15 }
-    );
+    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setHasAnimated(true); observer.disconnect(); } }, { threshold: 0.15 });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -192,7 +248,7 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   const subtitleDuration = subtitleText.length * 14;
   const marqueeDelay     = titleDuration + subtitleDuration + 300;
 
-  const { displayed: titleDisplayed,    done: titleDone    } = useTypewriter(titleText,    22, 0,                   hasAnimated);
+  const { displayed: titleDisplayed, done: titleDone       } = useTypewriter(titleText,    22, 0,                   hasAnimated);
   const { displayed: subtitleDisplayed, done: subtitleDone } = useTypewriter(subtitleText, 14, titleDuration + 100, hasAnimated);
 
   const [marqueeVisible, setMarqueeVisible] = useState(false);
@@ -202,10 +258,7 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     return () => clearTimeout(t2);
   }, [hasAnimated, marqueeDelay]);
 
-  const handleAskAI = (context: string) => {
-    setSelectedNode(null);
-    onAskAIClick?.(context);
-  };
+  const handleAskAI = (context: string) => { setSelectedNode(null); onAskAIClick?.(context); };
 
   const serviceNodes: ServiceNode[] = [
     { id: 1,  icon: Rocket,        title: t.node2Title,   description: t.node2Desc,   category: t.catGrowth,     filterGroup: 'agents', context: 'lead-generation', impact: t.impactLive },
@@ -235,53 +288,29 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   ];
 
   const filters: { key: FilterKey; label: string }[] = [
-    { key: 'all',    label: t.filterAll    },
     { key: 'agents', label: t.filterAgents },
     { key: 'faq',    label: t.filterFaq    },
     { key: 'roi',    label: t.filterRoi    },
   ];
 
-  const filtered = activeFilter === 'all'
-    ? serviceNodes
-    : serviceNodes.filter(n => n.filterGroup === activeFilter);
-
-  const showMarquee  = activeFilter === 'all' || filtered.length >= 7;
+  const filtered = serviceNodes.filter(n => n.filterGroup === activeFilter);
+  const showMarquee = filtered.length >= 7;
   const infiniteNodes = [...filtered, ...filtered];
-
   const titleCursor    = hasAnimated && !titleDone;
   const subtitleCursor = hasAnimated && subtitleDisplayed.length > 0 && !subtitleDone;
 
   const Card = ({ node, fullWidth = false, index = 0 }: { node: ServiceNode; fullWidth?: boolean; index?: number }) => (
-    <GlowCard
-      glowColor={glowPalette[index % glowPalette.length]}
-      onClick={() => setSelectedNode(node)}
-      className={`
-        group
-        ${fullWidth ? 'h-full' : 'flex-shrink-0 w-[310px] md:w-[330px] whitespace-normal'}
-      `}
-    >
-      <div className="flex flex-col h-full px-4 pt-4 pb-3">
-        <h3 className="font-black text-[15px] uppercase tracking-tight leading-tight mb-2 text-white/90">
-          {node.title}
-        </h3>
-        <div className="mb-5 flex-1">
-          <p className="text-[13px] text-white/75 font-medium leading-relaxed">
-            {node.description}
-          </p>
+    <GlowCard glowColor={glowPalette[index % glowPalette.length]} cardIndex={index} onClick={() => setSelectedNode(node)} className={`group ${fullWidth ? 'h-full' : 'flex-shrink-0 w-[310px] md:w-[330px] whitespace-normal'}`}>
+      <div className="flex flex-col h-full px-4 pt-3 pb-3">
+        <h3 className="font-black text-[15px] uppercase tracking-tight leading-tight mb-1.5 text-white">{node.title}</h3>
+        <div className="mb-4 relative" style={{ height: '4.5em' }}>
+          <p className="text-[13px] text-white/85 font-medium leading-[1.5] overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{node.description}</p>
         </div>
         <div className="flex items-center justify-between gap-2 mt-auto">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/40 leading-none">
-            {node.category}
-          </p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/60 leading-none">{node.category}</p>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {node.impact && (
-              <span className="text-[8px] font-black uppercase px-2 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-md leading-none">
-                {node.impact}
-              </span>
-            )}
-            <div className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white/85 transition-colors leading-none">
-              Details <ArrowRight className="w-3 h-3" />
-            </div>
+            {node.impact && <span className="text-[8px] font-black uppercase px-2 py-1 bg-emerald-500/25 border border-emerald-500/50 text-emerald-300 rounded-md leading-none">{node.impact}</span>}
+            <div className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-white/55 group-hover:text-white transition-colors leading-none">Details <ArrowRight className="w-3 h-3" /></div>
           </div>
         </div>
       </div>
@@ -289,103 +318,71 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   );
 
   return (
-    <section ref={sectionRef} className="relative py-12 bg-black overflow-hidden">
+    <section ref={sectionRef} className="relative py-12 overflow-hidden" style={{ background: SECTION_BG }}>
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes marqueeReverse {
-          0%   { transform: translateX(-50%); }
-          100% { transform: translateX(0);    }
-        }
-        .animate-marquee-reverse { animation: marqueeReverse 60s linear infinite; }
+        @keyframes marqueeReverse { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+        .animate-marquee-reverse { animation: marqueeReverse 60s linear infinite; animation-play-state: paused; }
+        .marquee-running .animate-marquee-reverse { animation-play-state: running; }
         .pause-marquee:hover .animate-marquee-reverse { animation-play-state: paused; }
-        .mask-fade {
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        .tw-cursor::after      { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 900; }
-        .tw-cursor-sub::after  { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 700; opacity: 0.3; }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-        .marquee-reveal { opacity: 0; }
-        .marquee-reveal.visible { animation: fadeInUp 1.4s ease-out forwards; }
+        .mask-fade { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .tw-cursor::after { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 900; }
+        .tw-cursor-sub::after { content: '|'; animation: blink 0.55s step-end infinite; font-weight: 700; opacity: 0.45; }
+        .marquee-reveal { opacity: 0; transform: translateX(-24px); transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s; }
+        .marquee-reveal.visible { opacity: 1; transform: translateX(0); }
+        .top-border-glow { --tbx: 50%; --tb-opacity: 0; }
       `}} />
 
-      {/* Header */}
+      <div ref={topBorderRef} className="top-border-glow pointer-events-none absolute top-0 left-0 right-0 z-10" style={{ height: '1.2px' }}>
+        <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(600px 80px at var(--tbx) 0px, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+        <div className="absolute left-0 right-0" style={{ top: '0px', height: '48px', background: 'radial-gradient(600px 48px at var(--tbx) 0px, rgba(160,210,255,0.16) 0%, transparent 70%)', opacity: 'var(--tb-opacity)', transition: 'opacity 0.4s ease' }} />
+      </div>
+
       <div className="max-w-7xl mx-auto px-6 mb-7">
         <div className="inline-block mb-2">
           <h2 className={`text-[33px] md:text-[55px] font-black text-white tracking-tighter uppercase min-h-[1.2em] ${titleCursor ? 'tw-cursor' : ''}`}>
             {hasAnimated ? titleDisplayed : <span className="invisible">{titleText}</span>}
           </h2>
-          <div className="mt-1 h-1 w-16 bg-white/30 rounded-full" />
+          <div className="mt-1 h-1 w-16 bg-white/50 rounded-full" />
         </div>
         <div className="relative text-[15px] md:text-[18px] font-bold max-w-2xl">
           <p className="invisible" aria-hidden="true">{subtitleText}</p>
-          <p className={`absolute inset-0 text-white/40 ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>
-            {hasAnimated ? subtitleDisplayed : ''}
-          </p>
+          <p className={`absolute inset-0 text-white/65 ${subtitleCursor ? 'tw-cursor-sub' : ''}`}>{hasAnimated ? subtitleDisplayed : ''}</p>
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className={`max-w-7xl mx-auto px-6 mb-6 marquee-reveal ${marqueeVisible ? 'visible' : ''}`}>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <Filter className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
+          <Filter className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
           {filters.map(f => {
             const IconComp = filterIcons[f.key];
-            const count = f.key === 'all'
-              ? serviceNodes.length
-              : serviceNodes.filter(n => n.filterGroup === f.key).length;
+            const count = serviceNodes.filter(n => n.filterGroup === f.key).length;
             return (
-              <button
-                key={f.key}
-                onClick={() => setActiveFilter(f.key)}
-                className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-all duration-150
-                  ${activeFilter === f.key
-                    ? 'bg-white text-black border-white/80'
-                    : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white/80 hover:border-white/20'
-                  }`}
-              >
-                <IconComp className="w-3 h-3" />
-                {f.label}
-                <span className="opacity-35">({count})</span>
-              </button>
+              <GlowFilterButton key={f.key} isActive={activeFilter === f.key} onClick={() => setActiveFilter(f.key)}>
+                <IconComp className="w-3 h-3" />{f.label}<span className="opacity-50">({count})</span>
+              </GlowFilterButton>
             );
           })}
         </div>
       </div>
 
-      {/* Marquee */}
       {showMarquee && (
-        <div className={`relative pause-marquee mask-fade marquee-reveal ${marqueeVisible ? 'visible' : ''}`}>
+        <div className={`relative pause-marquee mask-fade marquee-reveal ${marqueeVisible ? 'visible marquee-running' : ''}`}>
           <div className="flex overflow-hidden py-4">
             <div className="flex gap-4 animate-marquee-reverse whitespace-nowrap">
-              {infiniteNodes.map((node, index) => (
-                <Card key={`${node.id}-${index}`} node={node} index={index} />
-              ))}
+              {infiniteNodes.map((node, index) => <Card key={`${node.id}-${index}`} node={node} index={index} />)}
             </div>
           </div>
         </div>
       )}
 
-      {/* Static Grid */}
       {!showMarquee && (
         <div className={`max-w-7xl mx-auto px-6 marquee-reveal ${marqueeVisible ? 'visible' : ''}`}>
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
               {filtered.map((node, i) => (
-                <motion.div
-                  key={node.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <motion.div key={node.id} layout initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
                   <Card node={node} fullWidth index={i} />
                 </motion.div>
               ))}
@@ -394,62 +391,23 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
         </div>
       )}
 
-      {/* Modal */}
       <AnimatePresence>
         {selectedNode && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedNode(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 10, transition: { duration: 0.2 } }}
-              className="relative w-full max-w-lg bg-[#0e0e0e] border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-2xl p-6 md:p-10 max-h-[90vh] overflow-y-auto"
-            >
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full transition-colors z-10"
-              >
-                <X className="w-5 h-5 text-white/50" />
-              </button>
-
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedNode(null)} className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 10, transition: { duration: 0.2 } }} className="relative w-full max-w-lg bg-black border border-white/20 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-2xl p-6 md:p-10 max-h-[90vh] overflow-y-auto">
+              <button onClick={() => setSelectedNode(null)} className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors z-10"><X className="w-5 h-5 text-white/70" /></button>
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-white/10 text-white rounded-xl flex-shrink-0 border border-white/10">
-                  <selectedNode.icon className="w-6 h-6" />
-                </div>
+                <div className="p-3 bg-white/15 text-white rounded-xl flex-shrink-0 border border-white/20"><selectedNode.icon className="w-6 h-6" /></div>
                 <div>
-                  <span className="px-2 py-0.5 border border-white/20 text-white/40 text-[9px] font-black rounded uppercase tracking-tighter mb-1 inline-block">
-                    {selectedNode.category}
-                  </span>
-                  <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight text-white">
-                    {selectedNode.title}
-                  </h3>
+                  <span className="px-2 py-0.5 border border-white/30 text-white/60 text-[9px] font-black rounded uppercase tracking-tighter mb-1 inline-block">{selectedNode.category}</span>
+                  <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight text-white">{selectedNode.title}</h3>
                 </div>
               </div>
-
-              <p className="text-sm md:text-base text-white/50 font-medium leading-relaxed mb-8">
-                {selectedNode.description}
-              </p>
-
+              <p className="text-sm md:text-base text-white/75 font-medium leading-relaxed mb-8">{selectedNode.description}</p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => handleAskAI(selectedNode.context)}
-                  className="flex items-center justify-center gap-2 bg-white text-black px-5 py-3 rounded-xl font-black uppercase text-xs hover:bg-white/90 transition-all"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  {t.exploreAI}
-                </button>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="px-5 py-3 border border-white/15 rounded-xl font-black uppercase text-xs hover:bg-white/5 transition-all text-center text-white/60"
-                >
-                  {t.close}
-                </button>
+                <button onClick={() => handleAskAI(selectedNode.context)} className="flex items-center justify-center gap-2 bg-white text-black px-5 py-3 rounded-xl font-black uppercase text-xs hover:bg-white/90 transition-all"><Sparkles className="w-4 h-4" />{t.exploreAI}</button>
+                <button onClick={() => setSelectedNode(null)} className="px-5 py-3 border border-white/25 rounded-xl font-black uppercase text-xs hover:bg-white/8 transition-all text-center text-white/75">{t.close}</button>
               </div>
             </motion.div>
           </div>
