@@ -310,6 +310,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [isHoveringVideo, setIsHoveringVideo] = useState(false);
+  const [isCtaHovered, setIsCtaHovered] = useState(false);
   const [charGlowProgress, setCharGlowProgress] = useState<number>(-1);
 
   const titleLine1 = t.heroTitle1;
@@ -318,12 +319,12 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
   const totalChars = titleLine1.length + titleLine2.length;
 
   const iframeSrc = isPlayingIntro
-    ? `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=0&controls=1&playsinline=1&rel=0`
+    ? `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=0&controls=1&playsinline=1&rel=0&start=0`
     : `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&playsinline=1&rel=0`;
 
   // ─── Magnetic button RAF loop ─────────────────────────────────────────────
   useEffect(() => {
-    const LERP = 0.07;
+    const LERP = 0.12;
     const tick = () => {
       btnRafRef.current = requestAnimationFrame(tick);
       const cur = btnCurrentOffset.current;
@@ -339,28 +340,41 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
     return () => cancelAnimationFrame(btnRafRef.current);
   }, []);
 
-  const handleVideoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = scrollVideoContainerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const MAX_OFFSET = 28;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    const nx = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, (dx / (rect.width  * 0.5)) * MAX_OFFSET));
-    const ny = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, (dy / (rect.height * 0.5)) * MAX_OFFSET));
-    btnTargetOffset.current = { x: nx, y: ny };
-  }, []);
+  // ─── Native cursor tracking for play button ───────────────────────────────
+  useEffect(() => {
+    if (isPlayingIntro) {
+      btnTargetOffset.current = { x: 0, y: 0 };
+      return;
+    }
+    const container = scrollVideoContainerRef.current;
+    if (!container) return;
 
-  const handleVideoMouseLeave = useCallback(() => {
-    btnTargetOffset.current = { x: 0, y: 0 };
-  }, []);
+    const onMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const padding = 52;
+      const maxX = rect.width / 2 - padding;
+      const maxY = rect.height / 2 - padding;
+      btnTargetOffset.current = {
+        x: Math.max(-maxX, Math.min(maxX, e.clientX - cx)),
+        y: Math.max(-maxY, Math.min(maxY, e.clientY - cy)),
+      };
+    };
+    const onLeave = () => { btnTargetOffset.current = { x: 0, y: 0 }; };
+
+    container.addEventListener('mousemove', onMove, { passive: true });
+    container.addEventListener('mouseleave', onLeave, { passive: true });
+    return () => {
+      container.removeEventListener('mousemove', onMove);
+      container.removeEventListener('mouseleave', onLeave);
+    };
+  }, [isPlayingIntro]);
 
   useEffect(() => {
     let t: any;
     const onScroll = () => {
-      const p = Math.min(Math.max((window.scrollY - 50) / 300, 0), 1);
+      const p = Math.min(Math.max(window.scrollY / 250, 0), 1);
       setScrollOpacity(p); setScrollScale(0.85 + p * 0.15);
       clearTimeout(t);
     };
@@ -378,7 +392,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
 
     const setup = () => {
       const mobile = isMobile();
-      root.style.height = mobile ? '130vh' : '224vh';
+      root.style.height = mobile ? '180vh' : '260vh';
     };
 
     const onScroll = () => {
@@ -391,15 +405,16 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const startW = mobile ? 260 : 380;
       const startH = mobile ? 200 : 380;
-      const endW = window.innerWidth * (mobile ? 0.94 : 0.92);
+      const endW = window.innerWidth * (mobile ? 0.94 : 0.856);
       const endH = mobile
         ? Math.min(window.innerWidth * 0.94 * 0.6, window.innerHeight * 0.55)
-        : window.innerHeight * 0.88;
+        : window.innerHeight * 0.82;
       const w = startW + (endW - startW) * e;
       const h = startH + (endH - startH) * e;
       container.style.width  = `${w}px`;
       container.style.height = `${h}px`;
       container.style.borderRadius = `24px`;
+      container.style.opacity = `${Math.min(1, p * 2.2)}`;
     };
 
     setup();
@@ -515,7 +530,7 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
       </div>
 
       <section
-        className="relative min-h-screen flex flex-col items-center text-white pt-28 pb-12"
+        className="relative text-white"
         style={{ fontFamily: 'Georgia, serif', overflowX: 'clip', background: 'transparent' }}
       >
         <style>{`
@@ -536,7 +551,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
           }
           .video-glow-l1 { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
           .video-glow-l1::before {
-            content: ""; position: absolute; z-index: -2; width: 999px; height: 999px;
+            content: ""; position: absolute; z-index: -2;
+            width: max(300%, 3000px); height: max(300%, 3000px);
             background: conic-gradient(#000, #402fb5 5%, #000 38%, #000 50%, #cf30aa 60%, #000 87%);
             top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);
             animation: video-glow-spin1 4s linear infinite; background-repeat: no-repeat;
@@ -550,7 +566,8 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
             position: absolute; inset: 0; border-radius: inherit; overflow: hidden; filter: blur(1px);
           }
           .video-glow-l3::before {
-            content: ""; position: absolute; z-index: -2; width: 600px; height: 600px;
+            content: ""; position: absolute; z-index: -2;
+            width: max(300%, 3000px); height: max(300%, 3000px);
             background: conic-gradient(rgba(0,0,0,0) 0%, #a099d8, rgba(0,0,0,0) 8%, rgba(0,0,0,0) 50%, #dfa2da, rgba(0,0,0,0) 58%);
             filter: brightness(1.4); top: 50%; left: 50%;
             transform: translate(-50%, -50%) rotate(83deg);
@@ -578,10 +595,33 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
             animation: video-bloom-pulse 4s linear infinite;
           }
           @keyframes video-bloom-pulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+          .video-hover-glow {
+            position: absolute; border-radius: 32px;
+            pointer-events: none; z-index: 0;
+            inset: -60px;
+            background: radial-gradient(ellipse at 40% 50%, rgba(64,47,181,0.6) 0%, transparent 55%),
+                        radial-gradient(ellipse at 72% 38%, rgba(7,188,204,0.45) 0%, transparent 50%),
+                        radial-gradient(ellipse at 55% 68%, rgba(207,48,170,0.5) 0%, transparent 50%);
+            filter: blur(32px);
+            opacity: 0;
+            transition: opacity 0.45s ease;
+          }
+          .video-hover-glow.active { opacity: 1; }
         `}</style>
 
-        <div className="relative z-10 flex flex-col items-center text-center px-6 w-full max-w-7xl h-full">
-
+        {/* ── Sticky hero — fades & shrinks as video grows ── */}
+        {/* FIX 1: pointerEvents on the outer sticky wrapper now matches inner content */}
+        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 20, overflow: 'hidden', pointerEvents: scrollOpacity > 0.6 ? 'none' : 'auto' }}>
+          <div
+            className="relative flex flex-col items-center text-center px-6 w-full max-w-7xl mx-auto pt-28 h-full"
+            style={{
+              opacity: Math.max(0, 1 - scrollOpacity * 1.8),
+              transform: `scale(${1 - 0.13 * scrollOpacity}) translateY(${-55 * scrollOpacity}px)`,
+              transition: 'none',
+              pointerEvents: scrollOpacity > 0.6 ? 'none' : 'auto',
+              willChange: 'opacity, transform',
+            }}
+          >
           {/* ── Titles ── */}
           <div className="relative mb-8 w-full mx-auto flex flex-col items-center gap-2">
             {[titleLine1, titleLine2].map((line, lineIdx) => {
@@ -641,16 +681,39 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
           <div className="flex flex-col items-center gap-12 w-full max-w-md mt-4">
 
             {/* CTA Button */}
-            <div className={`transition-all duration-[840ms] ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
-              <button
-                onClick={onBookingClick}
-                className="group relative border border-white/20 bg-white/5 hover:bg-white/0 text-white mx-auto text-center rounded-full px-10 py-4 text-base font-medium flex items-center gap-2 hover:scale-105 transition-all duration-300"
+            <div className={`w-3/4 md:w-auto transition-all duration-[840ms] ${showCTA ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90 pointer-events-none'}`}>
+              <div
+                className="relative rounded-full transition-transform duration-300 hover:scale-105"
+                onMouseEnter={() => setIsCtaHovered(true)}
+                onMouseLeave={() => setIsCtaHovered(false)}
               >
-                <span className="absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 top-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#e601c0] to-transparent" />
-                <span className="whitespace-nowrap">{t.startJourney}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                <span className="absolute group-hover:opacity-60 opacity-20 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#07bccc] to-transparent" />
-              </button>
+                {/* Gradient bloom glow */}
+                <div
+                  className="absolute inset-0 rounded-full blur-xl transition-all duration-700"
+                  style={{
+                    background: 'linear-gradient(to right, #6366f1, #ec4899, #facc15)',
+                    opacity: isCtaHovered ? 0.75 : 0.35,
+                    transform: isCtaHovered ? 'scale(1.15)' : 'scale(1)',
+                  }}
+                />
+                <GlowingEffect
+                  spread={35}
+                  glow={false}
+                  disabled={false}
+                  proximity={55}
+                  inactiveZone={0.01}
+                  borderWidth={2}
+                />
+                <button
+                  onClick={onBookingClick}
+                  className="group relative w-full border border-white/20 bg-white/5 hover:bg-white/0 text-white mx-auto text-center rounded-full px-10 py-4 text-base font-medium flex items-center justify-center gap-2 transition-colors duration-300"
+                >
+                  <span className="absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 top-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#e601c0] to-transparent" />
+                  <span className="whitespace-nowrap">{t.startJourney}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <span className="absolute group-hover:opacity-60 opacity-20 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-[#07bccc] to-transparent" />
+                </button>
+              </div>
             </div>
 
             {/* AI Input */}
@@ -747,14 +810,17 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
             </div>
           </div>
 
-          {/* ── Scroll-Expanding Video ── */}
-          <div ref={scrollVideoRootRef} className="w-full mt-32" style={{ position: 'relative' }}>
+          </div>{/* close fade-content */}
+        </div>{/* close sticky hero */}
+
+          {/* ── Scroll-Expanding Video — overlaps hero, grows as you scroll ── */}
+          {/* FIX 2: z-index 25 so this sits above the faded sticky hero (z-index 20) */}
+          <div ref={scrollVideoRootRef} style={{ position: 'relative', marginTop: '-100vh', zIndex: 25 }}>
             <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div
                 ref={scrollVideoContainerRef}
-                onClick={() => setIsPlayingIntro(p => !p)}
-                onMouseMove={handleVideoMouseMove}
-                onMouseLeave={handleVideoMouseLeave}
+                onMouseEnter={() => setIsHoveringVideo(true)}
+                onMouseLeave={() => setIsHoveringVideo(false)}
                 style={{
                   position: 'relative',
                   width: 260,
@@ -763,64 +829,89 @@ export default function Hero({ onBookingClick, onAskAIClick, language, isChatOpe
                   overflow: 'visible',
                   background: 'transparent',
                   flexShrink: 0,
-                  cursor: 'pointer',
+                  cursor: isPlayingIntro ? 'default' : 'pointer',
+                  opacity: 0,
                 }}
               >
-                <div className="video-glow-bloom" style={{ borderRadius: 'inherit' }} />
-                <div className="video-glow-wrap" style={{ borderRadius: 'inherit' }}>
+                {/* Hover glow — sits behind everything */}
+                <div className={`video-hover-glow${isHoveringVideo && !isPlayingIntro ? ' active' : ''}`} style={{ pointerEvents: 'none' }} />
+                <div className="video-glow-bloom" style={{ borderRadius: 'inherit', pointerEvents: 'none' }} />
+                <div className="video-glow-wrap" style={{ borderRadius: 'inherit', pointerEvents: 'none' }}>
                   <div className="video-glow-l1" style={{ borderRadius: 'inherit' }} />
                   <div className="video-glow-l2" style={{ borderRadius: 'inherit' }} />
                   <div className="video-glow-l3" style={{ borderRadius: 'inherit' }} />
                 </div>
 
+                {/* Video iframe — clipped to rounded rect */}
+                {/* FIX 3: pointer events enabled on iframe once playing so YouTube controls work */}
                 <div style={{
                   position: 'absolute', inset: 0, borderRadius: 'inherit',
                   overflow: 'hidden', background: '#000',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1,
+                  pointerEvents: isPlayingIntro ? 'auto' : 'none',
                 }}>
                   <iframe
                     key={iframeSrc}
                     src={iframeSrc}
-                    style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: 'none' }}
+                    style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', border: 'none', pointerEvents: isPlayingIntro ? 'auto' : 'none' }}
                     allow="autoplay; encrypted-media"
                   />
-
-                  {!isPlayingIntro && (
-                    <div style={{
-                      position: 'absolute', inset: 0, zIndex: 3,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      pointerEvents: 'none',
-                    }}>
-                      <div ref={playBtnWrapRef} style={{ pointerEvents: 'auto', willChange: 'transform' }}>
-                        <button
-                          ref={playBtnRef}
-                          onClick={(e) => { e.stopPropagation(); setIsPlayingIntro(true); }}
-                          className="play-btn-pulse"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
-                            padding: '0.8rem 1.8rem', borderRadius: 999,
-                            background: 'rgba(255,255,255,0.92)', color: '#000',
-                            fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.07em',
-                            textTransform: 'uppercase', cursor: 'pointer', border: 'none',
-                            fontFamily: '"Montserrat", sans-serif', backdropFilter: 'blur(8px)',
-                            transition: 'background 0.2s ease, transform 0.2s ease',
-                            userSelect: 'none',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,1)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.92)')}
-                        >
-                          <Play style={{ width: 13, height: 13, fill: '#000' }} />
-                          {t.playIntro}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Full-cover click zone — catches any click inside the video when not playing */}
+                {!isPlayingIntro && (
+                  <div
+                    onClick={() => setIsPlayingIntro(true)}
+                    style={{
+                      position: 'absolute', inset: 0, zIndex: 9,
+                      cursor: 'pointer', borderRadius: 'inherit',
+                    }}
+                  />
+                )}
+
+                {/* Play button — sits above click zone with ocean-blue glow */}
+                {!isPlayingIntro && (
+                  <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}>
+                    <div ref={playBtnWrapRef} style={{ position: 'relative', pointerEvents: 'auto', willChange: 'transform' }}>
+                      {/* Ocean-blue glow behind button */}
+                      <div style={{
+                        position: 'absolute', inset: '-14px',
+                        borderRadius: 999,
+                        background: 'radial-gradient(ellipse, rgba(6,182,212,0.55) 0%, rgba(14,116,144,0.3) 45%, transparent 75%)',
+                        filter: 'blur(10px)',
+                        pointerEvents: 'none',
+                      }} />
+                      <button
+                        ref={playBtnRef}
+                        onClick={() => setIsPlayingIntro(true)}
+                        className="play-btn-pulse"
+                        style={{
+                          position: 'relative',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
+                          padding: '0.8rem 1.8rem', borderRadius: 999,
+                          background: 'rgba(255,255,255,0.92)', color: '#000',
+                          fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.07em',
+                          textTransform: 'uppercase', cursor: 'pointer', border: 'none',
+                          fontFamily: '"Montserrat", sans-serif', backdropFilter: 'blur(8px)',
+                          transition: 'background 0.2s ease, transform 0.2s ease',
+                          userSelect: 'none',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,1)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.92)')}
+                      >
+                        <Play style={{ width: 13, height: 13, fill: '#000' }} />
+                        {t.playIntro}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-        </div>
       </section>
     </>
   );
