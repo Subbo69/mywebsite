@@ -4,72 +4,91 @@ import { translations, Language } from '../utils/translations';
 import { useEffect, useRef, useState, useMemo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
-// ─── GlowCard (Spotlight border effect) ──────────────────────────────────────
-interface GlowCardProps {
-  children: ReactNode;
-  className?: string;
-  glowColor?: 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'white';
-}
+// ─── Shared CSS ───────────────────────────────────────────────────────────────
+const sharedCSS = `
+  @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 
-const glowColorMap = {
-  blue:   { base: 220, spread: 200 },
-  purple: { base: 280, spread: 300 },
-  green:  { base: 120, spread: 200 },
-  red:    { base: 0,   spread: 200 },
-  orange: { base: 30,  spread: 200 },
-  white:  { base: 0,   spread: 0   },
-};
+  /* Idle: slow counter-clockwise conic sweep with randomly varying speed */
+  @keyframes idleSpin { to { --angle: -360deg; } }
 
-const glowCardCSS = `
-  [data-glow]::before,
-  [data-glow]::after {
-    pointer-events: none;
-    content: "";
-    position: absolute;
-    inset: calc(var(--border-size) * -1);
-    border: var(--border-size) solid transparent;
-    border-radius: calc(var(--radius) * 1px);
-    background-attachment: fixed;
-    background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
-    background-repeat: no-repeat;
-    background-position: 50% 50%;
-    mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
-    mask-clip: padding-box, border-box;
-    mask-composite: intersect;
+  .gc2-wrap {
+    isolation: isolate;
+    --lx: -9999px;
+    --ly: -9999px;
+    --inside: 0;
+    position: relative;
   }
-  [data-glow]::before {
-    background-image: radial-gradient(
-      calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at
-      calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
-      hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)),
-      transparent 100%
+
+  /* ── Static base border ── */
+  .gc2-base-border {
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none; z-index: 1;
+    border: 1.5px solid rgba(255,255,255,0.12);
+  }
+
+  /* ── Idle conic sweep (counter-clockwise, slow) ── */
+  .gc2-idle {
+    position: absolute; inset: -1.5px;
+    border-radius: inherit;
+    padding: 1.5px;
+    --angle: 0deg;
+    background: conic-gradient(
+      from var(--angle),
+      transparent 0%,
+      rgba(255,255,255,0.04) 8%,
+      rgba(255,255,255,0.50) 14%,
+      rgba(255,255,255,0.85) 17%,
+      rgba(255,255,255,0.50) 20%,
+      rgba(255,255,255,0.04) 27%,
+      transparent 38%
     );
-    filter: brightness(2);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none; z-index: 2;
+    /* Base slow rotation — JS overrides animation-duration per card for variety */
+    animation: idleSpin var(--idle-dur, 14s) linear infinite;
+    /* Fade out when cursor is inside */
+    opacity: calc(1 - var(--inside));
+    transition: opacity 0.6s ease;
   }
-  [data-glow]::after {
-    background-image: radial-gradient(
-      calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at
-      calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
-      hsl(0 100% 100% / var(--border-light-opacity, 1)),
-      transparent 100%
+
+  /* ── Cursor-following bright arc on border ── */
+  .gc2-cursor-border {
+    position: absolute; inset: -1.5px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: radial-gradient(
+      500px 500px at var(--lx) var(--ly),
+      rgba(255,255,255,0.95) 0%,
+      rgba(200,220,255,0.5) 20%,
+      transparent 55%
     );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none; z-index: 3;
+    opacity: var(--inside);
+    transition: opacity 0.4s ease;
   }
-  [data-glow] [data-glow] {
-    position: absolute;
-    inset: 0;
-    will-change: filter;
-    opacity: var(--outer, 1);
-    border-radius: calc(var(--radius) * 1px);
-    border-width: calc(var(--border-size) * 20);
-    filter: blur(calc(var(--border-size) * 10));
-    background: none;
-    pointer-events: none;
-    border: none;
+
+  /* ── Cursor inner fill ── */
+  .gc2-fill {
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none; z-index: 0;
+    background: radial-gradient(
+      380px 380px at var(--lx) var(--ly),
+      rgba(255,255,255,0.055) 0%,
+      transparent 70%
+    );
+    opacity: var(--inside);
+    transition: opacity 0.4s ease;
   }
-  [data-glow] > [data-glow]::before {
-    inset: -10px;
-    border-width: 10px;
-  }
+
+  .gc2-content { position: relative; z-index: 4; height: 100%; }
+
   @keyframes subtleBounce {
     0%, 100% { transform: translateX(0); }
     50%       { transform: translateX(4px); }
@@ -77,57 +96,87 @@ const glowCardCSS = `
   .animate-arrow-bounce { animation: subtleBounce 1.5s ease-in-out infinite; }
 `;
 
-function GlowCard({ children, className = '', glowColor = 'blue' }: GlowCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const { base, spread } = glowColorMap[glowColor];
+// ─── GlowCard2 ────────────────────────────────────────────────────────────────
+// Cursor-following bright arc + slow counter-clockwise idle sweep
+function GlowCard2({
+  children,
+  className = '',
+  cardIndex = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  cardIndex?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sync = (e: PointerEvent) => {
-      if (!cardRef.current) return;
-      cardRef.current.style.setProperty('--x', e.clientX.toFixed(2));
-      cardRef.current.style.setProperty('--xp', (e.clientX / window.innerWidth).toFixed(2));
-      cardRef.current.style.setProperty('--y', e.clientY.toFixed(2));
-      cardRef.current.style.setProperty('--yp', (e.clientY / window.innerHeight).toFixed(2));
+    const el = ref.current;
+    if (!el) return;
+
+    // Each card gets a slightly different idle speed (12–22s) for organic feel
+    const baseDur = 14 + (cardIndex % 5) * 2.2;
+    el.style.setProperty('--idle-dur', `${baseDur}s`);
+
+    // JS-driven random acceleration: periodically tweak animation-duration
+    // on the idle element to simulate non-uniform speed without a complex keyframe
+    const idleEl = el.querySelector('.gc2-idle') as HTMLElement | null;
+    if (idleEl) {
+      let rafId = 0;
+      let nextTick = 0;
+
+      const jitter = () => {
+        const now = performance.now();
+        if (now >= nextTick) {
+          // randomise duration between 80 % and 130 % of base
+          const factor = 0.8 + Math.random() * 0.5;
+          idleEl.style.animationDuration = `${(baseDur * factor).toFixed(2)}s`;
+          // change every 1.8 – 4.5 s
+          nextTick = now + 1800 + Math.random() * 2700;
+        }
+        rafId = requestAnimationFrame(jitter);
+      };
+      rafId = requestAnimationFrame(jitter);
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [cardIndex]);
+
+  // Pointer handlers
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--lx', `${(e.clientX - r.left).toFixed(1)}px`);
+      el.style.setProperty('--ly', `${(e.clientY - r.top).toFixed(1)}px`);
+      el.style.setProperty('--inside', '1');
     };
-    document.addEventListener('pointermove', sync);
-    return () => document.removeEventListener('pointermove', sync);
+    const onLeave = () => el.style.setProperty('--inside', '0');
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+    return () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerleave', onLeave);
+    };
   }, []);
 
   return (
     <div
-      ref={cardRef}
-      data-glow
-      className={`relative rounded-lg ${className}`}
-      style={{
-        '--base': base,
-        '--spread': spread,
-        '--radius': '8',
-        '--border': '1.5',
-        '--backdrop': 'hsl(0 0% 4% / 1)',
-        '--backup-border': 'hsl(0 0% 100% / 0.08)',
-        '--size': '280',
-        '--outer': '1',
-        '--border-size': 'calc(var(--border, 2) * 1px)',
-        '--spotlight-size': 'calc(var(--size, 150) * 1px)',
-        '--hue': 'calc(var(--base) + (var(--xp, 0) * var(--spread, 0)))',
-        backgroundImage: `radial-gradient(
-          var(--spotlight-size) var(--spotlight-size) at
-          calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
-          hsl(var(--hue, 210) 100% 70% / 0.06),
-          transparent
-        )`,
-        backgroundColor: 'var(--backdrop, transparent)',
-        backgroundAttachment: 'fixed',
-        border: 'var(--border-size) solid var(--backup-border)',
-      } as React.CSSProperties}
+      ref={ref}
+      className={`gc2-wrap ${className}`}
+      style={{ background: '#000' }}
     >
-      <div data-glow />
-      {children}
+      <div className="gc2-fill" />
+      <div className="gc2-base-border" />
+      <div className="gc2-idle" />
+      <div className="gc2-cursor-border" />
+      <div className="gc2-content">{children}</div>
     </div>
   );
 }
 
-// ─── WaveText (letter-level hover, no layout shift) ───────────────────────────
+// ─── WaveText ─────────────────────────────────────────────────────────────────
 function WaveText({ text, className = '' }: { text: string; className?: string }) {
   return (
     <motion.span
@@ -145,12 +194,7 @@ function WaveText({ text, className = '' }: { text: string; className?: string }
             hover: {
               y: -3,
               scale: 1.15,
-              transition: {
-                type: 'spring',
-                stiffness: 400,
-                damping: 18,
-                delay: i * 0.025,
-              },
+              transition: { type: 'spring', stiffness: 400, damping: 18, delay: i * 0.025 },
             },
           }}
         >
@@ -214,13 +258,20 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
   return (
     <section
       ref={sectionRef}
-      className="relative py-12 md:py-20 text-white w-full border-t border-white/5"
+      className="relative py-12 md:py-20 text-white w-full border-t border-white/5 overflow-hidden"
       style={{ backgroundColor: '#000000', zIndex: 1, isolation: 'isolate' }}
     >
-      <style dangerouslySetInnerHTML={{ __html: glowCardCSS }} />
-      <div className="absolute inset-0" style={{ backgroundColor: '#000000', zIndex: -1 }} />
+      <style dangerouslySetInnerHTML={{ __html: sharedCSS }} />
 
-      <div className="max-w-2xl md:max-w-3xl mx-auto px-6">
+      {/* ── Vertical fade: 85% black at top → 100% black at bottom ── */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,1) 100%)',
+        }}
+      />
+
+      <div className="relative max-w-2xl md:max-w-3xl mx-auto px-6 z-10">
 
         {/* Header */}
         <div className="mb-6 md:mb-10">
@@ -232,8 +283,8 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
           </p>
         </div>
 
-        {/* Console Box with GlowCard border */}
-        <GlowCard className="mb-8 md:mb-12" glowColor="blue">
+        {/* Console Box */}
+        <GlowCard2 className="mb-8 md:mb-12 rounded-lg" cardIndex={0}>
           <div className="p-5 md:p-8">
             <div className="space-y-2.5 md:space-y-4">
               {planSteps.map((step, index) => (
@@ -251,7 +302,6 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
                     }`}
                   />
                   <p className="font-mono text-[13px] md:text-[17px] text-gray-300 leading-none">
-                    {/* WaveText activates only once typing is done */}
                     {typedText[index].length === step.length ? (
                       <WaveText text={typedText[index]} />
                     ) : (
@@ -267,9 +317,9 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
               ))}
             </div>
           </div>
-        </GlowCard>
+        </GlowCard2>
 
-        {/* CTA Button with GlowCard border */}
+        {/* CTA Button */}
         <div
           className={`flex justify-center transition-all duration-1000 transform ${
             showButton
@@ -277,7 +327,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
               : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
-          <GlowCard glowColor="white" className="rounded-full">
+          <GlowCard2 className="rounded-full" cardIndex={1}>
             <button
               onClick={onBookingClick}
               className="group relative flex items-center gap-3 rounded-full bg-white px-8 py-3 md:px-10 md:py-4 text-sm md:text-base font-black text-black hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.1)]"
@@ -285,7 +335,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
               <WaveText text={t.bookCall} className="uppercase tracking-wider text-black" />
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5 animate-arrow-bounce shrink-0" />
             </button>
-          </GlowCard>
+          </GlowCard2>
         </div>
 
         {/* Footer */}
@@ -294,6 +344,7 @@ export default function WorkWithUs({ onBookingClick, language }: WorkWithUsProps
             <WaveText text={`© ${new Date().getFullYear()} Halovision AI`} />
           </p>
         </div>
+
       </div>
     </section>
   );
