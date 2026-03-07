@@ -133,6 +133,36 @@ function GlowFilterButton({ children, isActive, onClick }: { children: React.Rea
 function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
   const letters = Array.from(text);
   const delay = 0.04;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const shrinkToFit = () => {
+      el.style.fontSize = '';
+      const parent = el.parentElement;
+      if (!parent) return;
+
+      const maxWidth = parent.getBoundingClientRect().width;
+      let size = window.innerWidth >= 768 ? 55 : 33;
+
+      el.style.fontSize = `${size}px`;
+
+      while (el.scrollWidth > maxWidth && size > 14) {
+        size -= 1;
+        el.style.fontSize = `${size}px`;
+      }
+
+      setFontSize(size);
+    };
+
+    shrinkToFit();
+    const ro = new ResizeObserver(shrinkToFit);
+    ro.observe(el.parentElement!);
+    return () => ro.disconnect();
+  }, [text]);
 
   const container: Variants = {
     hidden: { opacity: 0 },
@@ -161,13 +191,20 @@ function AnimatedTitle({ text, animate }: { text: string; animate: boolean }) {
   };
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block w-full">
       <motion.div
-        style={{ display: 'flex', overflow: 'hidden', flexWrap: 'wrap' }}
+        ref={containerRef}
+        style={{
+          display: 'flex',
+          overflow: 'hidden',
+          flexWrap: 'nowrap',
+          whiteSpace: 'nowrap',
+          fontSize: fontSize ? `${fontSize}px` : undefined,
+        }}
         variants={container}
         initial="hidden"
         animate={animate ? 'visible' : 'hidden'}
-        className="text-[33px] md:text-[55px] font-black text-white tracking-tighter uppercase"
+        className={`font-black text-white tracking-tighter uppercase${!fontSize ? ' text-[33px] md:text-[55px]' : ''}`}
       >
         {letters.map((letter, i) => (
           <motion.span key={i} variants={child}>
@@ -235,9 +272,8 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
   const [marqueeVisible, setMarqueeVisible] = useState(false);
   const sectionRef     = useRef<HTMLDivElement>(null);
   const topBorderRef   = useRef<HTMLDivElement>(null);
-  const bottomBorderRef = useRef<HTMLDivElement>(null); // ← NEW
+  const bottomBorderRef = useRef<HTMLDivElement>(null);
 
-  // Shared spring-smoothed cursor tracker for both borders
   useEffect(() => {
     const section = sectionRef.current;
     const topEl   = topBorderRef.current;
@@ -374,40 +410,6 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
     </GlowCard>
   );
 
-  // Shared border glow layer — reused for top and bottom
-  const BorderGlow = ({ position, ref: bRef }: { position: 'top' | 'bottom'; ref: React.RefObject<HTMLDivElement> }) => (
-    <div
-      ref={bRef}
-      className="pointer-events-none absolute left-0 right-0 z-10"
-      style={{
-        [position]: 0,
-        height: '1.2px',
-        '--tbx': '50%',
-        '--tb-opacity': '0',
-      } as React.CSSProperties}
-    >
-      <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.22)' }} />
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `radial-gradient(600px 80px at var(--tbx) ${position === 'top' ? '0%' : '100%'}, rgba(255,255,255,0.95) 0%, rgba(180,220,255,0.55) 30%, transparent 70%)`,
-          opacity: 'var(--tb-opacity)',
-          transition: 'opacity 0.4s ease',
-        }}
-      />
-      <div
-        className="absolute left-0 right-0"
-        style={{
-          [position]: '0px',
-          height: '48px',
-          background: `radial-gradient(600px 48px at var(--tbx) ${position === 'top' ? '0%' : '100%'}, rgba(160,210,255,0.16) 0%, transparent 70%)`,
-          opacity: 'var(--tb-opacity)',
-          transition: 'opacity 0.4s ease',
-        }}
-      />
-    </div>
-  );
-
   return (
     <section
       ref={sectionRef}
@@ -452,7 +454,7 @@ export default function Services({ onAskAIClick, language }: ServicesProps) {
 
       {/* Title & subtitle */}
       <div className="max-w-7xl mx-auto px-6 mb-7">
-        <div className="inline-block mb-4 pb-2">
+        <div className="inline-block mb-4 pb-2 w-full">
           <AnimatedTitle text={titleText} animate={hasAnimated} />
         </div>
         <AnimatedSubtitle text={subtitleText} animate={hasAnimated} />
