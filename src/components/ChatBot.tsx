@@ -27,13 +27,13 @@ const allStyles = `
       calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
       hsl(var(--hue, 210) 100% 50% / 0.8), transparent 100%
     );
-    filter: brightness(2);
+    filter: brightness(3.5);
   }
   [data-glow]::after {
     background-image: radial-gradient(
       calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at
       calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
-      hsl(0 100% 100% / 0.4), transparent 100%
+      hsl(0 100% 100% / 0.75), transparent 100%
     );
   }
   [data-glow] [data-glow] {
@@ -450,7 +450,7 @@ function GlowButtonWrapper({ children, opacity }: { children: React.ReactNode; o
   useEffect(() => {
     let t = 0;
     const tick = () => {
-      t += 0.006; // slower: was 0.0108, now 0.006 (~44% slower)
+      t += 0.006;
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -471,12 +471,12 @@ function GlowButtonWrapper({ children, opacity }: { children: React.ReactNode; o
       ref={ref}
       data-glow
       style={{
-        '--base': 190, '--spread': 160, '--radius': '999', '--border': '2',
-        '--backup-border': 'rgba(255,255,255,0.15)', '--size': '220', '--outer': '1',
-        '--border-size': 'calc(var(--border, 2) * 1px)',
-        '--spotlight-size': 'calc(var(--size, 150) * 1px)',
+        '--base': 190, '--spread': 160, '--radius': '999', '--border': '3',
+        '--backup-border': 'rgba(255,255,255,0.25)', '--size': '280', '--outer': '1',
+        '--border-size': 'calc(var(--border, 3) * 1px)',
+        '--spotlight-size': 'calc(var(--size, 280) * 1px)',
         '--hue': 'calc(var(--base) + (var(--xp, 0) * var(--spread, 0)))',
-        backgroundImage: `radial-gradient(var(--spotlight-size) var(--spotlight-size) at calc(var(--x,0)*1px) calc(var(--y,0)*1px), hsl(var(--hue,210) 100% 70% / 0.08), transparent)`,
+        backgroundImage: `radial-gradient(var(--spotlight-size) var(--spotlight-size) at calc(var(--x,0)*1px) calc(var(--y,0)*1px), hsl(var(--hue,210) 100% 70% / 0.18), transparent)`,
         backgroundAttachment: 'fixed',
         border: 'var(--border-size) solid var(--backup-border)',
         borderRadius: '9999px',
