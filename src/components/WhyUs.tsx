@@ -123,8 +123,6 @@ function GlowCard({
 // ─── LOGO SOURCES ─────────────────────────────────────────────────────────────
 const CDN = (slug: string) => `https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${slug}.svg`;
 
-// ── Switched to CDN (simple-icons) for accurate brand logos ──────────────────
-// n8n, Microsoft Teams, Outlook, Excel, Google Sheets → CDN slugs
 const ICONS_ROW1 = [
   { name: 'OpenAI',         url: '__openai__' },
   { name: 'Claude',         url: '__claude__' },
@@ -134,12 +132,12 @@ const ICONS_ROW1 = [
   { name: 'Slack',          url: '__slack__' },
   { name: 'Notion',         url: '__notion__' },
   { name: 'LinkedIn',       url: '__linkedin__' },
-  { name: 'n8n',            url: CDN('n8n') },              // ✅ real n8n logo
+  { name: 'n8n',            url: CDN('n8n') },
   { name: 'Mail',           url: '__mail__' },
   { name: 'Gmail',          url: '__gmail__' },
-  { name: 'Google Sheets',  url: CDN('googlesheets') },     // ✅ real Google Sheets logo
-  { name: 'Excel',          url: CDN('microsoftexcel') },   // ✅ real Excel logo
-  { name: 'Outlook',        url: CDN('microsoftoutlook') }, // ✅ real Outlook logo
+  { name: 'Google Sheets',  url: CDN('googlesheets') },
+  { name: 'Excel',          url: CDN('microsoftexcel') },
+  { name: 'Outlook',        url: CDN('microsoftoutlook') },
   { name: 'Your Website',   url: '__yourwebsite__' },
 ];
 const ICONS_ROW2 = [
@@ -168,6 +166,16 @@ const S = { width: 26, height: 26, opacity: 0.85 as number, position: 'relative'
 const MailSVG = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white" style={S}>
     <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/>
+  </svg>
+);
+
+// ✅ Gmail — clean M-envelope matching the real logo shape
+const GmailSVG = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={S}>
+    <path d="M2 6.5C2 5.12 3.12 4 4.5 4h15C20.88 4 22 5.12 22 6.5V17.5C22 18.88 20.88 20 19.5 20h-15C3.12 20 2 18.88 2 17.5V6.5z" stroke="white" strokeWidth="1.4" opacity="0.7"/>
+    <path d="M2 7L12 14L22 7" stroke="white" strokeWidth="1.6" strokeLinejoin="round"/>
+    <path d="M2 7L7.5 13" stroke="white" strokeWidth="1.3" opacity="0.8"/>
+    <path d="M22 7L16.5 13" stroke="white" strokeWidth="1.3" opacity="0.8"/>
   </svg>
 );
 
@@ -227,47 +235,18 @@ const GeminiSVG = () => (
   </svg>
 );
 
-// Gmail — accurate M-chevron envelope matching the real logo
-const GmailSVG = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={S}>
-    {/* Outer envelope frame */}
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="white" strokeWidth="0" opacity="0"/>
-    {/* White background fill */}
-    <path d="M2 6.5C2 5.12 3.12 4 4.5 4h15C20.88 4 22 5.12 22 6.5v11c0 1.38-1.12 2.5-2.5 2.5h-15C3.12 20 2 18.88 2 17.5V6.5z" fill="white" opacity="0.12"/>
-    {/* Envelope border */}
-    <path d="M2 6.5C2 5.12 3.12 4 4.5 4h15C20.88 4 22 5.12 22 6.5v11c0 1.38-1.12 2.5-2.5 2.5h-15C3.12 20 2 18.88 2 17.5V6.5z" fill="none" stroke="white" strokeWidth="1.4" opacity="0.7"/>
-    {/* The M chevron — solid white fills matching Gmail's inner flap shape */}
-    <path d="M2 6.5L12 13.5L22 6.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinejoin="round" opacity="0.9"/>
-    {/* Left diagonal panel */}
-    <path d="M2 7L2 19L7.5 13.5L2 7Z" fill="white" opacity="0.85"/>
-    {/* Right diagonal panel */}
-    <path d="M22 7L22 19L16.5 13.5L22 7Z" fill="white" opacity="0.85"/>
-    {/* Bottom left flap */}
-    <path d="M2 19L7.5 13.5L12 17L16.5 13.5L22 19H2Z" fill="white" opacity="0.85"/>
-    {/* Top M chevron sharp re-draw on top */}
-    <path d="M2 5.5L12 13L22 5.5" fill="none" stroke="white" strokeWidth="1.8" strokeLinejoin="round" opacity="1"/>
-  </svg>
-);
-
-: full grid with header bar + date dots ──────────────
 const CalendarSVG = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={S}>
-    {/* Outer frame */}
     <rect x="2" y="3" width="20" height="19" rx="2.5" fill="none" stroke="white" strokeWidth="1.5"/>
-    {/* Header bar */}
     <rect x="2" y="3" width="20" height="6" rx="2.5" fill="white" opacity="0.9"/>
-    {/* Bottom clip to make header flat-bottom */}
     <rect x="2" y="7" width="20" height="2" fill="white" opacity="0.9"/>
-    {/* Hanger pins */}
     <line x1="8"  y1="1.5" x2="8"  y2="5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
     <line x1="16" y1="1.5" x2="16" y2="5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-    {/* Day dots — row 1 */}
     <circle cx="7"  cy="13" r="1" fill="white" opacity="0.75"/>
     <circle cx="12" cy="13" r="1" fill="white" opacity="0.75"/>
     <circle cx="17" cy="13" r="1" fill="white" opacity="0.75"/>
-    {/* Day dots — row 2 */}
     <circle cx="7"  cy="18" r="1" fill="white" opacity="0.75"/>
-    <circle cx="12" cy="18" r="1.35" fill="white" opacity="1"/>   {/* today highlight */}
+    <circle cx="12" cy="18" r="1.35" fill="white" opacity="1"/>
     <circle cx="17" cy="18" r="1" fill="white" opacity="0.75"/>
   </svg>
 );
@@ -281,7 +260,6 @@ const DiscordSVG = () => (
 function LogoBubble({ src, name, registerRef }: { src: string; name: string; registerRef?: (el: HTMLDivElement | null) => void }) {
   const [errored, setErrored] = useState(false);
 
-  // Inline SVG sentinels
   const isOpenAI      = src === '__openai__';
   const isClaude      = src === '__claude__';
   const isGemini      = src === '__gemini__';
@@ -291,11 +269,10 @@ function LogoBubble({ src, name, registerRef }: { src: string; name: string; reg
   const isNotion      = src === '__notion__';
   const isLinkedIn    = src === '__linkedin__';
   const isMail        = src === '__mail__';
+  const isGmail       = src === '__gmail__';
   const isYourWebsite = src === '__yourwebsite__';
   const isCalendar    = src === '__calendar__';
   const isDiscord     = src === '__discord__';
-
-  const isGmail       = src === '__gmail__';
 
   const isInline = isOpenAI || isClaude || isGemini || isGoogle || isMicrosoft ||
                    isSlack || isNotion || isLinkedIn || isMail || isGmail ||
@@ -377,7 +354,7 @@ function LogoCarousel({
   }, [direction]);
 
   useEffect(() => {
-    const BASE_DRIFT = 0.168 * direction;
+    const BASE_DRIFT = 0.168 * direction; // ✅ 50% faster
     const tick = () => {
       velRef.current += (scrollVelRef.current - velRef.current) * 0.025;
       scrollVelRef.current *= 0.94;
